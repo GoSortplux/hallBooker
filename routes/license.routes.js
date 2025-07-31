@@ -4,7 +4,8 @@ import {
     purchaseOrRenewLicense, 
     getMyLicense,
     getLicenseForUser,
-    getRecommendedTier
+    getRecommendedTier,
+    upgradeLicense
 } from '../controllers/license.controller.js';
 
 const router = Router();
@@ -18,6 +19,9 @@ router.route('/recommend')
 router.route('/my-license')
     .post(authorizeRoles('venue-owner'), purchaseOrRenewLicense)
     .get(authorizeRoles('venue-owner'), getMyLicense);
+
+router.route('/upgrade')
+    .post(authorizeRoles('venue-owner'), upgradeLicense);
 
 // Route for a super admin to view a specific user's license
 router.route('/user/:userId')
