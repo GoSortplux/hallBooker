@@ -2,7 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Venue } from '../models/venue.model.js';
-import { uploadOnCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
+
 import sendEmail from '../services/email.service.js';
 import { generateVenueCreationEmail } from '../utils/emailTemplates.js';
 
@@ -10,6 +10,7 @@ const createVenue = asyncHandler(async (req, res) => {
     const { name, location, capacity, description, pricing, ownerId } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Venue owner must be specified.");
+
     
     const venue = await Venue.create({ name, location, capacity, description, pricing, owner: resolvedOwnerId });
 
