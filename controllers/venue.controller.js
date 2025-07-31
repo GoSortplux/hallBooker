@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Venue } from '../models/venue.model.js';
+import { uploadOnCloudinary } from '../config/cloudinary.js';
 
 const createVenue = asyncHandler(async (req, res) => {
     const { name, location, capacity, description, pricing, ownerId } = req.body;
@@ -47,10 +48,57 @@ const deleteVenue = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, {}, "Venue deleted successfully"));
 });
 
+const updateVenueMedia = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const venue = await Venue.findById(id);
+
+    if (!venue) {
+        throw new ApiError(404, "Venue not found");
+    }
+
+    // Authorization check
+    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
+        throw new ApiError(403, "You are not authorized to update this venue's media.");
+    }
+
+    const imageUploadPromises = [];
+    if (req.files?.images?.length) {
+        req.files.images.forEach(file => {
+            imageUploadPromises.push(uploadOnCloudinary(file.path));
+        });
+    }
+
+    const videoUploadPromises = [];
+    if (req.files?.videos?.length) {
+        req.files.videos.forEach(file => {
+            videoUploadPromises.push(uploadOnCloudinary(file.path));
+        });
+    }
+
+    const imageUploadResponses = await Promise.all(imageUploadPromises);
+    const videoUploadResponses = await Promise.all(videoUploadPromises);
+
+    const imageUrls = imageUploadResponses.map(res => res?.secure_url).filter(Boolean);
+    const videoUrls = videoUploadResponses.map(res => res?.secure_url).filter(Boolean);
+
+    if (imageUrls.length) {
+        venue.images.push(...imageUrls);
+    }
+    if (videoUrls.length) {
+        venue.videos.push(...videoUrls);
+    }
+
+    await venue.save();
+
+    return res.status(200).json(new ApiResponse(200, venue, "Venue media updated successfully"));
+});
+
+
 export { 
     createVenue, 
     getAllVenues, 
     getVenueById, 
     updateVenue, 
-    deleteVenue 
+    deleteVenue,
+    updateVenueMedia
 };

@@ -2,16 +2,20 @@ import mongoose from 'mongoose';
 
 const licenseSchema = new mongoose.Schema(
   {
-    owner: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User', 
-      required: true, 
-      unique: true
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      unique: true, // While we are moving to a dynamic model, we'll still enforce one active license per user for now.
     },
-    type: { 
-      type: String, 
-      enum: ['1-year', '2-year', 'lifetime'],
-      required: true 
+    tier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'LicenseTier',
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true,
     },
     status: {
         type: String,
