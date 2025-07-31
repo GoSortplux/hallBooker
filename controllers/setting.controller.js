@@ -36,7 +36,7 @@ const getCommissionRate = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, commissionRateSetting, 'Commission rate retrieved successfully'));
 });
 
-module.exports = {
+export {
   setCommissionRate,
   getCommissionRate,
 };
