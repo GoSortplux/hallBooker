@@ -21,9 +21,14 @@ const purchaseOrRenewLicense = asyncHandler(async (req, res) => {
         throw new ApiError(404, "The selected license tier was not found.");
     }
 
+    const existingLicense = await License.findOne({ owner: ownerId });
+    if (existingLicense && existingLicense.status === 'active' && existingLicense.tier.toString() === tierId) {
+        throw new ApiError(400, "You are already subscribed to this license tier. If you want to upgrade, please use the upgrade option.");
+    }
+
     const venueCount = await Venue.countDocuments({ owner: ownerId });
     if (venueCount > tier.maxHalls) {
-        throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${tier.maxHalls}). Please choose a higher tier.`);
+        throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${tier.maxHalls}). Please choose a higher tier or upgrade your current plan.`);
     }
 
     const paymentSuccessful = true; // Placeholder for payment gateway integration
