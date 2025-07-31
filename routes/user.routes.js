@@ -4,10 +4,15 @@ import {
     getAllUsers,
     getUserById,
     updateUser,
-    deleteUser
+    deleteUser,
+    updateUserBankAccount
 } from '../controllers/user.controller.js';
 
 const router = Router();
+
+// Route for users to update their own bank account
+router.route('/bank-account')
+    .patch(verifyJWT, authorizeRoles('venue-owner', 'user'), updateUserBankAccount);
 
 router.use(verifyJWT, authorizeRoles('super-admin'));
 
