@@ -16,10 +16,14 @@ export const checkActiveLicense = asyncHandler(async (req, res, next) => {
   }
 
   // For subsequent venues, a valid license is required
-  const license = await License.findOne({ owner: req.user._id });
+  const license = await License.findOne({ owner: req.user._id }).populate('tier');
 
   if (!license || license.status !== 'active') {
     throw new ApiError(403, "Access Denied: An active license is required to create more than one venue.");
+  }
+
+  if (license.tier && venueCount >= license.tier.maxHalls) {
+    throw new ApiError(403, `You have reached the maximum number of halls (${license.tier.maxHalls}) for your current subscription plan.`);
   }
   
   if (license.expiryDate && license.expiryDate < new Date()) {
