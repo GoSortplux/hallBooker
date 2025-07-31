@@ -34,7 +34,7 @@ const deleteFromCloudinary = async (publicUrl) => {
 
     // A more robust way to extract the public_id and resource_type from the URL
     const urlParts = publicUrl.split('/');
-    
+
     // Find the resource type ('image', 'video', etc.)
     const resourceTypeIndex = urlParts.findIndex(part => ['image', 'video', 'raw'].includes(part));
     const resourceType = resourceTypeIndex !== -1 ? urlParts[resourceTypeIndex] : 'image';

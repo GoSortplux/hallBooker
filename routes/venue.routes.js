@@ -8,7 +8,7 @@ import {
     updateVenue, 
     deleteVenue,
     updateVenueMedia,
-     deleteVenueMedia
+    deleteVenueMedia
 } from '../controllers/venue.controller.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
@@ -46,5 +46,5 @@ router.route('/:id/media')
         deleteVenueMedia
     );
 
+export default router; 
 
-export default router;  
