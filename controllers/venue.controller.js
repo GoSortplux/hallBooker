@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Venue } from '../models/venue.model.js';
+import { License } from '../models/license.model.js';
 import { uploadOnCloudinary } from '../config/cloudinary.js';
 import sendEmail from '../services/email.service.js';
 import { generateVenueCreationEmail } from '../utils/emailTemplates.js';
@@ -10,6 +11,21 @@ const createVenue = asyncHandler(async (req, res) => {
     const { name, location, capacity, description, pricing, ownerId } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Venue owner must be specified.");
+
+    if (req.user.role !== 'super-admin') {
+        // The venueCount is attached from the checkActiveLicense middleware
+        const venueCount = req.venueCount;
+
+        if (venueCount > 0) {
+            // If user has one or more venues, check their license limit
+            const license = await License.findOne({ owner: resolvedOwnerId }).populate('tier');
+            const maxHalls = license?.tier?.maxHalls ?? 0;
+
+            if (venueCount >= maxHalls) {
+                throw new ApiError(403, `You have reached the maximum number of venues (${maxHalls}) for your current license tier. Please upgrade your plan to add more.`);
+            }
+        }
+    }
     
     const venue = await Venue.create({ name, location, capacity, description, pricing, owner: resolvedOwnerId });
 
