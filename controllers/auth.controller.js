@@ -4,6 +4,41 @@ import { User } from '../models/user.model.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import sendEmail from '../services/email.service.js';
 import crypto from 'crypto';
+import { generateVerificationEmail, generateWelcomeEmail } from '../utils/emailTemplates.js';
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, 'User not found.');
+  }
+
+  if (user.isEmailVerified) {
+    throw new ApiError(400, 'Email is already verified.');
+  }
+
+  if (user.emailVerificationToken !== token || user.emailVerificationExpires < Date.now()) {
+    throw new ApiError(400, 'Invalid or expired verification token.');
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save();
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Welcome to HallBooker!',
+      html: generateWelcomeEmail(user.fullName),
+    });
+  } catch (emailError) {
+      console.error(`Welcome email failed for ${user.email}:`, emailError.message);
+  }
+
+  res.status(200).json(new ApiResponse(200, {}, 'Email verified successfully.'));
+});
 
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, password, role } = req.body;
@@ -12,20 +47,30 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'All fields are required');
   }
 
-  const user = await User.create({ fullName, email, phone, password, role });
-  const createdUser = await User.findById(user._id);
+  const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+  if (existingUser) {
+    throw new ApiError(409, 'User with this email or phone number already exists.');
+  }
+
+  const user = new User({ fullName, email, phone, password, role });
+  const verificationToken = user.generateEmailVerificationToken();
+  await user.save();
 
   try {
     await sendEmail({
       email: user.email,
-      subject: 'Welcome to HallBooker!',
-      html: `<h1>Hi ${user.fullName},</h1><p>Thank you for registering. We're excited to have you on board.</p>`,
+      subject: 'Verify Your Email Address',
+      html: generateVerificationEmail(user.fullName, verificationToken),
     });
   } catch (emailError) {
-      console.error(`Welcome email failed for ${user.email}:`, emailError.message);
+    console.error(`Verification email failed for ${user.email}:`, emailError.message);
+    // Optional: Add logic to handle failed email sending, e.g., by rolling back user creation
+    // For now, we'll just log the error and the user can request a new token.
   }
 
-  return res.status(201).json(new ApiResponse(201, createdUser, 'User registered successfully'));
+  const createdUser = await User.findById(user._id);
+
+  return res.status(201).json(new ApiResponse(201, { user: createdUser }, 'User registered successfully. Please check your email to verify your account.'));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -103,5 +148,6 @@ export {
   registerUser, 
   loginUser, 
   forgotPassword, 
-  resetPassword 
+  resetPassword,
+  verifyEmail
 };

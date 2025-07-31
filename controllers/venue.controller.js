@@ -3,6 +3,8 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Venue } from '../models/venue.model.js';
 import { uploadOnCloudinary } from '../config/cloudinary.js';
+import sendEmail from '../services/email.service.js';
+import { generateVenueCreationEmail } from '../utils/emailTemplates.js';
 
 const createVenue = asyncHandler(async (req, res) => {
     const { name, location, capacity, description, pricing, ownerId } = req.body;
@@ -10,6 +12,17 @@ const createVenue = asyncHandler(async (req, res) => {
     if (!resolvedOwnerId) throw new ApiError(400, "Venue owner must be specified.");
     
     const venue = await Venue.create({ name, location, capacity, description, pricing, owner: resolvedOwnerId });
+
+    try {
+        await sendEmail({
+            email: req.user.email,
+            subject: 'Your New Venue is Ready!',
+            html: generateVenueCreationEmail(req.user.fullName, venue.name, venue.location),
+        });
+    } catch (emailError) {
+        console.error(`Venue creation email failed for ${req.user.email}:`, emailError.message);
+    }
+
     return res.status(201).json(new ApiResponse(201, venue, "Venue created successfully"));
 });
 
