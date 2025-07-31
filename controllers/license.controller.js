@@ -62,4 +62,8 @@ const getLicenseForUser = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, license, "User license details fetched successfully."));
 });
 
-export { purchaseOrRenewLicense, getMyLicense, getLicenseForUser };
+export { 
+    purchaseOrRenewLicense, 
+    getMyLicense, 
+    getLicenseForUser 
+};

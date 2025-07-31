@@ -99,4 +99,9 @@ const resetPassword = asyncHandler(async (req, res) => {
        .json(new ApiResponse(200, {}, 'Password reset successful.'));
 });
 
-export { registerUser, loginUser, forgotPassword, resetPassword };
+export { 
+  registerUser, 
+  loginUser, 
+  forgotPassword, 
+  resetPassword 
+};

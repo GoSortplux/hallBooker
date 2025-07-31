@@ -91,4 +91,10 @@ const cancelBooking = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, booking, "Booking cancelled successfully."));
 });
 
-export { createBooking, getMyBookings, getBookingById, updateBookingDetails, cancelBooking };
+export { 
+  createBooking, 
+  getMyBookings, 
+  getBookingById, 
+  updateBookingDetails, 
+  cancelBooking 
+};
