@@ -13,6 +13,7 @@ import bookingRoutes from './routes/booking.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import userRoutes from './routes/user.routes.js';
 import licenseRoutes from './routes/license.routes.js';
+import licenseTierRoutes from './routes/licenseTier.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -41,7 +42,8 @@ app.use('/api/v1/venues', venueRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/licenses', licenseRoutes); 
+app.use('/api/v1/licenses', licenseRoutes);
+app.use('/api/v1/license-tiers', licenseTierRoutes);
 
 // Error Handling Middleware
 app.use(notFound);

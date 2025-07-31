@@ -6,8 +6,10 @@ import {
     getAllVenues, 
     getVenueById, 
     updateVenue, 
-    deleteVenue 
+    deleteVenue,
+    updateVenueMedia
 } from '../controllers/venue.controller.js';
+import { upload } from '../middlewares/multer.middleware.js';
 
 const router = Router();
 
@@ -25,5 +27,16 @@ router.route('/')
 router.route('/:id')
     .put(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, updateVenue)
     .delete(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, deleteVenue);
+
+// Route for uploading media to a venue
+router.route('/:id/media').patch(
+    authorizeRoles('venue-owner', 'super-admin'),
+    checkActiveLicense,
+    upload.fields([
+        { name: 'images', maxCount: 10 },
+        { name: 'videos', maxCount: 5 }
+    ]),
+    updateVenueMedia
+);
 
 export default router; 
