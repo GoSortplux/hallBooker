@@ -25,7 +25,7 @@ export const checkActiveLicense = asyncHandler(async (req, res, next) => {
   if (license.expiryDate && license.expiryDate < new Date()) {
       license.status = 'expired';
       await license.save();
-      throw new ApiError(403, "Access Denied: Your license has expired.");
+      throw new ApiError(403, "Access Denied: Your license has expired."); 
   }
   
   next();

@@ -2,7 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Venue } from '../models/venue.model.js';
-
+import { uploadOnCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
 import sendEmail from '../services/email.service.js';
 import { generateVenueCreationEmail } from '../utils/emailTemplates.js';
 
