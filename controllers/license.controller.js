@@ -5,31 +5,32 @@ import { License } from '../models/license.model.js';
 import { LicenseTier } from '../models/licenseTier.model.js';
 import { Venue } from '../models/venue.model.js';
 import mongoose from 'mongoose';
+import sendEmail from '../services/email.service.js';
+import { generateLicensePurchaseEmail } from '../utils/emailTemplates.js';
 
 const purchaseOrRenewLicense = asyncHandler(async (req, res) => {
     const ownerId = req.user._id;
+    const { tierId } = req.body;
 
-    // 1. Count the number of venues (halls) the user owns
-    const venueCount = await Venue.countDocuments({ owner: ownerId });
-
-    // 2. Find the appropriate license tier
-    const tier = await LicenseTier.findOne({
-        minHalls: { $lte: venueCount },
-        maxHalls: { $gte: venueCount },
-    });
-
-    if (!tier) {
-        throw new ApiError(400, "No suitable license tier found for your number of venues. Please contact support.");
+    if (!tierId) {
+        throw new ApiError(400, "A license tier ID is required.");
     }
 
-    // 3. In a real application, integrate with a payment gateway using `tier.price`.
-    // For this simulation, we'll assume payment is successful.
-    const paymentSuccessful = true;
+    const tier = await LicenseTier.findById(tierId);
+    if (!tier) {
+        throw new ApiError(404, "The selected license tier was not found.");
+    }
+
+    const venueCount = await Venue.countDocuments({ owner: ownerId });
+    if (venueCount > tier.maxHalls) {
+        throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${tier.maxHalls}). Please choose a higher tier.`);
+    }
+
+    const paymentSuccessful = true; // Placeholder for payment gateway integration
     if (!paymentSuccessful) {
         throw new ApiError(402, "Payment failed.");
     }
 
-    // 4. Calculate expiry date
     let expiryDate = null;
     if (tier.durationInDays) {
         expiryDate = new Date();
@@ -42,14 +43,23 @@ const purchaseOrRenewLicense = asyncHandler(async (req, res) => {
         price: tier.price,
         status: 'active',
         purchaseDate: new Date(),
-        expiryDate: expiryDate, // This will be null for lifetime licenses
+        expiryDate: expiryDate,
     };
 
-    // 5. Create or update the license
     const license = await License.findOneAndUpdate({ owner: ownerId }, licenseData, {
         new: true,
         upsert: true,
     }).populate('tier');
+
+    try {
+        await sendEmail({
+            email: req.user.email,
+            subject: 'Your License Has Been Activated!',
+            html: generateLicensePurchaseEmail(req.user.fullName, tier.name, tier.price, expiryDate),
+        });
+    } catch (emailError) {
+        console.error(`License purchase email failed for ${req.user.email}:`, emailError.message);
+    }
 
     res.status(200).json(new ApiResponse(200, license, "License activated successfully!"));
 });
@@ -80,8 +90,29 @@ const getLicenseForUser = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, license, "User license details fetched successfully."));
 });
 
+const getRecommendedTier = asyncHandler(async (req, res) => {
+    const ownerId = req.user._id;
+    const venueCount = await Venue.countDocuments({ owner: ownerId });
+
+    let recommendedTier = await LicenseTier.findOne({
+        minHalls: { $lte: venueCount },
+        maxHalls: { $gte: venueCount },
+    }).sort({ price: 1 });
+
+    if (!recommendedTier) {
+        recommendedTier = await LicenseTier.findOne().sort({ maxHalls: -1 });
+        if (recommendedTier) {
+            return res.status(200).json(new ApiResponse(200, { recommendedTier, venueCount, message: "You exceed the limits of our standard tiers. Here is our highest available tier." }, "Recommendation generated."));
+        }
+        throw new ApiError(404, "No license tiers are available in the system.");
+    }
+
+    res.status(200).json(new ApiResponse(200, { recommendedTier, venueCount }, "Recommended tier fetched successfully."));
+});
+
 export { 
     purchaseOrRenewLicense, 
     getMyLicense, 
-    getLicenseForUser 
+    getLicenseForUser,
+    getRecommendedTier
 };

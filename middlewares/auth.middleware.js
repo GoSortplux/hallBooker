@@ -32,3 +32,10 @@ export const authorizeRoles = (...roles) => {
     next();
   };
 };
+
+export const isEmailVerified = (req, _, next) => {
+  if (!req.user.isEmailVerified) {
+    throw new ApiError(403, 'Your email address is not verified. Please verify your email to access this resource.');
+  }
+  next();
+};
