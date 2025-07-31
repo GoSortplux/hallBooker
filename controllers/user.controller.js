@@ -32,9 +32,30 @@ const deleteUser = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, {}, "User deleted successfully."));
 });
 
+const updateUserBankAccount = asyncHandler(async (req, res) => {
+    const { bankName, accountNumber, accountName } = req.body;
+    const userId = req.user._id;
+
+    // TODO: Implement bank account verification here
+    // For now, we will just save the details
+
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { bankName, accountNumber, accountName },
+        { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+        throw new ApiError(404, "User not found");
+    }
+
+    res.status(200).json(new ApiResponse(200, updatedUser, "Bank account details updated successfully."));
+});
+
 export { 
     getAllUsers, 
     getUserById, 
     updateUser, 
-    deleteUser 
+    deleteUser,
+    updateUserBankAccount
 };

@@ -14,6 +14,18 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'venue-owner', 'staff', 'super-admin'],
       default: 'user',
     },
+    bankName: {
+      type: String,
+      trim: true,
+    },
+    accountNumber: {
+      type: String,
+      trim: true,
+    },
+    accountName: {
+      type: String,
+      trim: true,
+    },
     refreshToken: { type: String },
     passwordResetToken: String,
     passwordResetExpires: Date,
