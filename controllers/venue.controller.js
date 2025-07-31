@@ -109,44 +109,6 @@ const updateVenueMedia = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, venue, "Venue media updated successfully"));
 });
 
-const deleteVenueMedia = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { imageUrls, videoUrls } = req.body;
-
-    if (!imageUrls?.length && !videoUrls?.length) {
-        throw new ApiError(400, "No media URLs provided for deletion.");
-    }
-
-    const venue = await Venue.findById(id);
-    if (!venue) {
-        throw new ApiError(404, "Venue not found");
-    }
-
-    // Authorization check
-    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
-        throw new ApiError(403, "You are not authorized to delete this venue's media.");
-    }
-
-    const deletionPromises = [];
-    if (imageUrls?.length) {
-        imageUrls.forEach(url => deletionPromises.push(deleteFromCloudinary(url)));
-    }
-    if (videoUrls?.length) {
-        videoUrls.forEach(url => deletionPromises.push(deleteFromCloudinary(url)));
-    }
-
-    await Promise.all(deletionPromises);
-
-    // Now, remove the URLs from the database
-    const updateResult = await Venue.findByIdAndUpdate(id, {
-        $pull: {
-            images: { $in: imageUrls || [] },
-            videos: { $in: videoUrls || [] }
-        }
-    }, { new: true });
-
-    return res.status(200).json(new ApiResponse(200, updateResult, "Venue media deleted successfully"));
-});
 
 
 const deleteVenueMedia = asyncHandler(async (req, res) => {
