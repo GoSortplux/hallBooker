@@ -26,4 +26,4 @@ router.route('/:id')
     .put(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, updateVenue)
     .delete(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, deleteVenue);
 
-export default router;
+export default router; 
