@@ -110,9 +110,55 @@ const getRecommendedTier = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, { recommendedTier, venueCount }, "Recommended tier fetched successfully."));
 });
 
+const upgradeLicense = asyncHandler(async (req, res) => {
+    const { newTierId } = req.body;
+    const ownerId = req.user._id;
+
+    if (!newTierId) {
+        throw new ApiError(400, "New license tier ID is required for an upgrade.");
+    }
+
+    const [currentLicense, newTier] = await Promise.all([
+        License.findOne({ owner: ownerId }).populate('tier'),
+        LicenseTier.findById(newTierId)
+    ]);
+
+    if (!currentLicense || currentLicense.status !== 'active') {
+        throw new ApiError(404, "No active license found to upgrade.");
+    }
+
+    if (!newTier) {
+        throw new ApiError(404, "The selected new license tier was not found.");
+    }
+
+    if (newTier.maxHalls <= currentLicense.tier.maxHalls) {
+        throw new ApiError(400, "The new tier must be an upgrade (i.e., have a higher hall capacity).");
+    }
+
+    // For simplicity, we'll just update the tier and price.
+    // A real-world scenario would involve prorated charges, etc.
+    currentLicense.tier = newTier._id;
+    currentLicense.price = newTier.price;
+    // Optionally, you might want to reset the expiry date based on the new tier's duration
+    if (newTier.durationInDays) {
+        const newExpiryDate = new Date();
+        newExpiryDate.setDate(newExpiryDate.getDate() + newTier.durationInDays);
+        currentLicense.expiryDate = newExpiryDate;
+    } else {
+        currentLicense.expiryDate = null; // For lifetime tiers
+    }
+
+    await currentLicense.save();
+
+    const updatedLicense = await License.findById(currentLicense._id).populate('tier');
+
+    res.status(200).json(new ApiResponse(200, updatedLicense, "License upgraded successfully!"));
+});
+
 export { 
     purchaseOrRenewLicense, 
     getMyLicense, 
     getLicenseForUser,
-    getRecommendedTier
+    getRecommendedTier,
+    upgradeLicense
 };
