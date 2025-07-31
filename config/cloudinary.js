@@ -28,4 +28,38 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOnCloudinary };
+const deleteFromCloudinary = async (publicUrl) => {
+  try {
+    if (!publicUrl) return null;
+
+    // A more robust way to extract the public_id and resource_type from the URL
+    const urlParts = publicUrl.split('/');
+
+    // Find the resource type ('image', 'video', etc.)
+    const resourceTypeIndex = urlParts.findIndex(part => ['image', 'video', 'raw'].includes(part));
+    const resourceType = resourceTypeIndex !== -1 ? urlParts[resourceTypeIndex] : 'image';
+
+    // Find the version number (e.g., 'v1234567890')
+    const versionIndex = urlParts.findIndex(part => part.startsWith('v') && !isNaN(part.substring(1)));
+    if (versionIndex === -1) {
+      throw new Error('Could not determine public_id from URL (no version component)');
+    }
+
+    // The public_id is everything after the version number, joined back together, with the extension removed.
+    const publicIdWithExt = urlParts.slice(versionIndex + 1).join('/');
+    const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
+
+    if (!publicId) {
+        throw new Error('Could not determine public_id from URL');
+    }
+
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    return result;
+  } catch (error) {
+    console.error(`Cloudinary deletion error for URL ${publicUrl}:`, error);
+    // We don't re-throw the error, but we log it. The controller will handle the outcome.
+    return null;
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary };
