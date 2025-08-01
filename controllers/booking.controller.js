@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
@@ -7,11 +8,33 @@ import sendEmail from '../services/email.service.js';
 
 const createBooking = asyncHandler(async (req, res) => {
   const { venueId, startTime, endTime, eventDetails, totalPrice } = req.body;
+
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
 
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
+
+  // Validation checks
+  if (newBookingStartTime >= newBookingEndTime) {
+    throw new ApiError(400, 'Start time must be before end time.');
+  }
+  if (newBookingStartTime < new Date()) {
+    throw new ApiError(400, 'Booking must be in the future.');
+  }
+  const bookingDuration = (newBookingEndTime - newBookingStartTime) / (1000 * 60); // in minutes
+  if (bookingDuration < 30) {
+    throw new ApiError(400, 'Booking must be for at least 30 minutes.');
+  }
+  if (bookingDuration > 7 * 24 * 60) {
+    throw new ApiError(400, 'Booking cannot be for longer than 7 days.');
+  }
+  if (venue.openingHour && newBookingStartTime.getHours() < venue.openingHour) {
+    throw new ApiError(400, `Venue is not open until ${venue.openingHour}:00.`);
+  }
+  if (venue.closingHour && newBookingEndTime.getHours() > venue.closingHour) {
+    throw new ApiError(400, `Venue closes at ${venue.closingHour}:00.`);
+  }
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
@@ -24,17 +47,23 @@ const createBooking = asyncHandler(async (req, res) => {
 
   if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
 
-  const booking = await Booking.create({
-    venue: venueId,
-    user: req.user._id,
-    startTime: newBookingStartTime,
-    endTime: newBookingEndTime,
-    eventDetails,
-    totalPrice,
-    paymentStatus: 'paid', // Assuming payment is confirmed
-  });
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
+    const bookingData = {
+      venue: venueId,
+      user: req.user._id,
+      startTime: newBookingStartTime,
+      endTime: newBookingEndTime,
+      eventDetails,
+      totalPrice,
+      paymentStatus: 'pending',
+    };
+
+    const newBookingArr = await Booking.create([bookingData], { session });
+    const newBooking = newBookingArr[0];
+
     await sendEmail({
       email: req.user.email,
       subject: 'Booking Confirmation - HallBooker',
@@ -45,11 +74,19 @@ const createBooking = asyncHandler(async (req, res) => {
       subject: 'New Booking Notification',
       html: `<h1>You have a new booking!</h1><p>Venue ${venue.name} has been booked by ${req.user.fullName}.</p>`,
     });
-  } catch (emailError) {
-      console.error(`Confirmation email failed for booking ${booking._id}:`, emailError.message);
-  }
 
-  res.status(201).json(new ApiResponse(201, booking, 'Booking created successfully!'));
+    await session.commitTransaction();
+    res.status(201).json(new ApiResponse(201, newBooking, 'Booking created successfully!'));
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Booking transaction failed:', error);
+    throw new ApiError(
+      500,
+      'Could not complete the booking process. Please try again later.'
+    );
+  } finally {
+    session.endSession();
+  }
 });
 
 const getMyBookings = asyncHandler(async (req, res) => {
