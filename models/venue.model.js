@@ -14,6 +14,8 @@ const venueSchema = new mongoose.Schema(
       dailyRate: { type: Number },
       hourlyRate: { type: Number },
     },
+    openingHour: { type: Number, min: 0, max: 23 },
+    closingHour: { type: Number, min: 0, max: 23 },
     averageRating: {
       type: Number,
       default: 0,
