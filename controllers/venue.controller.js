@@ -109,8 +109,6 @@ const updateVenueMedia = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, venue, "Venue media updated successfully"));
 });
 
-
-
 const deleteVenueMedia = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { imageUrls, videoUrls } = req.body;
