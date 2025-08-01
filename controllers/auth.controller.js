@@ -15,7 +15,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
   }
 
   if (user.isEmailVerified) {
-    throw new ApiError(400, 'Email is already verified.');
+    throw new ApiError(400, 'Email is already verified.'); 
   }
 
   if (user.emailVerificationToken !== token || user.emailVerificationExpires < Date.now()) {
