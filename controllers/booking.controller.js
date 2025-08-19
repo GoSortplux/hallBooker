@@ -12,8 +12,8 @@ const createBooking = asyncHandler(async (req, res) => {
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
 
-  if (!venue.pricing || (!venue.pricing.hourlyRate && !venue.pricing.dailyRate)) {
-    throw new ApiError(400, 'Venue does not have pricing information.');
+  if (!venue.pricing || (typeof venue.pricing !== 'object') || (!venue.pricing.hourlyRate && !venue.pricing.dailyRate)) {
+    throw new ApiError(400, 'Venue does not have valid pricing information. Pricing should be an object with hourlyRate and/or dailyRate.');
   }
 
   const newBookingStartTime = new Date(startTime);
