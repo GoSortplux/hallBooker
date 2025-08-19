@@ -7,10 +7,14 @@ import { Venue } from '../models/venue.model.js';
 import sendEmail from '../services/email.service.js';
 
 const createBooking = asyncHandler(async (req, res) => {
-  const { venueId, startTime, endTime, eventDetails, totalPrice } = req.body;
+  const { venueId, startTime, endTime, eventDetails } = req.body;
 
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
+
+  if (!venue.pricing || (!venue.pricing.hourlyRate && !venue.pricing.dailyRate)) {
+    throw new ApiError(400, 'Venue does not have pricing information.');
+  }
 
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
@@ -22,7 +26,19 @@ const createBooking = asyncHandler(async (req, res) => {
   if (newBookingStartTime < new Date()) {
     throw new ApiError(400, 'Booking must be in the future.');
   }
-  const bookingDuration = (newBookingEndTime - newBookingStartTime) / (1000 * 60); // in minutes
+  const bookingDurationHours = (newBookingEndTime - newBookingStartTime) / (1000 * 60 * 60); // in hours
+
+  let totalPrice;
+  if (venue.pricing.dailyRate && bookingDurationHours >= 24) {
+    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
+    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
+  } else if (venue.pricing.hourlyRate) {
+    totalPrice = bookingDurationHours * venue.pricing.hourlyRate;
+  } else {
+    // Default to daily rate if only daily rate is available
+    totalPrice = venue.pricing.dailyRate;
+  }
+
   if (bookingDuration < 30) {
     throw new ApiError(400, 'Booking must be for at least 30 minutes.');
   }
