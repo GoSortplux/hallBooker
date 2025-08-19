@@ -13,6 +13,10 @@ const createVenue = asyncHandler(async (req, res) => {
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Venue owner must be specified.");
 
+    // Validate pricing
+    if (!pricing || (typeof pricing !== 'object') || (!pricing.dailyRate && !pricing.hourlyRate)) {
+        throw new ApiError(400, 'Pricing information is required. Please provide at least a daily or hourly rate.');
+    }
     
     const venue = await Venue.create({ name, location, capacity, description, pricing, owner: resolvedOwnerId });
 
