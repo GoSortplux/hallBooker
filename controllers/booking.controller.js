@@ -28,23 +28,31 @@ const createBooking = asyncHandler(async (req, res) => {
   }
   const bookingDurationHours = (newBookingEndTime - newBookingStartTime) / (1000 * 60 * 60); // in hours
 
+  // Corrected duration validation
+  if (bookingDurationHours * 60 < 30) { // bookingDurationHours is in hours, so convert to minutes for comparison
+    throw new ApiError(400, 'Booking must be for at least 30 minutes.');
+  }
+  if (bookingDurationHours > 7 * 24) { // bookingDurationHours is in hours
+    throw new ApiError(400, 'Booking cannot be for longer than 7 days.');
+  }
+
   let totalPrice;
-  if (venue.pricing.dailyRate && bookingDurationHours >= 24) {
+  if (venue.pricing.dailyRate && !venue.pricing.hourlyRate) {
+    // If only daily rate is available, booking must be for at least a full day
+    if (bookingDurationHours < 24) {
+      throw new ApiError(400, 'This venue only supports daily bookings. Minimum booking is 24 hours.');
+    }
     const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
     totalPrice = bookingDurationDays * venue.pricing.dailyRate;
   } else if (venue.pricing.hourlyRate) {
+    // If hourly rate is available, use it for any duration
     totalPrice = bookingDurationHours * venue.pricing.hourlyRate;
   } else {
-    // Default to daily rate if only daily rate is available
-    totalPrice = venue.pricing.dailyRate;
+    // This case should ideally not be reached due to the initial check, but as a fallback:
+    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
+    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
   }
 
-  if (bookingDuration < 30) {
-    throw new ApiError(400, 'Booking must be for at least 30 minutes.');
-  }
-  if (bookingDuration > 7 * 24 * 60) {
-    throw new ApiError(400, 'Booking cannot be for longer than 7 days.');
-  }
   if (venue.openingHour && newBookingStartTime.getHours() < venue.openingHour) {
     throw new ApiError(400, `Venue is not open until ${venue.openingHour}:00.`);
   }
