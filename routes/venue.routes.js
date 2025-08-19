@@ -1,27 +1,31 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js'; // Import license middleware
-import { 
-    createVenue, 
-    getAllVenues, 
-    getVenueById, 
-    updateVenue, 
+import {
+    createVenue,
+    getAllVenues,
+    getVenueById,
+    updateVenue,
     deleteVenue,
     updateVenueMedia,
-    deleteVenueMedia
+    deleteVenueMedia,
+    getVenuesByOwner
 } from '../controllers/venue.controller.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
 const router = Router();
 
-// Public routes are unaffected
+// Public routes
 router.route('/').get(getAllVenues);
 router.route('/:id').get(getVenueById);
 
-// Apply protection to all subsequent routes in this file
-router.use(verifyJWT); 
+// Protected routes
+router.use(verifyJWT);
 
-// Venue Owner & Admin routes now require a valid license
+// Route for venue owners to get their own venues
+router.route('/by-owner').get(authorizeRoles('venue-owner'), getVenuesByOwner);
+
+// Venue Owner & Super Admin routes
 router.route('/')
     .post(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, createVenue);
 

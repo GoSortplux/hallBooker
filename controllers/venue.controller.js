@@ -148,12 +148,18 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, updateResult, "Venue media deleted successfully"));
 });
 
-export { 
-    createVenue, 
-    getAllVenues, 
-    getVenueById, 
-    updateVenue, 
+const getVenuesByOwner = asyncHandler(async (req, res) => {
+    const venues = await Venue.find({ owner: req.user._id }).populate('owner', 'fullName');
+    return res.status(200).json(new ApiResponse(200, venues, "Venues fetched successfully"));
+});
+
+export {
+    createVenue,
+    getAllVenues,
+    getVenueById,
+    updateVenue,
     deleteVenue,
     updateVenueMedia,
-    deleteVenueMedia
+    deleteVenueMedia,
+    getVenuesByOwner
 };
