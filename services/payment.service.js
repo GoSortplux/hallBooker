@@ -21,6 +21,10 @@ const getAuthToken = async () => {
         });
         return response.data.responseBody.accessToken;
     } catch (error) {
+        if (error.code === 'ECONNRESET') {
+            console.error("Connection to Monnify was reset. This might be a temporary issue with the Monnify sandbox or a network problem.", error.message);
+            throw new ApiError(503, "Could not connect to the payment gateway. Please try again later.");
+        }
         console.error("Error from Monnify (getAuthToken):", error.response ? error.response.data : error.message);
         throw new ApiError(500, 'Failed to authenticate with Monnify');
     }
