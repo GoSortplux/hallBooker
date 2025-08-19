@@ -6,7 +6,7 @@ import { ApiError } from '../utils/apiError.js';
 
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(bookingId).populate('venue', 'name');
 
     if (!booking) {
         throw new ApiError(404, 'Booking not found');
