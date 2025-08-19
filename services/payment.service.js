@@ -21,6 +21,7 @@ const getAuthToken = async () => {
         });
         return response.data.responseBody.accessToken;
     } catch (error) {
+        console.error("Error from Monnify (getAuthToken):", error.response ? error.response.data : error.message);
         throw new ApiError(500, 'Failed to authenticate with Monnify');
     }
 };
@@ -35,7 +36,8 @@ const initializeTransaction = async (data) => {
         });
         return response.data;
     } catch (error) {
-        throw new ApiError(500, error.response.data.responseMessage || 'Failed to initialize transaction');
+        console.error("Error from Monnify (initializeTransaction):", error.response ? error.response.data : error.message);
+        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to initialize transaction');
     }
 };
 
@@ -49,7 +51,8 @@ const verifyTransaction = async (transactionReference) => {
         });
         return response.data;
     } catch (error) {
-        throw new ApiError(500, error.response.data.responseMessage || 'Failed to verify transaction');
+        console.error("Error from Monnify (verifyTransaction):", error.response ? error.response.data : error.message);
+        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to verify transaction');
     }
 };
 
