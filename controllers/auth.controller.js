@@ -40,6 +40,34 @@ const verifyEmail = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, {}, 'Email verified successfully.'));
 });
 
+const resendVerificationEmail = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, 'User not found.');
+  }
+
+  if (user.isEmailVerified) {
+    throw new ApiError(400, 'Email is already verified.');
+  }
+
+  const verificationToken = user.generateEmailVerificationToken();
+  await user.save();
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Verify Your Email Address',
+      html: generateVerificationEmail(user.fullName, verificationToken),
+    });
+  } catch (emailError) {
+    console.error(`Verification email failed for ${user.email}:`, emailError.message);
+    throw new ApiError(500, "There was an error sending the email. Try again later.");
+  }
+
+  res.status(200).json(new ApiResponse(200, {}, 'Verification email resent successfully.'));
+});
+
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, password, role } = req.body;
 
@@ -149,5 +177,6 @@ export {
   loginUser, 
   forgotPassword, 
   resetPassword,
-  verifyEmail
+  verifyEmail,
+  resendVerificationEmail
 };
