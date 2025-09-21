@@ -49,18 +49,31 @@ const initializeTransaction = async (data) => {
     }
 };
 
-const verifyTransaction = async (transactionReference) => {
+const verifyTransaction = async (reference) => {
     try {
         const token = await getAuthToken();
-        const response = await monnify.get(`/transactions/${transactionReference}`, {
+        // First, try to verify using the reference as a transactionReference
+        const response = await monnify.get(`/transactions/${reference}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         return response.data;
     } catch (error) {
-        console.error("Error from Monnify (verifyTransaction):", error.response ? error.response.data : error.message);
-        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to verify transaction');
+        // If the first attempt fails, try verifying using the reference as a paymentReference
+        console.log("Failed to verify with transaction reference, trying with payment reference");
+        try {
+            const token = await getAuthToken();
+            const response = await monnify.get(`/transactions?paymentReference=${reference}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (secondError) {
+            console.error("Error from Monnify (verifyTransaction):", secondError.response ? secondError.response.data : secondError.message);
+            throw new ApiError(500, (secondError.response && secondError.response.data && secondError.response.data.responseMessage) || 'Failed to verify transaction');
+        }
     }
 };
 
