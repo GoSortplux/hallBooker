@@ -34,7 +34,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
     const response = await verifyTransaction(transactionReference);
 
     if (response.responseBody.paymentStatus === 'PAID') {
-        const booking = await Booking.findById(transactionReference);
+        const booking = await Booking.findById(response.responseBody.paymentReference);
         if (booking) {
             booking.status = 'confirmed';
             await booking.save();
