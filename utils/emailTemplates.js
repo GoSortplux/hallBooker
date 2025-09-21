@@ -1,3 +1,5 @@
+import { formatDuration } from './time.js';
+
 const generateVerificationEmail = (name, token) => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -29,25 +31,55 @@ const generateWelcomeEmail = (name) => {
 export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail };
 
 const generateBookingConfirmationEmail = (booking) => {
+    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+    const formattedStartTime = new Date(booking.startTime).toLocaleTimeString('en-US', timeOptions);
+    const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
+    const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+
     return `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #333;">Booking Confirmation</h2>
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #0056b3; text-align: center;">Booking Confirmation</h2>
         <p>Hi ${booking.user.fullName},</p>
-        <p>Your booking has been confirmed successfully! Below are your booking details.</p>
+        <p>Your booking has been confirmed successfully! We are pleased to provide you with the details of your reservation below.</p>
 
-        <h3>Booking Summary:</h3>
-        <ul>
-            <li><strong>Booking ID:</strong> ${booking._id}</li>
-            <li><strong>Venue:</strong> ${booking.venue.name}</li>
-            <li><strong>Date:</strong> ${new Date(booking.bookingDate).toLocaleDateString()}</li>
-            <li><strong>Time:</strong> ${booking.startTime} - ${booking.endTime}</li>
-            <li><strong>Total Price:</strong> NGN ${booking.totalPrice}</li>
-        </ul>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Booking Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Booking ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking._id}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.startTime).toLocaleDateString('en-GB')}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedStartTime} - ${formattedEndTime}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
+                </tr>
+            </tbody>
+        </table>
 
-        <p>Please note that your access to the hall will expire at the end of your booking period.</p>
-        <p>We have also attached a PDF receipt for your payment and booking details for your records.</p>
-        <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>
+        <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your payment and booking details for your records.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
   `;
 }
