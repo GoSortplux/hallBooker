@@ -1,7 +1,5 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { jsPDF } = require('jspdf');
-require('jspdf-autotable');
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const generatePdfReceipt = (booking) => {
     const doc = new jsPDF();
@@ -30,7 +28,7 @@ const generatePdfReceipt = (booking) => {
         `NGN ${booking.totalPrice}`
     ]];
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: 95,
         head: [tableColumn],
         body: tableRows,
