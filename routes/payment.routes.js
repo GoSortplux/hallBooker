@@ -4,9 +4,7 @@ import { makePayment, verifyPayment } from '../controllers/payment.controller.js
 
 const router = Router();
 
-router.use(verifyJWT);
-
-router.route('/initialize/:bookingId').post(makePayment);
+router.route('/initialize/:bookingId').post(verifyJWT, makePayment);
 router.route('/verify').get(verifyPayment);
 router.route('/verify/:transactionReference').get(verifyPayment);
 
