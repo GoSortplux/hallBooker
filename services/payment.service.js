@@ -31,6 +31,10 @@ const getAuthToken = async () => {
 };
 
 const initializeTransaction = async (data) => {
+    if (!data.contractCode) {
+        throw new ApiError(400, 'contractCode is required to initialize a transaction.');
+    }
+
     try {
         const token = await getAuthToken();
         const response = await monnify.post('/merchant/transactions/init-transaction', data, {
