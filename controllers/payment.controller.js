@@ -16,6 +16,10 @@ const makePayment = asyncHandler(async (req, res) => {
         throw new ApiError(500, 'MONNIFY_CONTRACT_CODE is not defined in environment variables.');
     }
 
+    const redirectUrl = process.env.FRONTEND_URL
+        ? `${process.env.FRONTEND_URL}/bookings`
+        : `${req.protocol}://${req.get('host')}/api/v1/payments/verify`;
+
     const data = {
         amount: booking.totalPrice,
         customerName: req.user.fullName,
@@ -25,7 +29,7 @@ const makePayment = asyncHandler(async (req, res) => {
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
-         ...(process.env.FRONTEND_URL && { redirectUrl: `${process.env.FRONTEND_URL}/bookings` })
+        redirectUrl: redirectUrl
     };
 
     const response = await initializeTransaction(data);
@@ -34,8 +38,29 @@ const makePayment = asyncHandler(async (req, res) => {
 });
 
 const verifyPayment = asyncHandler(async (req, res) => {
-    const { transactionReference } = req.params;
-    const response = await verifyTransaction(transactionReference);
+    const { paymentReference } = req.query;
+
+    if (!paymentReference) {
+        // This case handles direct calls to /verify without a reference,
+        // which might happen if a user navigates there by mistake.
+        const { transactionReference } = req.params;
+        if (!transactionReference) {
+             throw new ApiError(400, 'Transaction reference or payment reference is required');
+        }
+
+        const response = await verifyTransaction(transactionReference);
+         if (response.responseBody.paymentStatus === 'PAID') {
+            const booking = await Booking.findById(response.responseBody.paymentReference);
+            if (booking) {
+                booking.status = 'confirmed';
+                await booking.save();
+            }
+        }
+         const redirectUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/bookings` : null;
+        return res.status(200).json(new ApiResponse(200, { ...response.responseBody, redirectUrl }, 'Transaction verified successfully'));
+    }
+
+    const response = await verifyTransaction(paymentReference);
 
     if (response.responseBody.paymentStatus === 'PAID') {
         const booking = await Booking.findById(response.responseBody.paymentReference);
@@ -45,9 +70,33 @@ const verifyPayment = asyncHandler(async (req, res) => {
         }
     }
 
-    const redirectUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/bookings` : null;
+    // If there is no frontend URL, send a simple HTML success page.
+    if (!process.env.FRONTEND_URL) {
+        return res.status(200).send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Payment Successful</title>
+                <style>
+                    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
+                    .container { text-align: center; padding: 40px; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+                    h1 { color: #4CAF50; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Payment Successful</h1>
+                    <p>Your payment has been successfully processed. You can now close this page.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
 
-    res.status(200).json(new ApiResponse(200, { ...response.responseBody, redirectUrl }, 'Transaction verified successfully'));
+    // If there is a frontend URL, redirect back to the bookings page.
+    res.redirect(`${process.env.FRONTEND_URL}/bookings`);
 });
 
 export { makePayment, verifyPayment };
