@@ -64,7 +64,7 @@ const verifyTransaction = async (reference) => {
         console.log("Failed to verify with transaction reference, trying with payment reference");
         try {
             const token = await getAuthToken();
-            const response = await monnify.get(`/transactions?paymentReference=${reference}`, {
+            const response = await monnify.get(`/transactions/by-payment-reference/${reference}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
