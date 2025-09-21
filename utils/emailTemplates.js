@@ -28,15 +28,24 @@ const generateWelcomeEmail = (name) => {
 
 export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail };
 
-const generateBookingConfirmationEmail = (name, bookingId) => {
+const generateBookingConfirmationEmail = (booking) => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #333;">Booking Confirmation</h2>
-        <p>Hi ${name},</p>
-        <p>Your booking has been confirmed successfully!</p>
-        <p>Your Booking ID is: <strong>${bookingId}</strong></p>
+        <p>Hi ${booking.user.fullName},</p>
+        <p>Your booking has been confirmed successfully! Below are your booking details.</p>
+
+        <h3>Booking Summary:</h3>
+        <ul>
+            <li><strong>Booking ID:</strong> ${booking._id}</li>
+            <li><strong>Venue:</strong> ${booking.venue.name}</li>
+            <li><strong>Date:</strong> ${new Date(booking.bookingDate).toLocaleDateString()}</li>
+            <li><strong>Time:</strong> ${booking.startTime} - ${booking.endTime}</li>
+            <li><strong>Total Price:</strong> NGN ${booking.totalPrice}</li>
+        </ul>
+
         <p>Please note that your access to the hall will expire at the end of your booking period.</p>
-        <p>We have attached a PDF receipt for your payment and booking details.</p>
+        <p>We have also attached a PDF receipt for your payment and booking details for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
