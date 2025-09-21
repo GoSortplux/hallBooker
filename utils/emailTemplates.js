@@ -26,7 +26,22 @@ const generateWelcomeEmail = (name) => {
   `;
 }
 
-export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail };
+export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail };
+
+const generateBookingConfirmationEmail = (name, bookingId) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Booking Confirmation</h2>
+        <p>Hi ${name},</p>
+        <p>Your booking has been confirmed successfully!</p>
+        <p>Your Booking ID is: <strong>${bookingId}</strong></p>
+        <p>Please note that your access to the hall will expire at the end of your booking period.</p>
+        <p>We have attached a PDF receipt for your payment and booking details.</p>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
 
 const generateVenueCreationEmail = (name, venueName, venueLocation) => {
     return `

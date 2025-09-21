@@ -3,6 +3,9 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 import { Booking } from '../models/booking.model.js';
 import { ApiError } from '../utils/apiError.js';
+import sendEmail from '../services/email.service.js';
+import { generateBookingConfirmationEmail } from '../utils/emailTemplates.js';
+import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
@@ -63,11 +66,28 @@ const verifyPayment = asyncHandler(async (req, res) => {
     const response = await verifyTransaction(paymentReference);
 
     if (response.responseBody.paymentStatus === 'PAID') {
-        const booking = await Booking.findById(response.responseBody.paymentReference);
+        const booking = await Booking.findById(response.responseBody.paymentReference).populate('user').populate('venue');
         if (booking) {
             booking.status = 'confirmed';
             booking.paymentStatus = 'paid';
             await booking.save();
+
+            // Generate PDF receipt
+            const pdfBuffer = generatePdfReceipt(booking);
+
+            // Send confirmation email
+            await sendEmail({
+                email: booking.user.email,
+                subject: 'Booking Confirmation and Receipt',
+                html: generateBookingConfirmationEmail(booking.user.fullName, booking._id),
+                attachments: [
+                    {
+                        filename: `receipt-${booking._id}.pdf`,
+                        content: pdfBuffer,
+                        contentType: 'application/pdf',
+                    },
+                ],
+            });
         }
     }
 
