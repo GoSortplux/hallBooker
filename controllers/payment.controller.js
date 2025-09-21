@@ -12,6 +12,10 @@ const makePayment = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Booking not found');
     }
 
+    if (!process.env.MONNIFY_CONTRACT_CODE) {
+        throw new ApiError(500, 'MONNIFY_CONTRACT_CODE is not defined in environment variables.');
+    }
+
     const data = {
         amount: booking.totalPrice,
         customerName: req.user.fullName,
