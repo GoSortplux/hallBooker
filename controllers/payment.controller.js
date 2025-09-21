@@ -45,7 +45,9 @@ const verifyPayment = asyncHandler(async (req, res) => {
         }
     }
 
-    res.status(200).json(new ApiResponse(200, response.responseBody, 'Transaction verified successfully'));
+    const redirectUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/bookings` : null;
+
+    res.status(200).json(new ApiResponse(200, { ...response.responseBody, redirectUrl }, 'Transaction verified successfully'));
 });
 
 export { makePayment, verifyPayment };
