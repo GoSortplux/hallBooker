@@ -1,5 +1,7 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { jsPDF } = require('jspdf');
+require('jspdf-autotable');
 
 const generatePdfReceipt = (booking) => {
     const doc = new jsPDF();
