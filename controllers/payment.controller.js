@@ -20,8 +20,8 @@ const makePayment = asyncHandler(async (req, res) => {
         paymentDescription: `Payment for booking of ${booking.venue.name}`,
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
-        redirectUrl: `${process.env.FRONTEND_URL}/bookings`,
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"]
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+         ...(process.env.FRONTEND_URL && { redirectUrl: `${process.env.FRONTEND_URL}/bookings` })
     };
 
     const response = await initializeTransaction(data);
