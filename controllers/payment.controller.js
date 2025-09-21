@@ -81,7 +81,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
             await sendEmail({
                 email: booking.user.email,
                 subject: 'Booking Confirmation and Receipt',
-                html: generateBookingConfirmationEmail(booking.user.fullName, booking._id),
+                html: generateBookingConfirmationEmail(booking),
                 attachments: [
                     {
                         filename: `receipt-${booking._id}.pdf`,
