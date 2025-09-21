@@ -72,8 +72,10 @@ const verifyPayment = asyncHandler(async (req, res) => {
             booking.paymentStatus = 'paid';
             await booking.save();
 
-            // Generate PDF receipt
-            const pdfBuffer = generatePdfReceipt(booking);
+            // Generate PDF receipt as an ArrayBuffer
+            const pdfArrayBuffer = generatePdfReceipt(booking);
+            // Convert to a Node.js Buffer for nodemailer
+            const pdfBuffer = Buffer.from(pdfArrayBuffer);
 
             // Send confirmation email
             await sendEmail({
