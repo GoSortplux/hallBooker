@@ -75,8 +75,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
         const pdfBuffer = Buffer.from(generatePdfReceipt(booking));
         await sendEmail({
             email: booking.user.email,
-            subject: 'Booking Confirmation and Receipt',
-            html: generateBookingConfirmationEmail(booking),
+            subject: 'Payment Confirmation and Receipt',
+            html: generatePaymentConfirmationEmail(booking),
             attachments: [{ filename: `receipt-${booking._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
         });
         return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
