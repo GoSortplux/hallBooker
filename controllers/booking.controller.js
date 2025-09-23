@@ -6,6 +6,7 @@ import { Booking } from '../models/booking.model.js';
 import { Venue } from '../models/venue.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner } from '../utils/emailTemplates.js';
+import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 
 const createBooking = asyncHandler(async (req, res) => {
   const { venueId, startTime, endTime, eventDetails } = req.body;
@@ -91,10 +92,17 @@ const createBooking = asyncHandler(async (req, res) => {
 
     const bookingForEmail = { ...newBooking.toObject(), user: req.user, venue: venue };
 
+    const pdfReceipt = generatePdfReceipt(bookingForEmail);
+
     await sendEmail({
       email: req.user.email,
       subject: 'Booking Confirmation - HallBooker',
       html: generateBookingConfirmationEmail(bookingForEmail),
+      attachments: [{
+        filename: `receipt-${bookingForEmail._id}.pdf`,
+        content: Buffer.from(pdfReceipt),
+        contentType: 'application/pdf'
+      }]
     });
     await sendEmail({
       email: venue.owner.email,
