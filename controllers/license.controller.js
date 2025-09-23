@@ -42,7 +42,8 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const redirectUrl = `${process.env.BASE_URL}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const redirectUrl = `${baseUrl}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
 
     const paymentData = {
         amount: tier.price,
@@ -103,7 +104,8 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const redirectUrl = `${process.env.BASE_URL}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const redirectUrl = `${baseUrl}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
 
     const paymentData = {
         amount: newTier.price,
