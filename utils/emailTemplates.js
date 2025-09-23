@@ -88,6 +88,12 @@ const generateBookingConfirmationEmail = (booking) => {
             </tbody>
         </table>
 
+        <div style="text-align: center; margin: 20px 0;">
+            <!-- TODO: Replace the href with your actual frontend payment URL -->
+            <a href="https://your-frontend-app.com/payment/${booking._id}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Now</a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">Alternatively, you can log in to your dashboard to complete the payment.</p>
         <p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>
         <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your payment and booking details for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
