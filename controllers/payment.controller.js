@@ -4,7 +4,7 @@ import { initializeTransaction, verifyTransaction } from '../services/payment.se
 import { Booking } from '../models/booking.model.js';
 import { ApiError } from '../utils/apiError.js';
 import sendEmail from '../services/email.service.js';
-import { generateBookingConfirmationEmail } from '../utils/emailTemplates.js';
+import { generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 
 const makePayment = asyncHandler(async (req, res) => {
@@ -77,11 +77,11 @@ const verifyPayment = asyncHandler(async (req, res) => {
             // Convert to a Node.js Buffer for nodemailer
             const pdfBuffer = Buffer.from(pdfArrayBuffer);
 
-            // Send confirmation email
+            // Send payment confirmation email
             await sendEmail({
                 email: booking.user.email,
-                subject: 'Booking Confirmation and Receipt',
-                html: generateBookingConfirmationEmail(booking),
+                subject: 'Payment Confirmation and Receipt',
+                html: generatePaymentConfirmationEmail(booking),
                 attachments: [
                     {
                         filename: `receipt-${booking._id}.pdf`,
