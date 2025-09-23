@@ -4,9 +4,12 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { LicenseTier } from '../models/licenseTier.model.js';
 import { Venue } from '../models/venue.model.js';
+import { User } from '../models/user.model.js';
 import mongoose from 'mongoose';
 import sendEmail from '../services/email.service.js';
-import { generateLicensePurchaseEmail } from '../utils/emailTemplates.js';
+import { generateAdminLicenseNotificationEmail, generateSubscriptionConfirmationEmail } from '../utils/emailTemplates.js';
+import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
+
 
 const purchaseSubscription = asyncHandler(async (req, res) => {
     const ownerId = req.user._id;
@@ -31,38 +34,31 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${tier.maxHalls}).`);
     }
 
-    // Mark old subscriptions as expired or cancelled
-    if (currentSubscription) {
-        currentSubscription.status = 'expired';
-        await currentSubscription.save();
-    }
-
-    let expiryDate = null;
-    if (tier.durationInDays) {
-        expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + tier.durationInDays);
-    }
-
     const newSubscription = await SubscriptionHistory.create({
         owner: ownerId,
         tier: tier._id,
         price: tier.price,
-        status: 'active',
+        status: 'pending',
         purchaseDate: new Date(),
-        expiryDate: expiryDate,
     });
 
-    try {
-        await sendEmail({
-            email: req.user.email,
-            subject: 'Your New Subscription is Active!',
-            html: generateLicensePurchaseEmail(req.user.fullName, tier.name, tier.price, expiryDate),
-        });
-    } catch (emailError) {
-        console.error(`Subscription purchase email failed for ${req.user.email}:`, emailError.message);
-    }
+    const redirectUrl = `${process.env.BASE_URL}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
 
-    res.status(201).json(new ApiResponse(201, newSubscription, "Subscription purchased successfully!"));
+    const paymentData = {
+        amount: tier.price,
+        customerName: req.user.fullName,
+        customerEmail: req.user.email,
+        paymentReference: newSubscription._id.toString(),
+        paymentDescription: `Subscription for ${tier.name}`,
+        currencyCode: 'NGN',
+        contractCode: process.env.MONNIFY_CONTRACT_CODE,
+        redirectUrl: redirectUrl,
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+    };
+
+    const paymentResponse = await initializeTransaction(paymentData);
+
+    res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, "Payment initialized successfully."));
 });
 
 const upgradeSubscription = asyncHandler(async (req, res) => {
@@ -86,30 +82,44 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(404, "The selected new license tier was not found.");
     }
 
-    if (newTier.maxHalls <= currentSubscription.tier.maxHalls) {
-        throw new ApiError(400, "The new tier must be an upgrade.");
+    if (newTier.price <= currentSubscription.tier.price) {
+        throw new ApiError(400, "The new tier must be an upgrade. Choose a tier with a higher price.");
+    }
+
+    const venueCount = await Venue.countDocuments({ owner: ownerId });
+    if (venueCount > newTier.maxHalls) {
+        throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${newTier.maxHalls}).`);
     }
 
     // Mark the old subscription as 'upgraded'
     currentSubscription.status = 'upgraded';
     await currentSubscription.save();
 
-    let expiryDate = null;
-    if (newTier.durationInDays) {
-        expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + newTier.durationInDays);
-    }
-
     const newSubscription = await SubscriptionHistory.create({
         owner: ownerId,
         tier: newTier._id,
         price: newTier.price,
-        status: 'active',
+        status: 'pending',
         purchaseDate: new Date(),
-        expiryDate: expiryDate,
     });
 
-    res.status(200).json(new ApiResponse(200, newSubscription, "Subscription upgraded successfully!"));
+    const redirectUrl = `${process.env.BASE_URL}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+
+    const paymentData = {
+        amount: newTier.price,
+        customerName: req.user.fullName,
+        customerEmail: req.user.email,
+        paymentReference: newSubscription._id.toString(),
+        paymentDescription: `Upgrade to ${newTier.name}`,
+        currencyCode: 'NGN',
+        contractCode: process.env.MONNIFY_CONTRACT_CODE,
+        redirectUrl: redirectUrl,
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+    };
+
+    const paymentResponse = await initializeTransaction(paymentData);
+
+    res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, "Upgrade payment initialized successfully."));
 });
 
 const getMyCurrentSubscription = asyncHandler(async (req, res) => {

@@ -28,6 +28,54 @@ const generateWelcomeEmail = (name) => {
   `;
 }
 
+const generateSubscriptionExpiryWarningEmail = (userName, tierName, expiryDate) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Your Subscription is Expiring Soon</h2>
+        <p>Hi ${userName},</p>
+        <p>This is a reminder that your subscription for the <strong>${tierName}</strong> plan is expiring on <strong>${new Date(expiryDate).toDateString()}</strong>.</p>
+        <p>To avoid any interruption in service and to keep your halls active, please renew your subscription at your earliest convenience.</p>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
+
+export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generateSubscriptionConfirmationEmail, generateAdminLicenseNotificationEmail, generateSubscriptionExpiryWarningEmail };
+
+const generateSubscriptionConfirmationEmail = (userName, tierName, price, expiryDate) => {
+    const expiryString = expiryDate ? `Your subscription will renew on ${new Date(expiryDate).toDateString()}.` : 'You have a lifetime subscription.';
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Subscription Confirmation</h2>
+        <p>Hi ${userName},</p>
+        <p>Your payment has been successfully processed and your subscription is now active.</p>
+        <h3>Subscription Details:</h3>
+        <ul>
+            <li><strong>Plan:</strong> ${tierName}</li>
+            <li><strong>Amount Paid:</strong> NGN ${price.toLocaleString()}</li>
+        </ul>
+        <p>${expiryString}</p>
+        <p>Thank you for choosing HallBooker.</p>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
+
+const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">New Subscription Purchase</h2>
+        <p>A new subscription has been purchased on HallBooker.</p>
+        <h3>Transaction Details:</h3>
+        <ul>
+            <li><strong>Hall Owner:</strong> ${ownerName}</li>
+            <li><strong>Subscription Plan:</strong> ${tierName}</li>
+            <li><strong>Amount Paid:</strong> NGN ${price.toLocaleString()}</li>
+        </ul>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
 export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail };
 
 const generatePaymentConfirmationEmail = (booking) => {

@@ -2,8 +2,16 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 import { Booking } from '../models/booking.model.js';
+import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
+import { Venue } from '../models/venue.model.js';
+import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
 import sendEmail from '../services/email.service.js';
+import {
+    generateBookingConfirmationEmail,
+    generateSubscriptionConfirmationEmail,
+    generateAdminLicenseNotificationEmail
+} from '../utils/emailTemplates.js';
 import { generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 
@@ -44,38 +52,45 @@ const verifyPayment = asyncHandler(async (req, res) => {
     const { paymentReference } = req.query;
 
     if (!paymentReference) {
-        // This case handles direct calls to /verify without a reference,
-        // which might happen if a user navigates there by mistake.
-        const { transactionReference } = req.params;
-        if (!transactionReference) {
-             throw new ApiError(400, 'Transaction reference or payment reference is required');
-        }
-
-        const response = await verifyTransaction(transactionReference);
-         if (response.responseBody.paymentStatus === 'PAID') {
-            const booking = await Booking.findById(response.responseBody.paymentReference);
-            if (booking) {
-                booking.status = 'confirmed';
-                await booking.save();
-            }
-        }
-         const redirectUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/bookings` : null;
-        return res.status(200).json(new ApiResponse(200, { ...response.responseBody, redirectUrl }, 'Transaction verified successfully'));
+        throw new ApiError(400, 'Payment reference is required');
     }
 
     const response = await verifyTransaction(paymentReference);
+    const paymentStatus = response.responseBody.paymentStatus;
 
-    if (response.responseBody.paymentStatus === 'PAID') {
-        const booking = await Booking.findById(response.responseBody.paymentReference).populate('user').populate('venue');
-        if (booking) {
-            booking.status = 'confirmed';
-            booking.paymentStatus = 'paid';
-            await booking.save();
+    if (paymentStatus !== 'PAID') {
+        // Redirect to a failure page or handle accordingly
+        return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+    }
 
-            // Generate PDF receipt as an ArrayBuffer
-            const pdfArrayBuffer = generatePdfReceipt(booking);
-            // Convert to a Node.js Buffer for nodemailer
-            const pdfBuffer = Buffer.from(pdfArrayBuffer);
+    const { paymentReference: refFromMonnify, transactionReference } = response.responseBody;
+
+    // Attempt to find a booking first
+    const booking = await Booking.findById(refFromMonnify).populate('user').populate('venue');
+    if (booking) {
+        booking.status = 'confirmed';
+        booking.paymentStatus = 'paid';
+        await booking.save();
+
+        const pdfBuffer = Buffer.from(generatePdfReceipt(booking));
+        await sendEmail({
+            email: booking.user.email,
+            subject: 'Booking Confirmation and Receipt',
+            html: generateBookingConfirmationEmail(booking),
+            attachments: [{ filename: `receipt-${booking._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+        });
+        return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
+    }
+
+    // If not a booking, try to find a subscription
+    const subscription = await SubscriptionHistory.findById(refFromMonnify).populate('owner').populate('tier');
+    if (subscription && subscription.status === 'pending') {
+        subscription.status = 'active';
+        subscription.transactionId = transactionReference;
+        if (subscription.tier.durationInDays) {
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + subscription.tier.durationInDays);
+            subscription.expiryDate = expiryDate;
 
             // Send payment confirmation email
             await sendEmail({
@@ -90,36 +105,32 @@ const verifyPayment = asyncHandler(async (req, res) => {
                     },
                 ],
             });
+
         }
+        await subscription.save();
+
+        await Venue.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
+
+        // Send emails (user and admin)
+        await sendEmail({
+            email: subscription.owner.email,
+            subject: 'Your Subscription is Confirmed!',
+            html: generateSubscriptionConfirmationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price, subscription.expiryDate),
+        });
+
+        const admin = await User.findOne({ role: 'super-admin' });
+        if (admin) {
+            await sendEmail({
+                email: admin.email,
+                subject: 'New Subscription Purchase',
+                html: generateAdminLicenseNotificationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price),
+            }).catch(err => console.error(`Admin notification email failed:`, err));
+        }
+        return res.redirect(`${process.env.FRONTEND_URL}/dashboard/subscription`);
     }
 
-    // If there is no frontend URL, send a simple HTML success page.
-    if (!process.env.FRONTEND_URL) {
-        return res.status(200).send(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Payment Successful</title>
-                <style>
-                    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-                    .container { text-align: center; padding: 40px; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
-                    h1 { color: #4CAF50; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>Payment Successful</h1>
-                    <p>Your payment has been successfully processed. You can now close this page.</p>
-                </div>
-            </body>
-            </html>
-        `);
-    }
-
-    // If there is a frontend URL, redirect back to the bookings page.
-    res.redirect(`${process.env.FRONTEND_URL}/bookings`);
+    // If neither booking nor subscription is found, or subscription was not pending
+    throw new ApiError(404, 'No matching booking or pending subscription found for this payment reference.');
 });
 
 export { makePayment, verifyPayment };
