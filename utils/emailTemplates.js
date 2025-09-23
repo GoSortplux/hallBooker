@@ -36,6 +36,18 @@ const generateBookingConfirmationEmail = (booking) => {
     const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
+    const startDate = new Date(booking.startTime);
+    const endDate = new Date(booking.endTime);
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+    const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
+                      startDate.getMonth() === endDate.getMonth() &&
+                      startDate.getDate() === endDate.getDate();
+
+    const formattedDate = isSameDay
+      ? startDate.toLocaleDateString('en-US', dateOptions)
+      : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">Booking Confirmation</h2>
@@ -63,7 +75,7 @@ const generateBookingConfirmationEmail = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.startTime).toLocaleDateString('en-GB')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
@@ -108,6 +120,18 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
     const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
+    const startDate = new Date(booking.startTime);
+    const endDate = new Date(booking.endTime);
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+    const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
+                        startDate.getMonth() === endDate.getMonth() &&
+                        startDate.getDate() === endDate.getDate();
+
+    const formattedDate = isSameDay
+        ? startDate.toLocaleDateString('en-US', dateOptions)
+        : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">New Booking Notification</h2>
@@ -131,7 +155,7 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.startTime).toLocaleDateString('en-GB')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
