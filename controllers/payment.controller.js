@@ -12,6 +12,7 @@ import {
     generateSubscriptionConfirmationEmail,
     generateAdminLicenseNotificationEmail
 } from '../utils/emailTemplates.js';
+import { generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 
 const makePayment = asyncHandler(async (req, res) => {
@@ -90,6 +91,21 @@ const verifyPayment = asyncHandler(async (req, res) => {
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + subscription.tier.durationInDays);
             subscription.expiryDate = expiryDate;
+
+            // Send payment confirmation email
+            await sendEmail({
+                email: booking.user.email,
+                subject: 'Payment Confirmation and Receipt',
+                html: generatePaymentConfirmationEmail(booking),
+                attachments: [
+                    {
+                        filename: `receipt-${booking._id}.pdf`,
+                        content: pdfBuffer,
+                        contentType: 'application/pdf',
+                    },
+                ],
+            });
+
         }
         await subscription.save();
 
