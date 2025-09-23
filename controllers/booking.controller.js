@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { Venue } from '../models/venue.model.js';
 import sendEmail from '../services/email.service.js';
+import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner } from '../utils/emailTemplates.js';
 
 const createBooking = asyncHandler(async (req, res) => {
   const { venueId, startTime, endTime, eventDetails } = req.body;
@@ -88,15 +89,17 @@ const createBooking = asyncHandler(async (req, res) => {
     const newBookingArr = await Booking.create([bookingData], { session });
     const newBooking = newBookingArr[0];
 
+    const bookingForEmail = { ...newBooking.toObject(), user: req.user, venue: venue };
+
     await sendEmail({
       email: req.user.email,
       subject: 'Booking Confirmation - HallBooker',
-      html: `<h1>Your Booking is Confirmed!</h1><p>Details for venue: ${venue.name}</p>`,
+      html: generateBookingConfirmationEmail(bookingForEmail),
     });
     await sendEmail({
       email: venue.owner.email,
       subject: 'New Booking Notification',
-      html: `<h1>You have a new booking!</h1><p>Venue ${venue.name} has been booked by ${req.user.fullName}.</p>`,
+      html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
     });
 
     await session.commitTransaction();

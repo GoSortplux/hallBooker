@@ -28,7 +28,7 @@ const generateWelcomeEmail = (name) => {
   `;
 }
 
-export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail };
+export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner };
 
 const generateBookingConfirmationEmail = (booking) => {
     const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
@@ -58,6 +58,10 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
                 </tr>
                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Location:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.startTime).toLocaleDateString('en-GB')}</td>
                 </tr>
@@ -69,6 +73,14 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
                 </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.eventDetails}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
+                </tr>
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
@@ -78,6 +90,81 @@ const generateBookingConfirmationEmail = (booking) => {
 
         <p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>
         <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your payment and booking details for your records.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
+
+const generateNewBookingNotificationEmailForOwner = (booking) => {
+    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+    const formattedStartTime = new Date(booking.startTime).toLocaleTimeString('en-US', timeOptions);
+    const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
+    const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #0056b3; text-align: center;">New Booking Notification</h2>
+        <p>Hi ${booking.venue.owner.fullName},</p>
+        <p>You have a new booking for your venue, ${booking.venue.name}. Here are the details:</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Booking Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Booking ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking._id}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.startTime).toLocaleDateString('en-GB')}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedStartTime} - ${formattedEndTime}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.eventDetails}</td>
+                </tr>
+                 <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="color: #0056b3;">Booked By:</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+             <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">User Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Full Name:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.user.fullName}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Email:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.user.email}</td>
+                </tr>
+            </tbody>
+        </table>
+
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
         <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
