@@ -41,8 +41,6 @@ const generateSubscriptionExpiryWarningEmail = (userName, tierName, expiryDate) 
   `;
 }
 
-export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generateSubscriptionConfirmationEmail, generateAdminLicenseNotificationEmail, generateSubscriptionExpiryWarningEmail };
-
 const generateSubscriptionConfirmationEmail = (userName, tierName, price, expiryDate) => {
     const expiryString = expiryDate ? `Your subscription will renew on ${new Date(expiryDate).toDateString()}.` : 'You have a lifetime subscription.';
     return `
@@ -76,7 +74,9 @@ const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
         </ul>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
-export { generateVerificationEmail, generateWelcomeEmail, generateLicensePurchaseEmail, generateVenueCreationEmail, generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail };
+    </div>
+  `;
+}
 
 const generatePaymentConfirmationEmail = (booking) => {
     const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
@@ -364,3 +364,16 @@ const generateLicensePurchaseEmail = (name, tierName, price, expiryDate) => {
     </div>
   `;
 }
+
+export {
+  generateVerificationEmail,
+  generateWelcomeEmail,
+  generateSubscriptionExpiryWarningEmail,
+  generateSubscriptionConfirmationEmail,
+  generateAdminLicenseNotificationEmail,
+  generatePaymentConfirmationEmail,
+  generateBookingConfirmationEmail,
+  generateNewBookingNotificationEmailForOwner,
+  generateVenueCreationEmail,
+  generateLicensePurchaseEmail,
+};
