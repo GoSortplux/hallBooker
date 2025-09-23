@@ -18,7 +18,7 @@ const subscriptionHistorySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'expired', 'cancelled', 'upgraded'],
+      enum: ['pending', 'active', 'expired', 'cancelled', 'upgraded'],
       required: true,
     },
     purchaseDate: {
