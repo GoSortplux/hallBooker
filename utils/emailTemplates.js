@@ -102,7 +102,7 @@ const generateBookingConfirmationEmail = (booking) => {
 
         <div style="text-align: center; margin: 20px 0;">
             <!-- TODO: Replace the href with your actual frontend payment URL -->
-            <a href="https://your-frontend-app.com/payment/${booking._id}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Now</a>
+            <a href="http://localhost:8000/api/v1/payments/initialize/${booking._id}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Now</a>
         </div>
 
         <p style="font-size: 14px; color: #555;">Alternatively, you can log in to your dashboard to complete the payment.</p>
