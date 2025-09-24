@@ -365,10 +365,73 @@ const generateLicensePurchaseEmail = (name, tierName, price, expiryDate) => {
   `;
 }
 
+const generateSubscriptionPaymentEmail = (subscription) => {
+    const purchaseDate = new Date(subscription.purchaseDate);
+    const expiryDate = new Date(subscription.expiryDate);
+    const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #4CAF50; text-align: center;">Subscription Payment Successful!</h2>
+        <p>Hi ${subscription.owner.fullName},</p>
+        <p>Your payment for the subscription has been successfully processed. Your license is now active. Here are the details of your subscription:</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #4CAF50;">Subscription Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Transaction ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${subscription.transactionId}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Tier:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${subscription.tier.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Purchase Date:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${purchaseDate.toLocaleDateString('en-US', dateOptions)}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Expiry Date:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${expiryDate.toLocaleDateString('en-US', dateOptions)}</td>
+                </tr>
+                 <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Amount Paid:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${subscription.price.toLocaleString()}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="font-size: 14px; color: #555;">We have attached a PDF receipt for your records.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
+
+const generateSubscriptionExpiredEmail = (userName, tierName) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #d9534f;">Your Subscription Has Expired</h2>
+        <p>Hi ${userName},</p>
+        <p>This is to notify you that your subscription for the <strong>${tierName}</strong> plan has expired.</p>
+        <p>As a result, your venues have been deactivated and are no longer visible for booking. To continue using our services and reactivate your venues, please log in to your dashboard and purchase a new subscription.</p>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
+
 export {
   generateVerificationEmail,
   generateWelcomeEmail,
+  generateSubscriptionPaymentEmail,
   generateSubscriptionExpiryWarningEmail,
+  generateSubscriptionExpiredEmail,
   generateSubscriptionConfirmationEmail,
   generateAdminLicenseNotificationEmail,
   generatePaymentConfirmationEmail,
