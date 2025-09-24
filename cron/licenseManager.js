@@ -3,7 +3,7 @@ import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { Venue } from '../models/venue.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
-import { generateSubscriptionExpiryWarningEmail } from '../utils/emailTemplates.js';
+import { generateSubscriptionExpiryWarningEmail, generateSubscriptionExpiredEmail } from '../utils/emailTemplates.js';
 
 const sendExpirationWarnings = async () => {
     console.log('Running subscription expiration warning check...');
@@ -37,7 +37,7 @@ const deactivateExpiredSubscriptions = async () => {
     const expiredSubscriptions = await SubscriptionHistory.find({
         expiryDate: { $ne: null, $lt: new Date() },
         status: 'active'
-    }).populate('owner', 'email fullName');
+    }).populate('owner', 'email fullName').populate('tier', 'name');
 
     for (const sub of expiredSubscriptions) {
         sub.status = 'expired';
@@ -51,7 +51,7 @@ const deactivateExpiredSubscriptions = async () => {
             await sendEmail({
                 email: sub.owner.email,
                 subject: 'Your HallBooker Subscription Has Expired',
-                html: `<p>Hi ${sub.owner.fullName},</p><p>Your subscription for HallBooker has expired. Your venues have been deactivated and are no longer available for booking. Please renew your subscription to reactivate them.</p>`
+                html: generateSubscriptionExpiredEmail(sub.owner.fullName, sub.tier.name)
             });
         } catch (err) {
             console.error(`Failed to send expiration email to ${sub.owner.email}`, err);

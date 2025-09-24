@@ -10,10 +10,11 @@ import sendEmail from '../services/email.service.js';
 import {
     generateBookingConfirmationEmail,
     generateSubscriptionConfirmationEmail,
-    generateAdminLicenseNotificationEmail
+    generateAdminLicenseNotificationEmail,
+    generateSubscriptionPaymentEmail
 } from '../utils/emailTemplates.js';
 import { generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
-import { generatePdfReceipt } from '../utils/pdfGenerator.js';
+import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
 
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
@@ -85,47 +86,53 @@ const verifyPayment = asyncHandler(async (req, res) => {
     // If not a booking, try to find a subscription
     const subscription = await SubscriptionHistory.findById(refFromMonnify).populate('owner').populate('tier');
     if (subscription && subscription.status === 'pending') {
+        // 1. Update subscription details
         subscription.status = 'active';
         subscription.transactionId = transactionReference;
         if (subscription.tier.durationInDays) {
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + subscription.tier.durationInDays);
             subscription.expiryDate = expiryDate;
-
-            // Send payment confirmation email
-            await sendEmail({
-                email: booking.user.email,
-                subject: 'Payment Confirmation and Receipt',
-                html: generatePaymentConfirmationEmail(booking),
-                attachments: [
-                    {
-                        filename: `receipt-${booking._id}.pdf`,
-                        content: pdfBuffer,
-                        contentType: 'application/pdf',
-                    },
-                ],
-            });
-
         }
+
+        // 2. Save the updated subscription to the database FIRST
         await subscription.save();
 
+        // 3. Activate the user's venues
         await Venue.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
 
-        // Send emails (user and admin)
-        await sendEmail({
-            email: subscription.owner.email,
-            subject: 'Your Subscription is Confirmed!',
-            html: generateSubscriptionConfirmationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price, subscription.expiryDate),
-        });
-
-        const admin = await User.findOne({ role: 'super-admin' });
-        if (admin) {
+        // 4. Send receipt and confirmation emails (now that the subscription is saved)
+        try {
+            const pdfBuffer = Buffer.from(generateSubscriptionPdfReceipt(subscription));
+            // Send detailed email with receipt
             await sendEmail({
-                email: admin.email,
-                subject: 'New Subscription Purchase',
-                html: generateAdminLicenseNotificationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price),
-            }).catch(err => console.error(`Admin notification email failed:`, err));
+                email: subscription.owner.email,
+                subject: 'Your Subscription Payment Receipt',
+                html: generateSubscriptionPaymentEmail(subscription),
+                attachments: [{ filename: `receipt-${subscription._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+            });
+
+            // Send simple confirmation email
+            await sendEmail({
+                email: subscription.owner.email,
+                subject: 'Your Subscription is Confirmed!',
+                html: generateSubscriptionConfirmationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price, subscription.expiryDate),
+            });
+
+            const admin = await User.findOne({ role: 'super-admin' });
+            if (admin) {
+                await sendEmail({
+                    email: admin.email,
+                    subject: 'New Subscription Purchase',
+                    html: generateAdminLicenseNotificationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price),
+                });
+            }
+        } catch (emailError) {
+            // Log the email error, but don't crash the process. The payment was successful.
+            console.error('Failed to send subscription confirmation emails:', emailError);
         }
+
+        // 5. Redirect user to their subscription dashboard
         return res.redirect(`${process.env.FRONTEND_URL}/dashboard/subscription`);
     }
 
