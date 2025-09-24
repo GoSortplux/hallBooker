@@ -34,6 +34,42 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${tier.maxHalls}).`);
     }
 
+    // Handle free tiers - activate directly without payment
+    if (tier.price === 0) {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + tier.durationInDays);
+
+        const newSubscription = await SubscriptionHistory.create({
+            owner: ownerId,
+            tier: tier._id,
+            price: 0,
+            status: 'active',
+            purchaseDate: new Date(),
+            expiryDate: expiryDate,
+        });
+
+        await Venue.updateMany({ owner: ownerId }, { $set: { isActive: true } });
+
+        // Send confirmation emails
+        sendEmail({
+            email: req.user.email,
+            subject: 'Your Free Subscription is Active!',
+            html: generateSubscriptionConfirmationEmail(req.user.fullName, tier.name, 0, expiryDate),
+        }).catch(err => console.error(`Free subscription user notification email failed:`, err));
+
+        const admin = await User.findOne({ role: 'super-admin' });
+        if (admin) {
+            sendEmail({
+                email: admin.email,
+                subject: 'New Free Subscription Activated',
+                html: generateAdminLicenseNotificationEmail(req.user.fullName, tier.name, 0),
+            }).catch(err => console.error(`Free subscription admin notification email failed:`, err));
+        }
+
+        return res.status(201).json(new ApiResponse(201, newSubscription, "Free subscription activated successfully."));
+    }
+
+    // Proceed with payment for paid tiers
     const newSubscription = await SubscriptionHistory.create({
         owner: ownerId,
         tier: tier._id,
