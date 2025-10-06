@@ -4,6 +4,7 @@ import {
     createBooking, 
     getMyBookings,
     getBookingById,
+    getBookingByBookingId,
     updateBookingDetails,
     cancelBooking 
 } from '../controllers/booking.controller.js';
@@ -18,6 +19,9 @@ router.route('/')
 router.route('/my-bookings')
     .get(getMyBookings);
     
+router.route('/search/:bookingId')
+    .get(authorizeRoles('user', 'venue-owner', 'super-admin'), getBookingByBookingId);
+
 router.route('/:id')
     .get(authorizeRoles('user', 'venue-owner', 'super-admin'), getBookingById)
     .patch(authorizeRoles('user'), updateBookingDetails)

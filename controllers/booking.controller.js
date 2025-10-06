@@ -4,9 +4,11 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { Venue } from '../models/venue.model.js';
+import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
+import generateBookingId from '../utils/bookingIdGenerator.js';
 
 const createBooking = asyncHandler(async (req, res) => {
   const { venueId, startTime, endTime, eventDetails } = req.body;
@@ -77,7 +79,9 @@ const createBooking = asyncHandler(async (req, res) => {
   session.startTransaction();
 
   try {
+    const bookingId = await generateBookingId(venue.name);
     const bookingData = {
+      bookingId,
       venue: venueId,
       user: req.user._id,
       startTime: newBookingStartTime,
@@ -99,16 +103,22 @@ const createBooking = asyncHandler(async (req, res) => {
       subject: 'Booking Confirmation - HallBooker',
       html: generateBookingConfirmationEmail(bookingForEmail),
       attachments: [{
-        filename: `receipt-${bookingForEmail._id}.pdf`,
+        filename: `receipt-${bookingForEmail.bookingId}.pdf`,
         content: Buffer.from(pdfReceipt),
         contentType: 'application/pdf'
       }]
     });
-    await sendEmail({
-      email: venue.owner.email,
+
+    const admins = await User.find({ role: 'super-admin' });
+    const adminEmails = admins.map(admin => admin.email);
+
+    const notificationEmails = [venue.owner.email, ...adminEmails];
+
+    await Promise.all(notificationEmails.map(email => sendEmail({
+      email,
       subject: 'New Booking Notification',
       html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
-    });
+    })));
 
     await session.commitTransaction();
     res.status(201).json(new ApiResponse(201, newBooking, 'Booking created successfully!'));
@@ -163,10 +173,22 @@ const cancelBooking = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, booking, "Booking cancelled successfully."));
 });
 
+const getBookingByBookingId = asyncHandler(async (req, res) => {
+    const { bookingId } = req.params;
+    const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('venue');
+    if (!booking) throw new ApiError(404, "Booking not found");
+
+    if (req.user.role === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not authorized to view this booking.");
+    }
+    res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));
+});
+
 export { 
   createBooking, 
   getMyBookings, 
   getBookingById, 
+  getBookingByBookingId,
   updateBookingDetails, 
   cancelBooking 
 };
