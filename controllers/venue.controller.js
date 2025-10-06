@@ -232,6 +232,8 @@ const getRecommendedVenues = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json(new ApiResponse(200, venues, "Recommended venues fetched successfully"));
+});
+
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
   const { folder, public_id } = req.body;
 
@@ -264,7 +266,7 @@ export {
     addVenueMedia,
     deleteVenueMedia,
     getVenuesByOwner,
-    getRecommendedVenues
+    getRecommendedVenues,
     replaceVenueMedia,
     getVenuesByOwner,
     generateCloudinarySignature,
