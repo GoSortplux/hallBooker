@@ -79,9 +79,6 @@ const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
 }
 
 const generatePaymentConfirmationEmail = (booking) => {
-    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-    const formattedStartTime = new Date(booking.startTime).toLocaleTimeString('en-US', timeOptions);
-    const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
     const startDate = new Date(booking.startTime);
@@ -95,6 +92,14 @@ const generatePaymentConfirmationEmail = (booking) => {
     const formattedDate = isSameDay
       ? startDate.toLocaleDateString('en-US', dateOptions)
       : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
+    const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+    const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+
+    const formattedTime = isSameDay
+        ? `${new Date(booking.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(booking.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
+        : `${new Date(booking.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(booking.endTime).toLocaleString('en-US', dateTimeOptions)}`;
+
 
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -127,7 +132,7 @@ const generatePaymentConfirmationEmail = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedStartTime} - ${formattedEndTime}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
@@ -157,9 +162,6 @@ const generatePaymentConfirmationEmail = (booking) => {
 }
 
 const generateBookingConfirmationEmail = (booking) => {
-    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-    const formattedStartTime = new Date(booking.startTime).toLocaleTimeString('en-US', timeOptions);
-    const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
     const startDate = new Date(booking.startTime);
@@ -173,6 +175,13 @@ const generateBookingConfirmationEmail = (booking) => {
     const formattedDate = isSameDay
       ? startDate.toLocaleDateString('en-US', dateOptions)
       : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
+    const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+    const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+
+    const formattedTime = isSameDay
+        ? `${new Date(booking.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(booking.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
+        : `${new Date(booking.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(booking.endTime).toLocaleString('en-US', dateTimeOptions)}`;
 
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -205,7 +214,7 @@ const generateBookingConfirmationEmail = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedStartTime} - ${formattedEndTime}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
@@ -241,9 +250,6 @@ const generateBookingConfirmationEmail = (booking) => {
 }
 
 const generateNewBookingNotificationEmailForOwner = (booking) => {
-    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-    const formattedStartTime = new Date(booking.startTime).toLocaleTimeString('en-US', timeOptions);
-    const formattedEndTime = new Date(booking.endTime).toLocaleTimeString('en-US', timeOptions);
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
     const startDate = new Date(booking.startTime);
@@ -257,6 +263,13 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
     const formattedDate = isSameDay
         ? startDate.toLocaleDateString('en-US', dateOptions)
         : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
+    const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+    const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+
+    const formattedTime = isSameDay
+        ? `${new Date(booking.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(booking.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
+        : `${new Date(booking.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(booking.endTime).toLocaleString('en-US', dateTimeOptions)}`;
 
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -285,7 +298,7 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedStartTime} - ${formattedEndTime}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
