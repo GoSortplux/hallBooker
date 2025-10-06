@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     fullName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, required: true, unique: true },
+    whatsappNumber: { type: String },
     password: { type: String, required: [true, 'Password is required'], select: false },
     role: {
       type: String,
