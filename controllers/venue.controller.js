@@ -45,26 +45,18 @@ const getVenueById = asyncHandler(async (req, res) => {
 });
 
 const updateVenue = asyncHandler(async (req, res) => {
-    const venue = await Venue.findById(req.params.id);
-    if (!venue) throw new ApiError(404, "Venue not found");
-
-    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
-        throw new ApiError(403, "You are not authorized to update this venue.");
-    }
-
     const updatedVenue = await Venue.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!updatedVenue) {
+        throw new ApiError(404, "Venue not found.");
+    }
     return res.status(200).json(new ApiResponse(200, updatedVenue, "Venue updated successfully"));
 });
 
 const deleteVenue = asyncHandler(async (req, res) => {
-    const venue = await Venue.findById(req.params.id);
-    if (!venue) throw new ApiError(404, "Venue not found");
-
-    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
-        throw new ApiError(403, "You are not authorized to delete this venue.");
+    const venue = await Venue.findByIdAndDelete(req.params.id);
+    if (!venue) {
+        throw new ApiError(404, "Venue not found.");
     }
-
-    await venue.deleteOne();
     return res.status(200).json(new ApiResponse(200, {}, "Venue deleted successfully"));
 });
 
@@ -74,11 +66,6 @@ const updateVenueMedia = asyncHandler(async (req, res) => {
 
     if (!venue) {
         throw new ApiError(404, "Venue not found");
-    }
-
-    // Authorization check
-    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
-        throw new ApiError(403, "You are not authorized to update this venue's media.");
     }
 
     const imageUploadPromises = [];
@@ -126,11 +113,6 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Venue not found");
     }
 
-    // Authorization check
-    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
-        throw new ApiError(403, "You are not authorized to delete this venue's media.");
-    }
-
     const deletionPromises = [];
     if (imageUrls?.length) {
         imageUrls.forEach(url => deletionPromises.push(deleteFromCloudinary(url)));
@@ -153,7 +135,13 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
 });
 
 const getVenuesByOwner = asyncHandler(async (req, res) => {
-    const venues = await Venue.find({ owner: req.user._id }).populate('owner', 'fullName');
+    let query = {};
+    if (req.user.role === 'venue-owner') {
+        query = { owner: req.user._id };
+    } else if (req.user.role === 'staff') {
+        query = { staff: req.user._id };
+    }
+    const venues = await Venue.find(query).populate('owner', 'fullName');
     return res.status(200).json(new ApiResponse(200, venues, "Venues fetched successfully"));
 });
 
