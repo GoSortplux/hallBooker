@@ -111,7 +111,7 @@ const generatePaymentConfirmationEmail = (booking) => {
             <tbody>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Booking ID:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking._id}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
@@ -189,7 +189,7 @@ const generateBookingConfirmationEmail = (booking) => {
             <tbody>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Booking ID:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking._id}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
@@ -228,7 +228,7 @@ const generateBookingConfirmationEmail = (booking) => {
 
         <div style="text-align: center; margin: 20px 0;">
             <!-- TODO: Replace the href with your actual frontend payment URL -->
-            <a href="http://localhost:8000/api/v1/payments/initialize/${booking._id}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Now</a>
+            <a href="http://localhost:8000/api/v1/payments/initialize/${booking.bookingId}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Now</a>
         </div>
 
         <p style="font-size: 14px; color: #555;">Alternatively, you can log in to your dashboard to complete the payment.</p>
@@ -273,7 +273,7 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
             <tbody>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Booking ID:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking._id}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>

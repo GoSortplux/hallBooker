@@ -7,7 +7,7 @@ const generateBookingId = async (venueName) => {
   const year = String(today.getFullYear()).slice(-2);
   const dateString = `${day}-${month}-${year}`;
 
-  const venuePrefix = venueName.substring(0, 3).toUpperCase();
+  const venuePrefix = venueName.replace(/\s/g, '').substring(0, 3).toUpperCase();
   const prefix = `${venuePrefix}-${dateString}-`;
 
   const lastBooking = await Booking.findOne({ bookingId: { $regex: `^${prefix}` } })
