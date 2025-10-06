@@ -67,6 +67,8 @@ venueSchema.virtual('directionUrl').get(function () {
     return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
   }
   return null;
+});
+
 // Pre-save hook for validation
 venueSchema.pre('save', function (next) {
   // This rule ensures that if a venue has images, it must also have at least one video.
