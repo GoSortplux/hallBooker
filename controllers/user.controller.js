@@ -2,6 +2,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
+import { Venue } from '../models/venue.model.js';
+import mongoose from 'mongoose';
 
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({});
@@ -51,9 +53,6 @@ const updateUserBankAccount = asyncHandler(async (req, res) => {
 
     res.status(200).json(new ApiResponse(200, updatedUser, "Bank account details updated successfully."));
 });
-
-import { Venue } from '../models/venue.model.js';
-import mongoose from 'mongoose';
 
 const addStaff = asyncHandler(async (req, res) => {
   const { fullName, email, phone, password, venueIds } = req.body;
