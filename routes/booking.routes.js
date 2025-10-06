@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 import { 
-    createBooking, 
+    createBooking,
+    walkInBooking,
     getMyBookings,
     getBookingById,
     getBookingByBookingId,
@@ -15,6 +16,9 @@ router.use(verifyJWT);
 
 router.route('/')
     .post(createBooking);
+
+router.route('/walk-in')
+    .post(authorizeRoles('venue-owner', 'super-admin'), walkInBooking);
 
 router.route('/my-bookings')
     .get(getMyBookings);
