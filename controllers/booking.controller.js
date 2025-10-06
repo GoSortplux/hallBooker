@@ -88,7 +88,10 @@ const createBooking = asyncHandler(async (req, res) => {
       endTime: newBookingEndTime,
       eventDetails,
       totalPrice,
+      paymentMethod: 'online',
       paymentStatus: 'pending',
+      bookingType: 'online',
+      bookedBy: req.user._id,
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
@@ -128,6 +131,146 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(
       500,
       'Could not complete the booking process. Please try again later.'
+    );
+  } finally {
+    session.endSession();
+  }
+});
+
+const walkInBooking = asyncHandler(async (req, res) => {
+  const { venueId, startTime, endTime, eventDetails, paymentMethod, walkInUserDetails } = req.body;
+
+  if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
+    throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
+  }
+
+  const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
+  if (!venue) throw new ApiError(404, 'Venue not found');
+
+  // Authorization: only venue owner or super-admin can create a walk-in booking for a venue
+  const isVenueOwner = venue.owner._id.toString() === req.user._id.toString();
+  const isSuperAdmin = req.user.role === 'super-admin';
+
+  if (!isVenueOwner && !isSuperAdmin) {
+    throw new ApiError(403, 'You are not authorized to create a walk-in booking for this venue.');
+  }
+
+  if (!venue.pricing || (typeof venue.pricing !== 'object') || (!venue.pricing.hourlyRate && !venue.pricing.dailyRate)) {
+    throw new ApiError(400, 'Venue does not have valid pricing information. Pricing should be an object with hourlyRate and/or dailyRate.');
+  }
+
+  const newBookingStartTime = new Date(startTime);
+  const newBookingEndTime = new Date(endTime);
+
+  // Validation checks
+  if (newBookingStartTime >= newBookingEndTime) {
+    throw new ApiError(400, 'Start time must be before end time.');
+  }
+  if (newBookingStartTime < new Date()) {
+    throw new ApiError(400, 'Booking must be in the future.');
+  }
+  const bookingDurationHours = (newBookingEndTime - newBookingStartTime) / (1000 * 60 * 60);
+
+  if (bookingDurationHours * 60 < 30) {
+    throw new ApiError(400, 'Booking must be for at least 30 minutes.');
+  }
+  if (bookingDurationHours > 7 * 24) {
+    throw new ApiError(400, 'Booking cannot be for longer than 7 days.');
+  }
+
+  let totalPrice;
+  if (venue.pricing.dailyRate && !venue.pricing.hourlyRate) {
+    if (bookingDurationHours < 24) {
+      throw new ApiError(400, 'This venue only supports daily bookings. Minimum booking is 24 hours.');
+    }
+    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
+    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
+  } else if (venue.pricing.hourlyRate) {
+    totalPrice = bookingDurationHours * venue.pricing.hourlyRate;
+  } else {
+    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
+    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
+  }
+
+  if (venue.openingHour && newBookingStartTime.getHours() < venue.openingHour) {
+    throw new ApiError(400, `Venue is not open until ${venue.openingHour}:00.`);
+  }
+  if (venue.closingHour && newBookingEndTime.getHours() > venue.closingHour) {
+    throw new ApiError(400, `Venue closes at ${venue.closingHour}:00.`);
+  }
+
+  const existingBooking = await Booking.findOne({
+    venue: venueId,
+    status: 'confirmed',
+    $or: [
+      { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
+      { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
+    ],
+  });
+
+  if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const bookingId = await generateBookingId(venue.name);
+    const bookingData = {
+      bookingId,
+      venue: venueId,
+      startTime: newBookingStartTime,
+      endTime: newBookingEndTime,
+      eventDetails,
+      totalPrice,
+      paymentMethod,
+      paymentStatus: 'paid', // For walk-in, payment is made upfront
+      bookingType: 'walk-in',
+      bookedBy: req.user._id,
+      walkInUserDetails: {
+        fullName: walkInUserDetails.fullName,
+        email: walkInUserDetails.email,
+        phone: walkInUserDetails.phone,
+      },
+    };
+
+    const newBookingArr = await Booking.create([bookingData], { session });
+    const newBooking = newBookingArr[0];
+
+    const bookingForReceipt = { ...newBooking.toObject(), venue: venue };
+    const pdfReceipt = generatePdfReceipt(bookingForReceipt);
+
+    // Send email if an email address is provided
+    if (walkInUserDetails.email) {
+      await sendEmail({
+        email: walkInUserDetails.email,
+        subject: 'Booking Confirmation - HallBooker',
+        html: generateBookingConfirmationEmail(bookingForReceipt),
+        attachments: [{
+          filename: `receipt-${bookingForReceipt.bookingId}.pdf`,
+          content: Buffer.from(pdfReceipt),
+          contentType: 'application/pdf'
+        }]
+      });
+    }
+
+    const admins = await User.find({ role: 'super-admin' });
+    const adminEmails = admins.map(admin => admin.email);
+    const notificationEmails = [venue.owner.email, ...adminEmails];
+
+    await Promise.all(notificationEmails.map(email => sendEmail({
+      email,
+      subject: 'New Walk-in Booking Notification',
+      html: generateNewBookingNotificationEmailForOwner(bookingForReceipt),
+    })));
+
+    await session.commitTransaction();
+    res.status(201).json(new ApiResponse(201, newBooking, 'Walk-in booking created successfully!'));
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Walk-in booking transaction failed:', error);
+    throw new ApiError(
+      500,
+      'Could not complete the walk-in booking process. Please try again later.'
     );
   } finally {
     session.endSession();
@@ -186,6 +329,7 @@ const getBookingByBookingId = asyncHandler(async (req, res) => {
 
 export { 
   createBooking, 
+  walkInBooking,
   getMyBookings, 
   getBookingById, 
   getBookingByBookingId,

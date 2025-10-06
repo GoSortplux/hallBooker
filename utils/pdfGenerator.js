@@ -19,13 +19,16 @@ const generatePdfReceipt = (booking) => {
     doc.text(`Booking ID: ${booking.bookingId}`, 105, 35, null, null, 'center');
 
     // Billed To Section
+    const userDetails = booking.bookingType === 'walk-in' ? booking.walkInUserDetails : booking.user;
     doc.setFontSize(14);
     doc.setTextColor(40);
     doc.text('Billed To', 14, 55);
     doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(booking.user.fullName, 14, 62);
-    doc.text(booking.user.email, 14, 69);
+    doc.text(userDetails.fullName, 14, 62);
+    if (userDetails.email) {
+        doc.text(userDetails.email, 14, 69);
+    }
 
     // Booking Details Table
     doc.setFontSize(14);
@@ -52,6 +55,7 @@ const generatePdfReceipt = (booking) => {
         ['Time', `${startDate.toLocaleTimeString('en-US', timeOptions)} - ${endDate.toLocaleTimeString('en-US', timeOptions)}`],
         ['Duration', formatDuration(startDate, endDate)],
         ['Event Details', booking.eventDetails],
+        ['Payment Method', booking.paymentMethod],
         ['Payment Status', booking.paymentStatus],
         [{ content: 'Total Price', styles: { fontStyle: 'bold' } }, { content: `NGN ${booking.totalPrice.toLocaleString()}`, styles: { fontStyle: 'bold' } }],
     ];

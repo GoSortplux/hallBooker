@@ -2,12 +2,17 @@ import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     venue: { type: mongoose.Schema.Types.ObjectId, ref: 'Venue', required: true },
     eventDetails: { type: String, required: true },
     startTime: { type: Date, required: true },
     endTime: { type: Date, required: true },
     totalPrice: { type: Number, required: true },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'pos', 'bank-transfer', 'online'],
+      required: true
+    },
     paymentStatus: {
       type: String,
       enum: ['pending', 'paid', 'failed'],
@@ -23,6 +28,20 @@ const bookingSchema = new mongoose.Schema(
       required: true,
       unique: true,
       index: true,
+    },
+    bookedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    bookingType: {
+      type: String,
+      enum: ['online', 'walk-in'],
+      default: 'online'
+    },
+    walkInUserDetails: {
+      fullName: { type: String },
+      email: { type: String },
+      phone: { type: String },
     }
   },
   { timestamps: true }
