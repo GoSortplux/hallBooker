@@ -73,22 +73,26 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
 
     // Attempt to find a booking first
-    const booking = await Booking.findOne({ bookingId: bookingIdFromRef }).populate('user').populate('venue');
+    let booking = await Booking.findOne({ bookingId: bookingIdFromRef });
     if (booking) {
         booking.status = 'confirmed';
         booking.paymentStatus = 'paid';
         await booking.save();
 
-        // Repopulate the venue and user fields, as `save()` clears populated paths.
-        // This ensures the virtual `directionUrl` is available for the email.
-        await booking.populate('user venue');
+        // Fetch a fresh, fully populated instance of the booking
+        const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('venue');
 
-        const pdfBuffer = Buffer.from(generatePdfReceipt(booking));
+        if (!confirmedBooking) {
+            // This should ideally not happen if the save was successful
+            throw new ApiError(500, "Failed to retrieve confirmed booking details.");
+        }
+
+        const pdfBuffer = Buffer.from(generatePdfReceipt(confirmedBooking));
         await sendEmail({
-            email: booking.user.email,
+            email: confirmedBooking.user.email,
             subject: 'Payment Confirmation and Receipt',
-            html: generatePaymentConfirmationEmail(booking),
-            attachments: [{ filename: `receipt-${booking.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+            html: generatePaymentConfirmationEmail(confirmedBooking),
+            attachments: [{ filename: `receipt-${confirmedBooking.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
         });
         return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
     }
