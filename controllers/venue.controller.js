@@ -39,7 +39,7 @@ const getAllVenues = asyncHandler(async (req, res) => {
 });
 
 const getVenueById = asyncHandler(async (req, res) => {
-    const venue = await Venue.findById(req.params.id).populate('owner', 'fullName email');
+    const venue = await Venue.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber');
     if (!venue) throw new ApiError(404, "Venue not found");
     return res.status(200).json(new ApiResponse(200, venue, "Venue details fetched successfully"));
 });
