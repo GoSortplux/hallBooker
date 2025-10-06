@@ -17,6 +17,12 @@ const bookingSchema = new mongoose.Schema(
         type: String,
         enum: ['confirmed', 'cancelled'],
         default: 'confirmed'
+    },
+    bookingId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
     }
   },
   { timestamps: true }
