@@ -16,7 +16,7 @@ const generatePdfReceipt = (booking) => {
     // Sub-header
     doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(`Booking ID: ${booking._id}`, 105, 35, null, null, 'center');
+    doc.text(`Booking ID: ${booking.bookingId}`, 105, 35, null, null, 'center');
 
     // Billed To Section
     doc.setFontSize(14);
