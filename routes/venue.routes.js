@@ -7,12 +7,14 @@ import {
     getVenueById,
     updateVenue,
     deleteVenue,
-    updateVenueMedia,
+    addVenueMedia,
     deleteVenueMedia,
     getVenuesByOwner,
     getRecommendedVenues
+    replaceVenueMedia,
+    getVenuesByOwner,
+    generateCloudinarySignature,
 } from '../controllers/venue.controller.js';
-import { upload } from '../middlewares/multer.middleware.js';
 
 const router = Router();
 
@@ -35,21 +37,16 @@ router.route('/:id')
     .put(authorizeVenueAccess, checkActiveLicense, updateVenue)
     .delete(authorizeVenueAccess, checkActiveLicense, deleteVenue);
 
-// Route for uploading and deleting media for a venue
+// Route for generating a cloudinary signature
+router.route('/media/generate-signature')
+    .post(authorizeRoles('venue-owner', 'staff', 'super-admin'), generateCloudinarySignature);
+
+// Routes for managing venue media
 router.route('/:id/media')
-    .patch(
-        authorizeVenueAccess,
-        checkActiveLicense,
-        upload.fields([
-            { name: 'images', maxCount: 10 },
-            { name: 'videos', maxCount: 5 }
-        ]),
-        updateVenueMedia
-    )
-    .delete(
-        authorizeVenueAccess,
-        checkActiveLicense,
-        deleteVenueMedia
-    );
+    .post(authorizeVenueAccess, checkActiveLicense, addVenueMedia)
+    .delete(authorizeVenueAccess, checkActiveLicense, deleteVenueMedia);
+
+router.route('/:id/media/replace')
+    .put(authorizeVenueAccess, checkActiveLicense, replaceVenueMedia);
 
 export default router;
