@@ -127,6 +127,10 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
                 </tr>
                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Directions:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.venue.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
                 </tr>
@@ -207,6 +211,10 @@ const generateBookingConfirmationEmail = (booking) => {
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Location:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Directions:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.venue.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>

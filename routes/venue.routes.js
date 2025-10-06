@@ -9,13 +9,15 @@ import {
     deleteVenue,
     updateVenueMedia,
     deleteVenueMedia,
-    getVenuesByOwner
+    getVenuesByOwner,
+    getRecommendedVenues
 } from '../controllers/venue.controller.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
 const router = Router();
 
 // Public routes
+router.route('/recommendations').get(getRecommendedVenues);
 router.route('/').get(getAllVenues);
 router.route('/:id').get(getVenueById);
 
@@ -50,5 +52,4 @@ router.route('/:id/media')
         deleteVenueMedia
     );
 
-export default router; 
-
+export default router;
