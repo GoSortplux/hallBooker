@@ -18,7 +18,7 @@ import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdf
 
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
-    const booking = await Booking.findById(bookingId).populate('venue', 'name');
+    const booking = await Booking.findOne({ bookingId }).populate('venue', 'name');
 
     if (!booking) {
         throw new ApiError(404, 'Booking not found');
@@ -67,7 +67,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
     const { paymentReference: refFromMonnify, transactionReference } = response.responseBody;
 
     // Attempt to find a booking first
-    const booking = await Booking.findById(refFromMonnify).populate('user').populate('venue');
+    const booking = await Booking.findOne({ bookingId: refFromMonnify }).populate('user').populate('venue');
     if (booking) {
         booking.status = 'confirmed';
         booking.paymentStatus = 'paid';
@@ -78,7 +78,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
             email: booking.user.email,
             subject: 'Payment Confirmation and Receipt',
             html: generatePaymentConfirmationEmail(booking),
-            attachments: [{ filename: `receipt-${booking._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+            attachments: [{ filename: `receipt-${booking.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
         });
         return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
     }
