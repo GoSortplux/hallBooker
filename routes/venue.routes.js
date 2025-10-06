@@ -10,9 +10,7 @@ import {
     addVenueMedia,
     deleteVenueMedia,
     getVenuesByOwner,
-    getRecommendedVenues
-    replaceVenueMedia,
-    getVenuesByOwner,
+    getRecommendedVenues,
     generateCloudinarySignature,
 } from '../controllers/venue.controller.js';
 
@@ -45,8 +43,5 @@ router.route('/media/generate-signature')
 router.route('/:id/media')
     .post(authorizeVenueAccess, checkActiveLicense, addVenueMedia)
     .delete(authorizeVenueAccess, checkActiveLicense, deleteVenueMedia);
-
-router.route('/:id/media/replace')
-    .put(authorizeVenueAccess, checkActiveLicense, replaceVenueMedia);
 
 export default router;

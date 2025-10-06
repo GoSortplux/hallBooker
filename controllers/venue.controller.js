@@ -155,50 +155,6 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updateResult, 'Venue media deleted successfully.'));
 });
 
-const replaceVenueMedia = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { oldMediaUrl, newMediaUrl } = req.body;
-
-  if (!oldMediaUrl || !newMediaUrl) {
-    throw new ApiError(400, 'Old and new media URLs are required.');
-  }
-
-  const venue = await Venue.findById(id);
-  if (!venue) {
-    throw new ApiError(404, 'Venue not found.');
-  }
-
-  const isImage = venue.images.includes(oldMediaUrl);
-  const isVideo = venue.videos.includes(oldMediaUrl);
-
-  if (!isImage && !isVideo) {
-    throw new ApiError(404, 'The media to be replaced was not found.');
-  }
-
-  // Delete the old media from Cloudinary
-  await deleteFromCloudinary(oldMediaUrl);
-
-  // Atomically find and update the URL in the correct array
-  let updateQuery;
-  if (isImage) {
-    updateQuery = { $set: { 'images.$[elem]': newMediaUrl } };
-  } else {
-    updateQuery = { $set: { 'videos.$[elem]': newMediaUrl } };
-  }
-
-  const arrayFilters = [{ elem: oldMediaUrl }];
-
-  const updatedVenue = await Venue.findOneAndUpdate(
-    { _id: id },
-    updateQuery,
-    { arrayFilters, new: true }
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, updatedVenue, 'Venue media replaced successfully.'));
-});
-
 const getVenuesByOwner = asyncHandler(async (req, res) => {
     let query = {};
     if (req.user.role === 'venue-owner') {
@@ -267,7 +223,5 @@ export {
     deleteVenueMedia,
     getVenuesByOwner,
     getRecommendedVenues,
-    replaceVenueMedia,
-    getVenuesByOwner,
     generateCloudinarySignature,
 };
