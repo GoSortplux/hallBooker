@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
+import { verifyJWT, authorizeRoles, authorizeVenueAccess } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js'; // Import license middleware
 import {
     createVenue,
@@ -23,20 +23,20 @@ router.route('/:id').get(getVenueById);
 router.use(verifyJWT);
 
 // Route for venue owners to get their own venues
-router.route('/by-owner').get(authorizeRoles('venue-owner'), getVenuesByOwner);
+router.route('/by-owner').get(authorizeRoles('venue-owner', 'staff'), getVenuesByOwner);
 
 // Venue Owner & Super Admin routes
 router.route('/')
     .post(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, createVenue);
 
 router.route('/:id')
-    .put(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, updateVenue)
-    .delete(authorizeRoles('venue-owner', 'super-admin'), checkActiveLicense, deleteVenue);
+    .put(authorizeVenueAccess, checkActiveLicense, updateVenue)
+    .delete(authorizeVenueAccess, checkActiveLicense, deleteVenue);
 
 // Route for uploading and deleting media for a venue
 router.route('/:id/media')
     .patch(
-        authorizeRoles('venue-owner', 'super-admin'),
+        authorizeVenueAccess,
         checkActiveLicense,
         upload.fields([
             { name: 'images', maxCount: 10 },
@@ -45,7 +45,7 @@ router.route('/:id/media')
         updateVenueMedia
     )
     .delete(
-        authorizeRoles('venue-owner', 'super-admin'),
+        authorizeVenueAccess,
         checkActiveLicense,
         deleteVenueMedia
     );

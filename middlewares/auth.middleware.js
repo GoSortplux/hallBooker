@@ -33,9 +33,39 @@ export const authorizeRoles = (...roles) => {
   };
 };
 
+import { Venue } from '../models/venue.model.js';
+import mongoose from 'mongoose';
+
 export const isEmailVerified = (req, _, next) => {
   if (!req.user.isEmailVerified) {
     throw new ApiError(403, 'Your email address is not verified. Please verify your email to access this resource.');
   }
   next();
 };
+
+export const authorizeVenueAccess = asyncHandler(async (req, _, next) => {
+  const { id: venueId } = req.params;
+  const user = req.user;
+
+  if (user.role === 'super-admin') {
+    return next();
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(venueId)) {
+    throw new ApiError(400, 'Invalid venue ID');
+  }
+
+  const venue = await Venue.findById(venueId);
+  if (!venue) {
+    throw new ApiError(404, 'Venue not found');
+  }
+
+  const isOwner = venue.owner.toString() === user._id.toString();
+  const isStaff = venue.staff.some(staffId => staffId.toString() === user._id.toString());
+
+  if (isOwner || isStaff) {
+    return next();
+  }
+
+  throw new ApiError(403, 'You are not authorized to perform this action');
+});
