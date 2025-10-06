@@ -79,6 +79,10 @@ const verifyPayment = asyncHandler(async (req, res) => {
         booking.paymentStatus = 'paid';
         await booking.save();
 
+        // Repopulate the venue and user fields, as `save()` clears populated paths.
+        // This ensures the virtual `directionUrl` is available for the email.
+        await booking.populate('user venue');
+
         const pdfBuffer = Buffer.from(generatePdfReceipt(booking));
         await sendEmail({
             email: booking.user.email,
