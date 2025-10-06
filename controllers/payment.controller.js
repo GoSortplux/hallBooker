@@ -32,11 +32,13 @@ const makePayment = asyncHandler(async (req, res) => {
         ? `${process.env.FRONTEND_URL}/bookings`
         : `${req.protocol}://${req.get('host')}/api/v1/payments/verify`;
 
+    const uniquePaymentReference = `${bookingId}_${Date.now()}`;
+
     const data = {
         amount: booking.totalPrice,
         customerName: req.user.fullName,
         customerEmail: req.user.email,
-        paymentReference: bookingId,
+        paymentReference: uniquePaymentReference,
         paymentDescription: `Payment for booking of ${booking.venue.name}`,
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
@@ -66,8 +68,12 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
     const { paymentReference: refFromMonnify, transactionReference } = response.responseBody;
 
+    // If the payment reference contains an underscore, it's a booking payment.
+    const bookingIdFromRef = refFromMonnify.includes('_') ? refFromMonnify.split('_')[0] : refFromMonnify;
+
+
     // Attempt to find a booking first
-    const booking = await Booking.findOne({ bookingId: refFromMonnify }).populate('user').populate('venue');
+    const booking = await Booking.findOne({ bookingId: bookingIdFromRef }).populate('user').populate('venue');
     if (booking) {
         booking.status = 'confirmed';
         booking.paymentStatus = 'paid';
