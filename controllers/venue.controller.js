@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Venue } from '../models/venue.model.js';
+import geocoder from '../utils/geocoder.js';
 import {
   uploadOnCloudinary,
   deleteFromCloudinary,
@@ -22,7 +23,18 @@ const createVenue = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Pricing information is required. Please provide at least a daily or hourly rate.');
     }
     
-    const venue = await Venue.create({ name, location, capacity, description, pricing, owner: resolvedOwnerId });
+    const geocodedData = await geocoder.geocode(location);
+    if (!geocodedData.length) {
+        throw new ApiError(400, 'Could not geocode the provided location. Please provide a valid address.');
+    }
+
+    const geoLocation = {
+        type: 'Point',
+        coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
+        address: geocodedData[0].formattedAddress,
+    };
+
+    const venue = await Venue.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId });
 
     try {
         await sendEmail({
@@ -49,7 +61,22 @@ const getVenueById = asyncHandler(async (req, res) => {
 });
 
 const updateVenue = asyncHandler(async (req, res) => {
-    const updatedVenue = await Venue.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const { location, ...otherDetails } = req.body;
+
+    if (location) {
+        const geocodedData = await geocoder.geocode(location);
+        if (!geocodedData.length) {
+            throw new ApiError(400, 'Could not geocode the provided location. Please provide a valid address.');
+        }
+        otherDetails.location = location;
+        otherDetails.geoLocation = {
+            type: 'Point',
+            coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
+            address: geocodedData[0].formattedAddress,
+        };
+    }
+
+    const updatedVenue = await Venue.findByIdAndUpdate(req.params.id, otherDetails, { new: true, runValidators: true });
     if (!updatedVenue) {
         throw new ApiError(404, "Venue not found.");
     }
@@ -183,6 +210,28 @@ const getVenuesByOwner = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, venues, "Venues fetched successfully"));
 });
 
+const getRecommendedVenues = asyncHandler(async (req, res) => {
+    const { longitude, latitude, radius } = req.query;
+
+    if (!longitude || !latitude) {
+        throw new ApiError(400, 'Longitude and latitude are required for recommendations.');
+    }
+
+    const maxDistance = (radius || 10) * 1000; // Default to 10km
+
+    const venues = await Venue.find({
+        geoLocation: {
+            $near: {
+                $geometry: {
+                    type: 'Point',
+                    coordinates: [parseFloat(longitude), parseFloat(latitude)],
+                },
+                $maxDistance: maxDistance,
+            },
+        },
+    });
+
+    return res.status(200).json(new ApiResponse(200, venues, "Recommended venues fetched successfully"));
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
   const { folder, public_id } = req.body;
 
@@ -214,6 +263,8 @@ export {
     deleteVenue,
     addVenueMedia,
     deleteVenueMedia,
+    getVenuesByOwner,
+    getRecommendedVenues
     replaceVenueMedia,
     getVenuesByOwner,
     generateCloudinarySignature,

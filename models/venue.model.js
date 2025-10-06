@@ -6,6 +6,19 @@ const venueSchema = new mongoose.Schema(
     staff: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     name: { type: String, required: true, trim: true, index: true },
     location: { type: String, required: true },
+    geoLocation: {
+      type: {
+        type: String,
+        enum: ['Point'],
+      },
+      coordinates: {
+        type: [Number],
+        index: '2dsphere',
+      },
+      address: {
+        type: String,
+      },
+    },
     capacity: { type: Number, required: true },
     description: { type: String, required: true },
     images: {
@@ -41,9 +54,19 @@ const venueSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
+venueSchema.virtual('directionUrl').get(function () {
+  if (this.geoLocation && this.geoLocation.coordinates) {
+    const [lng, lat] = this.geoLocation.coordinates;
+    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
+  }
+  return null;
 // Pre-save hook for validation
 venueSchema.pre('save', function (next) {
   // This rule ensures that if a venue has images, it must also have at least one video.

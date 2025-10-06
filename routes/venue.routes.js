@@ -9,6 +9,8 @@ import {
     deleteVenue,
     addVenueMedia,
     deleteVenueMedia,
+    getVenuesByOwner,
+    getRecommendedVenues
     replaceVenueMedia,
     getVenuesByOwner,
     generateCloudinarySignature,
@@ -17,6 +19,7 @@ import {
 const router = Router();
 
 // Public routes
+router.route('/recommendations').get(getRecommendedVenues);
 router.route('/').get(getAllVenues);
 router.route('/:id').get(getVenueById);
 
@@ -46,5 +49,4 @@ router.route('/:id/media')
 router.route('/:id/media/replace')
     .put(authorizeVenueAccess, checkActiveLicense, replaceVenueMedia);
 
-export default router; 
-
+export default router;
