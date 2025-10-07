@@ -9,6 +9,7 @@ import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
+import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createBooking = asyncHandler(async (req, res) => {
   const { venueId, startTime, endTime, eventDetails } = req.body;
@@ -23,39 +24,13 @@ const createBooking = asyncHandler(async (req, res) => {
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
 
-  // Validation checks
-  if (newBookingStartTime >= newBookingEndTime) {
-    throw new ApiError(400, 'Start time must be before end time.');
-  }
+  // Validation for future bookings
   if (newBookingStartTime < new Date()) {
     throw new ApiError(400, 'Booking must be in the future.');
   }
-  const bookingDurationHours = (newBookingEndTime - newBookingStartTime) / (1000 * 60 * 60); // in hours
 
-  // Corrected duration validation
-  if (bookingDurationHours * 60 < 30) { // bookingDurationHours is in hours, so convert to minutes for comparison
-    throw new ApiError(400, 'Booking must be for at least 30 minutes.');
-  }
-  if (bookingDurationHours > 7 * 24) { // bookingDurationHours is in hours
-    throw new ApiError(400, 'Booking cannot be for longer than 7 days.');
-  }
-
-  let totalPrice;
-  if (venue.pricing.dailyRate && !venue.pricing.hourlyRate) {
-    // If only daily rate is available, booking must be for at least a full day
-    if (bookingDurationHours < 24) {
-      throw new ApiError(400, 'This venue only supports daily bookings. Minimum booking is 24 hours.');
-    }
-    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
-  } else if (venue.pricing.hourlyRate) {
-    // If hourly rate is available, use it for any duration
-    totalPrice = bookingDurationHours * venue.pricing.hourlyRate;
-  } else {
-    // This case should ideally not be reached due to the initial check, but as a fallback:
-    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
-  }
+  // Use the helper function for validation and price calculation
+  const { totalPrice } = calculateBookingPriceAndValidate(startTime, endTime, venue.pricing);
 
   if (venue.openingHour && newBookingStartTime.getHours() < venue.openingHour) {
     throw new ApiError(400, `Venue is not open until ${venue.openingHour}:00.`);
@@ -162,35 +137,13 @@ const walkInBooking = asyncHandler(async (req, res) => {
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
 
-  // Validation checks
-  if (newBookingStartTime >= newBookingEndTime) {
-    throw new ApiError(400, 'Start time must be before end time.');
-  }
+  // Validation for future bookings
   if (newBookingStartTime < new Date()) {
     throw new ApiError(400, 'Booking must be in the future.');
   }
-  const bookingDurationHours = (newBookingEndTime - newBookingStartTime) / (1000 * 60 * 60);
 
-  if (bookingDurationHours * 60 < 30) {
-    throw new ApiError(400, 'Booking must be for at least 30 minutes.');
-  }
-  if (bookingDurationHours > 7 * 24) {
-    throw new ApiError(400, 'Booking cannot be for longer than 7 days.');
-  }
-
-  let totalPrice;
-  if (venue.pricing.dailyRate && !venue.pricing.hourlyRate) {
-    if (bookingDurationHours < 24) {
-      throw new ApiError(400, 'This venue only supports daily bookings. Minimum booking is 24 hours.');
-    }
-    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
-  } else if (venue.pricing.hourlyRate) {
-    totalPrice = bookingDurationHours * venue.pricing.hourlyRate;
-  } else {
-    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-    totalPrice = bookingDurationDays * venue.pricing.dailyRate;
-  }
+  // Use the helper function for validation and price calculation
+  const { totalPrice } = calculateBookingPriceAndValidate(startTime, endTime, venue.pricing);
 
   if (venue.openingHour && newBookingStartTime.getHours() < venue.openingHour) {
     throw new ApiError(400, `Venue is not open until ${venue.openingHour}:00.`);
