@@ -6,7 +6,7 @@ import { Booking } from '../models/booking.model.js';
 import { Venue } from '../models/venue.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
-import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner } from '../utils/emailTemplates.js';
+import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
