@@ -41,7 +41,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
-    status: 'confirmed',
+    paymentStatus: 'paid',
     $or: [
       { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
       { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
@@ -113,20 +113,15 @@ const createBooking = asyncHandler(async (req, res) => {
 });
 
 const walkInBooking = asyncHandler(async (req, res) => {
-  const { venueId, startTime, endTime, eventDetails, paymentMethod, walkInUserDetails } = req.body;
+  const { venueId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails } = req.body;
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
     throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
   }
 
-  if (!paymentMethod) {
-    throw new ApiError(400, 'Payment method is required for walk-in bookings.');
-  }
-
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
 
-  // Authorization: only venue owner or super-admin can create a walk-in booking for a venue
   const isVenueOwner = venue.owner._id.toString() === req.user._id.toString();
   const isSuperAdmin = req.user.role === 'super-admin';
 
@@ -141,12 +136,10 @@ const walkInBooking = asyncHandler(async (req, res) => {
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
 
-  // Validation for future bookings
   if (newBookingStartTime < new Date()) {
     throw new ApiError(400, 'Booking must be in the future.');
   }
 
-  // Use the helper function for validation and price calculation
   const { totalPrice } = calculateBookingPriceAndValidate(startTime, endTime, venue.pricing);
 
   if (venue.openingHour && newBookingStartTime.getHours() < venue.openingHour) {
@@ -158,20 +151,22 @@ const walkInBooking = asyncHandler(async (req, res) => {
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
-    status: 'confirmed',
+    paymentStatus: 'paid',
     $or: [
       { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
       { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
     ],
   });
 
-  if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
+  if (existingBooking) throw new ApiError(409, 'This time slot is already booked and paid for.');
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const bookingId = await generateBookingId(venue.name);
+    const finalPaymentStatus = paymentStatus || 'pending';
+
     const bookingData = {
       bookingId,
       venue: venueId,
@@ -179,8 +174,8 @@ const walkInBooking = asyncHandler(async (req, res) => {
       endTime: newBookingEndTime,
       eventDetails,
       totalPrice,
-      paymentMethod,
-      paymentStatus: 'paid', // For walk-in, payment is made upfront
+      paymentMethod: finalPaymentStatus === 'paid' ? paymentMethod : 'online',
+      paymentStatus: finalPaymentStatus,
       bookingType: 'walk-in',
       bookedBy: req.user._id,
       walkInUserDetails: {
@@ -193,9 +188,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
     const newBookingArr = await Booking.create([bookingData], { session });
     const newBooking = newBookingArr[0];
 
-    // For walk-in bookings, create a user-like object from walkInUserDetails
-    // to ensure email templates receive the expected data structure.
-    const bookingForReceipt = {
+    const bookingForEmail = {
       ...newBooking.toObject(),
       user: {
         fullName: walkInUserDetails.fullName,
@@ -203,16 +196,18 @@ const walkInBooking = asyncHandler(async (req, res) => {
       },
       venue: venue,
     };
-    const pdfReceipt = generatePdfReceipt(bookingForReceipt);
 
-    // Send email if an email address is provided
     if (walkInUserDetails.email) {
+      const pdfReceipt = generatePdfReceipt(bookingForEmail);
+      const emailSubject = finalPaymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
+      const emailHtml = finalPaymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
+
       await sendEmail({
         email: walkInUserDetails.email,
-        subject: 'Booking Confirmation - HallBooker',
-        html: generateBookingConfirmationEmail(bookingForReceipt),
+        subject: emailSubject,
+        html: emailHtml,
         attachments: [{
-          filename: `receipt-${bookingForReceipt.bookingId}.pdf`,
+          filename: `receipt-${bookingForEmail.bookingId}.pdf`,
           content: Buffer.from(pdfReceipt),
           contentType: 'application/pdf'
         }]
@@ -226,11 +221,11 @@ const walkInBooking = asyncHandler(async (req, res) => {
     await Promise.all(notificationEmails.map(email => sendEmail({
       email,
       subject: 'New Walk-in Booking Notification',
-      html: generateNewBookingNotificationEmailForOwner(bookingForReceipt),
+      html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
     })));
 
     await session.commitTransaction();
-    res.status(201).json(new ApiResponse(201, newBooking, 'Walk-in booking created successfully!'));
+    res.status(201).json(new ApiResponse(201, newBooking, `Walk-in booking created with ${finalPaymentStatus} status.`));
   } catch (error) {
     await session.abortTransaction();
     console.error('Walk-in booking transaction failed:', error);
