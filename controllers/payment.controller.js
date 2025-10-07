@@ -73,27 +73,48 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
 
     // Attempt to find a booking first
-    let booking = await Booking.findOne({ bookingId: bookingIdFromRef });
+    const booking = await Booking.findOne({ bookingId: bookingIdFromRef });
     if (booking) {
-        booking.status = 'confirmed';
+        if (booking.paymentStatus === 'paid') {
+            console.log(`Payment for booking ${bookingIdFromRef} has already been processed.`);
+            return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
+        }
+
         booking.paymentStatus = 'paid';
         await booking.save();
 
-        // Fetch a fresh, fully populated instance of the booking
         const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('venue');
 
         if (!confirmedBooking) {
-            // This should ideally not happen if the save was successful
             throw new ApiError(500, "Failed to retrieve confirmed booking details.");
         }
 
-        const pdfBuffer = Buffer.from(generatePdfReceipt(confirmedBooking));
-        await sendEmail({
-            email: confirmedBooking.user.email,
-            subject: 'Payment Confirmation and Receipt',
-            html: generatePaymentConfirmationEmail(confirmedBooking),
-            attachments: [{ filename: `receipt-${confirmedBooking.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
-        });
+        let emailToSend;
+        let userForEmail;
+
+        if (confirmedBooking.bookingType === 'walk-in') {
+            emailToSend = confirmedBooking.walkInUserDetails.email;
+            userForEmail = { fullName: confirmedBooking.walkInUserDetails.fullName };
+        } else {
+            emailToSend = confirmedBooking.user.email;
+            userForEmail = confirmedBooking.user;
+        }
+
+        if (emailToSend) {
+            const bookingForEmail = {
+                ...confirmedBooking.toObject(),
+                user: userForEmail,
+            };
+
+            const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
+            await sendEmail({
+                email: emailToSend,
+                subject: 'Payment Confirmation and Receipt',
+                html: generatePaymentConfirmationEmail(bookingForEmail),
+                attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+            });
+        }
+
         return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
     }
 

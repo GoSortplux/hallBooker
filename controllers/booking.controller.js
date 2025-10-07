@@ -119,6 +119,10 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
   }
 
+  if (!paymentStatus || !['pending', 'paid'].includes(paymentStatus)) {
+    throw new ApiError(400, 'A valid paymentStatus ("pending" or "paid") is required.');
+  }
+
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
 
