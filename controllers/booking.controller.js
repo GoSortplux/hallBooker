@@ -119,6 +119,10 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
   }
 
+  if (!paymentMethod) {
+    throw new ApiError(400, 'Payment method is required for walk-in bookings.');
+  }
+
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
 
@@ -189,7 +193,16 @@ const walkInBooking = asyncHandler(async (req, res) => {
     const newBookingArr = await Booking.create([bookingData], { session });
     const newBooking = newBookingArr[0];
 
-    const bookingForReceipt = { ...newBooking.toObject(), venue: venue };
+    // For walk-in bookings, create a user-like object from walkInUserDetails
+    // to ensure email templates receive the expected data structure.
+    const bookingForReceipt = {
+      ...newBooking.toObject(),
+      user: {
+        fullName: walkInUserDetails.fullName,
+        email: walkInUserDetails.email,
+      },
+      venue: venue,
+    };
     const pdfReceipt = generatePdfReceipt(bookingForReceipt);
 
     // Send email if an email address is provided
