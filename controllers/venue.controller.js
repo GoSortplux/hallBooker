@@ -191,13 +191,7 @@ const getRecommendedVenues = asyncHandler(async (req, res) => {
 });
 
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
-  const { folder, public_id } = req.body;
-
-  if (!folder) {
-    throw new ApiError(400, 'Folder name is required.');
-  }
-
-  const { timestamp, signature } = generateUploadSignature(folder, public_id);
+  const { timestamp, signature } = generateUploadSignature();
 
   res.status(200).json(
     new ApiResponse(

@@ -62,14 +62,12 @@ const deleteFromCloudinary = async (publicUrl) => {
   }
 };
 
-const generateUploadSignature = (folder, public_id) => {
+const generateUploadSignature = () => {
   const timestamp = Math.round(new Date().getTime() / 1000);
 
   const signature = cloudinary.utils.api_sign_request(
     {
       timestamp: timestamp,
-      folder: folder,
-      public_id: public_id,
     },
     process.env.CLOUDINARY_API_SECRET
   );
