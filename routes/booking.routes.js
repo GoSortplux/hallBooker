@@ -18,7 +18,7 @@ router.route('/')
     .post(createBooking);
 
 router.route('/walk-in')
-    .post(authorizeRoles('venue-owner', 'super-admin'), walkInBooking);
+    .post(authorizeRoles('staff', 'venue-owner', 'super-admin'), walkInBooking);
 
 router.route('/my-bookings')
     .get(getMyBookings);
