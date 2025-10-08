@@ -17,6 +17,7 @@ import licenseTierRoutes from './routes/licenseTier.routes.js';
 import settingRoutes from './routes/setting.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import subAccountRoutes from './routes/subaccount.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +51,7 @@ app.use('/api/v1/license-tiers', licenseTierRoutes);
 app.use('/api/v1/settings', settingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/subaccounts', subAccountRoutes);
 
 // Error Handling Middleware
 app.use(notFound);

@@ -6,6 +6,8 @@ import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { Venue } from '../models/venue.model.js';
 import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
+import Setting from '../models/setting.model.js';
+import { SubAccount } from '../models/subaccount.model.js';
 import sendEmail from '../services/email.service.js';
 import {
     generateBookingConfirmationEmail,
@@ -18,10 +20,21 @@ import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdf
 
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId }).populate('venue', 'name');
+    const booking = await Booking.findOne({ bookingId }).populate({
+        path: 'venue',
+        select: 'name owner',
+        populate: {
+            path: 'owner',
+            select: '_id'
+        }
+    });
 
     if (!booking) {
         throw new ApiError(404, 'Booking not found');
+    }
+
+    if (booking.paymentMethod === 'walk-in' || booking.bookingType === 'walk-in') {
+        throw new ApiError(400, 'This endpoint is for online payments only.');
     }
 
     if (!process.env.MONNIFY_CONTRACT_CODE) {
@@ -43,8 +56,28 @@ const makePayment = asyncHandler(async (req, res) => {
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
-        redirectUrl: redirectUrl
+        redirectUrl: redirectUrl,
     };
+
+    const commissionSetting = await Setting.findOne({ key: 'commissionRate' });
+    if (commissionSetting && commissionSetting.value > 0) {
+        const venueOwnerId = booking.venue.owner._id;
+        const subAccount = await SubAccount.findOne({ user: venueOwnerId });
+
+        if (subAccount) {
+            const commissionRate = commissionSetting.value / 100; // e.g., 5% -> 0.05
+            const splitPercentage = (1 - commissionRate) * 100; // e.g., 95
+
+            data.incomeSplitConfig = [{
+                subAccountCode: subAccount.subAccountCode,
+                feePercentage: 0, // Merchant bears transaction fees
+                splitPercentage: splitPercentage,
+                feeBearer: false
+            }];
+        } else {
+            console.log(`No sub-account found for venue owner ${venueOwnerId}. Proceeding without split.`);
+        }
+    }
 
     const response = await initializeTransaction(data);
 
