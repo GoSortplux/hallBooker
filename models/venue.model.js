@@ -46,13 +46,12 @@ const venueSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    manuallyBlockedSlots: [
-      {
-        startDate: { type: Date, required: true },
-        endDate: { type: Date, required: true },
-        reason: { type: String },
-      },
-    ],
+    blockedDates: [{ type: Date, index: true }],
+    allowRecurringBookings: { type: Boolean, default: false },
+    recurringBookingDiscount: {
+      percentage: { type: Number, default: 0 },
+      minBookings: { type: Number, default: 0 },
+    },
   },
   {
     timestamps: true,

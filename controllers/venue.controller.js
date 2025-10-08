@@ -61,25 +61,59 @@ const getVenueById = asyncHandler(async (req, res) => {
 });
 
 const updateVenue = asyncHandler(async (req, res) => {
-    const { location, ...otherDetails } = req.body;
+    const { location, allowRecurringBookings, recurringBookingDiscount, ...otherDetails } = req.body;
 
+    const venue = await Venue.findById(req.params.id);
+    if (!venue) {
+        throw new ApiError(404, "Venue not found.");
+    }
+
+    // Handle location update
     if (location) {
         const geocodedData = await geocoder.geocode(location);
         if (!geocodedData.length) {
             throw new ApiError(400, 'Could not geocode the provided location. Please provide a valid address.');
         }
-        otherDetails.location = location;
-        otherDetails.geoLocation = {
+        venue.location = location;
+        venue.geoLocation = {
             type: 'Point',
             coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
             address: geocodedData[0].formattedAddress,
         };
     }
 
-    const updatedVenue = await Venue.findByIdAndUpdate(req.params.id, otherDetails, { new: true, runValidators: true });
-    if (!updatedVenue) {
-        throw new ApiError(404, "Venue not found.");
+    // Handle other details
+    Object.assign(venue, otherDetails);
+
+    // Handle recurring bookings settings
+    if (allowRecurringBookings !== undefined) {
+        if (typeof allowRecurringBookings !== 'boolean') {
+            throw new ApiError(400, 'allowRecurringBookings must be a boolean.');
+        }
+        venue.allowRecurringBookings = allowRecurringBookings;
     }
+
+    if (recurringBookingDiscount) {
+        if (typeof recurringBookingDiscount !== 'object' || recurringBookingDiscount === null) {
+            throw new ApiError(400, 'recurringBookingDiscount must be an object.');
+        }
+        const { percentage, minBookings } = recurringBookingDiscount;
+        if (percentage !== undefined) {
+            if (typeof percentage !== 'number' || percentage < 0 || percentage > 100) {
+                throw new ApiError(400, 'Discount percentage must be a number between 0 and 100.');
+            }
+            venue.recurringBookingDiscount.percentage = percentage;
+        }
+        if (minBookings !== undefined) {
+            if (!Number.isInteger(minBookings) || minBookings < 1) {
+                throw new ApiError(400, 'Minimum bookings for discount must be a positive integer.');
+            }
+            venue.recurringBookingDiscount.minBookings = minBookings;
+        }
+    }
+
+    const updatedVenue = await venue.save({ runValidators: true });
+
     return res.status(200).json(new ApiResponse(200, updatedVenue, "Venue updated successfully"));
 });
 
@@ -207,6 +241,89 @@ const generateCloudinarySignature = asyncHandler(async (req, res) => {
   );
 });
 
+const createReservation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reservationPattern, startDate, endDate, year, month, week, days } = req.body;
+
+  const venue = await Venue.findById(id);
+  if (!venue) {
+    throw new ApiError(404, 'Venue not found.');
+  }
+
+  let datesToBlock = [];
+
+  switch (reservationPattern) {
+    case 'date-range':
+      if (!startDate || !endDate) {
+        throw new ApiError(400, 'Start date and end date are required for a date range reservation.');
+      }
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      let currentDate = new Date(start);
+      while (currentDate <= end) {
+        datesToBlock.push(new Date(currentDate.setUTCHours(0, 0, 0, 0)));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      break;
+
+    case 'full-week':
+      if (!year || !month || !week) {
+        throw new ApiError(400, 'Year, month, and week are required for a full week reservation.');
+      }
+      const firstDayOfMonth = new Date(Date.UTC(year, month - 1, 1));
+      const firstDayOfWeek = new Date(firstDayOfMonth);
+      firstDayOfWeek.setUTCDate(firstDayOfWeek.getUTCDate() + (week - 1) * 7);
+
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(firstDayOfWeek);
+        day.setUTCDate(day.getUTCDate() + i);
+        datesToBlock.push(day);
+      }
+      break;
+
+    case 'full-month':
+      if (!year || !month) {
+        throw new ApiError(400, 'Year and month are required for a full month reservation.');
+      }
+      const firstDay = new Date(Date.UTC(year, month - 1, 1));
+      const lastDay = new Date(Date.UTC(year, month, 0));
+      let currentMonthDay = new Date(firstDay);
+      while (currentMonthDay <= lastDay) {
+        datesToBlock.push(new Date(currentMonthDay));
+        currentMonthDay.setUTCDate(currentMonthDay.getUTCDate() + 1);
+      }
+      break;
+
+    case 'specific-days':
+      if (!year || !month || !days || !Array.isArray(days) || days.length === 0) {
+        throw new ApiError(400, 'Year, month, and an array of days are required for this reservation type.');
+      }
+      const firstDayInMonth = new Date(Date.UTC(year, month - 1, 1));
+      const lastDayInMonth = new Date(Date.UTC(year, month, 0));
+      let currentDay = new Date(firstDayInMonth);
+      while (currentDay <= lastDayInMonth) {
+        if (days.includes(currentDay.getUTCDay())) {
+          datesToBlock.push(new Date(currentDay));
+        }
+        currentDay.setUTCDate(currentDay.getUTCDate() + 1);
+      }
+      break;
+
+    default:
+      throw new ApiError(400, 'Invalid reservation pattern provided.');
+  }
+
+  const existingBlockedDates = new Set(venue.blockedDates.map(d => d.getTime()));
+  const newDatesToBlock = datesToBlock.filter(d => !existingBlockedDates.has(d.getTime()));
+
+  if (newDatesToBlock.length > 0) {
+    venue.blockedDates.push(...newDatesToBlock);
+    await venue.save({ validateBeforeSave: true });
+  }
+
+  return res.status(200).json(new ApiResponse(200, venue, 'Reservation created successfully.'));
+});
+
 export {
     createVenue,
     getAllVenues,
@@ -218,4 +335,5 @@ export {
     getVenuesByOwner,
     getRecommendedVenues,
     generateCloudinarySignature,
+    createReservation,
 };

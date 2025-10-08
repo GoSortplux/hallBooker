@@ -43,7 +43,15 @@ const bookingSchema = new mongoose.Schema(
       fullName: { type: String },
       email: { type: String },
       phone: { type: String },
-    }
+    },
+    isRecurring: {
+      type: Boolean,
+      default: false,
+    },
+    recurringBookingId: {
+      type: String,
+      index: true,
+    },
   },
   { timestamps: true }
 );
