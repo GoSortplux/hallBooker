@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import { notFound, errorHandler } from './middlewares/error.middleware.js';
 import initializeCronJobs from './cron/licenseManager.js';
@@ -40,6 +42,11 @@ app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(cookieParser());
 
+// Serve Static Files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, 'public')));
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/venues', venueRoutes);
@@ -52,6 +59,11 @@ app.use('/api/v1/settings', settingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/subaccounts', subAccountRoutes);
+
+// Fallback route to serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Error Handling Middleware
 app.use(notFound);
