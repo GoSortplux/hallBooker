@@ -67,4 +67,49 @@ const verifyTransaction = async (reference) => {
     }
 };
 
-export { initializeTransaction, verifyTransaction };
+const createSubAccount = async (data) => {
+    try {
+        const token = await getAuthToken();
+        const response = await monnify.post('/sub-accounts', data, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data.responseBody;
+    } catch (error) {
+        console.error("Error from Monnify (createSubAccount):", error.response ? error.response.data : error.message);
+        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to create sub account');
+    }
+};
+
+const getBanks = async () => {
+    try {
+        const token = await getAuthToken();
+        const response = await monnify.get('/banks', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data.responseBody;
+    } catch (error) {
+        console.error("Error from Monnify (getBanks):", error.response ? error.response.data : error.message);
+        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to get banks');
+    }
+};
+
+const updateSubAccount = async (subAccountCode, data) => {
+    try {
+        const token = await getAuthToken();
+        const response = await monnify.put(`/sub-accounts/${subAccountCode}`, data, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data.responseBody;
+    } catch (error) {
+        console.error("Error from Monnify (updateSubAccount):", error.response ? error.response.data : error.message);
+        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to update sub account');
+    }
+};
+
+export { initializeTransaction, verifyTransaction, createSubAccount, getBanks, updateSubAccount };
