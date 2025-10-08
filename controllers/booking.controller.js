@@ -9,7 +9,125 @@ import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
+import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
+
+const createRecurringBooking = asyncHandler(async (req, res) => {
+  const { venueId, startTime, endTime, eventDetails, recurrenceRule } = req.body;
+
+  if (!recurrenceRule || typeof recurrenceRule !== 'object') {
+    throw new ApiError(400, 'Recurrence rule is required and must be an object.');
+  }
+
+  const { frequency, daysOfWeek, dayOfMonth, endDate } = recurrenceRule;
+  if (!frequency || !endDate || (frequency === 'weekly' && !daysOfWeek) || (frequency === 'monthly' && !dayOfMonth)) {
+    throw new ApiError(400, 'Invalid recurrence rule provided.');
+  }
+
+  const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
+  if (!venue) throw new ApiError(404, 'Venue not found');
+  if (!venue.allowRecurringBookings) throw new ApiError(400, 'This venue does not allow recurring bookings.');
+
+  const initialStartTime = new Date(startTime);
+  const initialEndTime = new Date(endTime);
+  const recurrenceEndDate = new Date(endDate);
+
+  const bookingDates = [];
+  let currentDate = new Date(initialStartTime);
+
+  while (currentDate <= recurrenceEndDate) {
+    if (frequency === 'weekly') {
+      if (daysOfWeek.includes(currentDate.getDay())) {
+        bookingDates.push(new Date(currentDate));
+      }
+    } else if (frequency === 'monthly') {
+      if (currentDate.getDate() === dayOfMonth) {
+        bookingDates.push(new Date(currentDate));
+      }
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  if (bookingDates.length === 0) {
+    throw new ApiError(400, 'No booking dates could be generated with the provided rule.');
+  }
+
+  const canOverrideReservation = ['super-admin', 'venue-owner', 'staff'].includes(req.user.role);
+  const blockedDatesSet = new Set(venue.blockedDates.map(d => new Date(d).setHours(0, 0, 0, 0)));
+
+  for (const date of bookingDates) {
+    const bookingStart = new Date(date);
+    bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
+    const bookingEnd = new Date(date);
+    bookingEnd.setHours(initialEndTime.getHours(), initialEndTime.getMinutes(), initialEndTime.getSeconds());
+
+    if (!canOverrideReservation && blockedDatesSet.has(new Date(date).setHours(0, 0, 0, 0))) {
+      throw new ApiError(409, `The venue is reserved for ${date.toDateString()} and cannot be booked.`);
+    }
+
+    const existingBooking = await Booking.findOne({
+      venue: venueId,
+      status: 'confirmed',
+      $or: [
+        { startTime: { $lt: bookingEnd, $gte: bookingStart } },
+        { endTime: { $gt: bookingStart, $lte: bookingEnd } },
+      ],
+    });
+    if (existingBooking) {
+      throw new ApiError(409, `Time slot on ${date.toDateString()} is already booked.`);
+    }
+  }
+
+  const { totalPrice: singleBookingPrice } = calculateBookingPriceAndValidate(startTime, endTime, venue.pricing);
+  let finalPricePerBooking = singleBookingPrice;
+
+  if (venue.recurringBookingDiscount.percentage > 0 && bookingDates.length >= venue.recurringBookingDiscount.minBookings) {
+    finalPricePerBooking = singleBookingPrice * (1 - venue.recurringBookingDiscount.percentage / 100);
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const recurringBookingId = crypto.randomUUID();
+    const createdBookings = [];
+
+    for (const date of bookingDates) {
+      const bookingId = await generateBookingId(venue.name);
+      const bookingStart = new Date(date);
+      bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
+      const bookingEnd = new Date(date);
+      bookingEnd.setHours(initialEndTime.getHours(), initialEndTime.getMinutes(), initialEndTime.getSeconds());
+
+      const bookingData = {
+        bookingId,
+        venue: venueId,
+        user: req.user._id,
+        startTime: bookingStart,
+        endTime: bookingEnd,
+        eventDetails,
+        totalPrice: finalPricePerBooking,
+        paymentMethod: 'online',
+        paymentStatus: 'pending',
+        bookingType: 'online',
+        bookedBy: req.user._id,
+        isRecurring: true,
+        recurringBookingId,
+      };
+      createdBookings.push(bookingData);
+    }
+
+    const newBookings = await Booking.create(createdBookings, { session });
+
+    await session.commitTransaction();
+    res.status(201).json(new ApiResponse(201, newBookings, 'Recurring booking created successfully!'));
+  } catch (error) {
+    await session.abortTransaction();
+    throw new ApiError(500, 'Could not complete the recurring booking process.');
+  } finally {
+    session.endSession();
+  }
+});
 
 const createBooking = asyncHandler(async (req, res) => {
   const { venueId, startTime, endTime, eventDetails } = req.body;
@@ -23,6 +141,20 @@ const createBooking = asyncHandler(async (req, res) => {
 
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
+
+  // Check for reservations
+  const canOverrideReservation = ['super-admin', 'venue-owner', 'staff'].includes(req.user.role);
+  if (!canOverrideReservation && venue.blockedDates && venue.blockedDates.length > 0) {
+    const blockedDatesSet = new Set(venue.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0).getTime()));
+    let currentDate = new Date(newBookingStartTime);
+    while (currentDate <= newBookingEndTime) {
+      const currentDay = new Date(currentDate).setUTCHours(0, 0, 0, 0);
+      if (blockedDatesSet.has(currentDay)) {
+        throw new ApiError(400, `The venue is reserved for ${new Date(currentDate).toDateString()} and cannot be booked.`);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  }
 
   // Validation for future bookings
   if (newBookingStartTime < new Date()) {
@@ -41,7 +173,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
-    paymentStatus: 'paid',
+    status: 'confirmed',
     $or: [
       { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
       { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
@@ -155,14 +287,14 @@ const walkInBooking = asyncHandler(async (req, res) => {
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
-    paymentStatus: 'paid',
+    status: 'confirmed',
     $or: [
       { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
       { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
     ],
   });
 
-  if (existingBooking) throw new ApiError(409, 'This time slot is already booked and paid for.');
+  if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -292,12 +424,13 @@ const getBookingByBookingId = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));
 });
 
-export { 
-  createBooking, 
+export {
+  createRecurringBooking,
+  createBooking,
   walkInBooking,
-  getMyBookings, 
-  getBookingById, 
+  getMyBookings,
+  getBookingById,
   getBookingByBookingId,
-  updateBookingDetails, 
-  cancelBooking 
+  updateBookingDetails,
+  cancelBooking,
 };

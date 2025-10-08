@@ -1,18 +1,21 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
-import { 
+import {
+    createRecurringBooking,
     createBooking,
     walkInBooking,
     getMyBookings,
     getBookingById,
     getBookingByBookingId,
     updateBookingDetails,
-    cancelBooking 
+    cancelBooking,
 } from '../controllers/booking.controller.js';
 
 const router = Router();
 
 router.use(verifyJWT);
+
+router.route('/recurring').post(createRecurringBooking);
 
 router.route('/')
     .post(createBooking);

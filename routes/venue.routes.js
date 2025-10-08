@@ -12,6 +12,7 @@ import {
     getVenuesByOwner,
     getRecommendedVenues,
     generateCloudinarySignature,
+    createReservation,
 } from '../controllers/venue.controller.js';
 
 const router = Router();
@@ -43,5 +44,9 @@ router.route('/media/generate-signature')
 router.route('/:id/media')
     .post(authorizeVenueAccess, checkActiveLicense, addVenueMedia)
     .delete(authorizeVenueAccess, checkActiveLicense, deleteVenueMedia);
+
+// Route for creating reservations
+router.route('/:id/reservations')
+    .post(authorizeVenueAccess, checkActiveLicense, createReservation);
 
 export default router;
