@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateSubscriptionExpiryWarningEmail, generateSubscriptionExpiredEmail } from '../utils/emailTemplates.js';
@@ -44,8 +44,8 @@ const deactivateExpiredSubscriptions = async () => {
         await sub.save();
         console.log(`Subscription for owner ${sub.owner.fullName} has been marked as expired.`);
 
-        await Venue.updateMany({ owner: sub.owner._id }, { $set: { isActive: false } });
-        console.log(`Deactivated venues for owner ${sub.owner.fullName}.`);
+        await Hall.updateMany({ owner: sub.owner._id }, { $set: { isActive: false } });
+        console.log(`Deactivated halls for owner ${sub.owner.fullName}.`);
 
         try {
             await sendEmail({

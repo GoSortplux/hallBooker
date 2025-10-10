@@ -119,16 +119,16 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Location:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.location}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Directions:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.venue.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.hall.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
@@ -205,16 +205,16 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Location:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.location}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Directions:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.venue.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.hall.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
@@ -282,8 +282,8 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">New Booking Notification</h2>
-        <p>Hi ${booking.venue.owner.fullName},</p>
-        <p>You have a new booking for your venue, ${booking.venue.name}. Here are the details:</p>
+        <p>Hi ${booking.hall.owner.fullName},</p>
+        <p>You have a new booking for your hall, ${booking.hall.name}. Here are the details:</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <thead>
@@ -297,8 +297,8 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
@@ -348,18 +348,18 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
   `;
 }
 
-const generateVenueCreationEmail = (name, venueName, venueLocation) => {
+const generateHallCreationEmail = (name, hallName, hallLocation) => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #333;">New Venue Created!</h2>
+        <h2 style="color: #333;">New Hall Created!</h2>
         <p>Hi ${name},</p>
-        <p>Congratulations! Your new venue has been successfully created on HallBooker.</p>
-        <h3>Venue Details:</h3>
+        <p>Congratulations! Your new hall has been successfully created on HallBooker.</p>
+        <h3>Hall Details:</h3>
         <ul>
-            <li><strong>Name:</strong> ${venueName}</li>
-            <li><strong>Location:</strong> ${venueLocation}</li>
+            <li><strong>Name:</strong> ${hallName}</li>
+            <li><strong>Location:</strong> ${hallLocation}</li>
         </ul>
-        <p>You can now manage your venue from your dashboard.</p>
+        <p>You can now manage your hall from your dashboard.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
@@ -440,7 +440,7 @@ const generateSubscriptionExpiredEmail = (userName, tierName) => {
         <h2 style="color: #d9534f;">Your Subscription Has Expired</h2>
         <p>Hi ${userName},</p>
         <p>This is to notify you that your subscription for the <strong>${tierName}</strong> plan has expired.</p>
-        <p>As a result, your venues have been deactivated and are no longer visible for booking. To continue using our services and reactivate your venues, please log in to your dashboard and purchase a new subscription.</p>
+        <p>As a result, your halls have been deactivated and are no longer visible for booking. To continue using our services and reactivate your halls, please log in to your dashboard and purchase a new subscription.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
@@ -466,8 +466,8 @@ const generatePendingBookingCancelledEmail = (recipientName, booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
@@ -494,7 +494,7 @@ export {
   generatePaymentConfirmationEmail,
   generateBookingConfirmationEmail,
   generateNewBookingNotificationEmailForOwner,
-  generateVenueCreationEmail,
+  generateHallCreationEmail,
   generateLicensePurchaseEmail,
   generatePendingBookingCancelledEmail,
 };

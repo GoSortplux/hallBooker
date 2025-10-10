@@ -6,22 +6,22 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 const createReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
-  const venueId = req.params.venueId;
+  const hallId = req.params.hallId;
 
   const booking = await Booking.findOne({
     user: req.user._id,
-    venue: venueId,
+    hall: hallId,
     paymentStatus: 'paid',
     endTime: { $lt: new Date() }
   });
-  if (!booking) throw new ApiError(403, "You can only review venues you have booked and attended.");
+  if (!booking) throw new ApiError(403, "You can only review halls you have booked and attended.");
 
-  const review = await Review.create({ rating, comment, venue: venueId, user: req.user._id });
+  const review = await Review.create({ rating, comment, hall: hallId, user: req.user._id });
   res.status(201).json(new ApiResponse(201, review, 'Review submitted successfully.'));
 });
 
-const getReviewsForVenue = asyncHandler(async (req, res) => {
-  const reviews = await Review.find({ venue: req.params.venueId }).populate('user', 'fullName');
+const getReviewsForHall = asyncHandler(async (req, res) => {
+  const reviews = await Review.find({ hall: req.params.hallId }).populate('user', 'fullName');
   res.status(200).json(new ApiResponse(200, reviews, 'Reviews fetched successfully.'));
 });
 
@@ -49,9 +49,9 @@ const deleteReview = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, {}, "Review deleted."));
 });
 
-export { 
-  createReview, 
-  getReviewsForVenue, 
-  updateReview, 
-  deleteReview 
+export {
+  createReview,
+  getReviewsForHall,
+  updateReview,
+  deleteReview
 };

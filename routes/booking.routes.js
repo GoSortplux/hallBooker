@@ -34,8 +34,8 @@ const router = Router();
  *           description: The custom-generated ID for the booking.
  *         user:
  *           $ref: '#/components/schemas/User'
- *         venue:
- *           $ref: '#/components/schemas/Venue'
+ *         hall:
+ *           $ref: '#/components/schemas/Hall'
  *         startTime:
  *           type: string
  *           format: date-time
@@ -66,11 +66,11 @@ const router = Router();
  *
  *     BookingInput:
  *       type: object
- *       required: [venue, startTime, endTime]
+ *       required: [hall, startTime, endTime]
  *       properties:
- *         venue:
+ *         hall:
  *           type: string
- *           description: The ID of the venue to book.
+ *           description: The ID of the hall to book.
  *         startTime:
  *           type: string
  *           format: date-time
@@ -84,11 +84,11 @@ const router = Router();
  *
  *     RecurringBookingInput:
  *       type: object
- *       required: [venue, startDate, endDate, dayOfWeek, time]
+ *       required: [hall, startDate, endDate, dayOfWeek, time]
  *       properties:
- *         venue:
+ *         hall:
  *           type: string
- *           description: The ID of the venue to book.
+ *           description: The ID of the hall to book.
  *         startDate:
  *           type: string
  *           format: date
@@ -108,9 +108,9 @@ const router = Router();
  *
  *     WalkInBookingInput:
  *       type: object
- *       required: [venue, startTime, endTime, paymentMethod, walkInUserDetails]
+ *       required: [hall, startTime, endTime, paymentMethod, walkInUserDetails]
  *       properties:
- *         venue:
+ *         hall:
  *           type: string
  *         startTime:
  *           type: string

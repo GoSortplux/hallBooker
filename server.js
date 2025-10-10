@@ -13,7 +13,7 @@ import initializeBookingCronJobs from './cron/bookingManager.js';
 
 // Route Imports
 import authRoutes from './routes/auth.routes.js';
-import venueRoutes from './routes/venue.routes.js'; 
+import hallRoutes from './routes/hall.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -56,7 +56,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/venues', venueRoutes);
+app.use('/api/v1/halls', hallRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);

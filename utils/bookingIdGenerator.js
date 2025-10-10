@@ -1,14 +1,14 @@
 import { Booking } from '../models/booking.model.js';
 
-const generateBookingId = async (venueName) => {
+const generateBookingId = async (hallName) => {
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const year = String(today.getFullYear()).slice(-2);
   const dateString = `${day}-${month}-${year}`;
 
-  const venuePrefix = venueName.replace(/\s/g, '').substring(0, 3).toUpperCase();
-  const prefix = `${venuePrefix}-${dateString}-`;
+  const hallPrefix = hallName.replace(/\s/g, '').substring(0, 3).toUpperCase();
+  const prefix = `${hallPrefix}-${dateString}-`;
 
   const lastBooking = await Booking.findOne({ bookingId: { $regex: `^${prefix}` } })
     .sort({ bookingId: -1 })

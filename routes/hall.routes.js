@@ -1,34 +1,34 @@
 import { Router } from 'express';
-import { verifyJWT, authorizeRoles, authorizeVenueAccess } from '../middlewares/auth.middleware.js';
+import { verifyJWT, authorizeRoles, authorizeHallAccess } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js';
 import {
-    createVenue,
-    getAllVenues,
-    getVenueById,
-    updateVenue,
-    deleteVenue,
-    addVenueMedia,
-    deleteVenueMedia,
-    getVenuesByOwner,
-    getRecommendedVenues,
+    createHall,
+    getAllHalls,
+    getHallById,
+    updateHall,
+    deleteHall,
+    addHallMedia,
+    deleteHallMedia,
+    getHallsByOwner,
+    getRecommendedHalls,
     generateCloudinarySignature,
     createReservation,
-} from '../controllers/venue.controller.js';
+} from '../controllers/hall.controller.js';
 
 const router = Router();
 
 /**
  * @swagger
  * tags:
- *   name: Venues
- *   description: Venue management
+ *   name: Halls
+ *   description: Hall management
  */
 
 /**
  * @swagger
  * components:
  *   schemas:
- *     Venue:
+ *     Hall:
  *       type: object
  *       properties:
  *         _id:
@@ -97,7 +97,7 @@ const router = Router();
  *         directionUrl:
  *           type: string
  *           format: uri
- *     VenueInput:
+ *     HallInput:
  *       type: object
  *       required: [name, description, capacity, openingHour, closingHour, location, pricing]
  *       properties:
@@ -125,7 +125,7 @@ const router = Router();
  *           type: array
  *           items:
  *             type: string
- *     VenueMediaInput:
+ *     HallMediaInput:
  *       type: object
  *       required: [media]
  *       properties:
@@ -134,7 +134,7 @@ const router = Router();
  *           items:
  *             type: string
  *             format: uri
- *           description: An array of media URLs to add to the venue
+ *           description: An array of media URLs to add to the hall
  *     ReservationInput:
  *       type: object
  *       required: [pattern]
@@ -171,10 +171,10 @@ const router = Router();
 
 /**
  * @swagger
- * /venues/recommendations:
+ * /halls/recommendations:
  *   get:
- *     summary: Get recommended venues based on user's location
- *     tags: [Venues]
+ *     summary: Get recommended halls based on user's location
+ *     tags: [Halls]
  *     parameters:
  *       - in: query
  *         name: longitude
@@ -188,7 +188,7 @@ const router = Router();
  *         required: true
  *     responses:
  *       200:
- *         description: A list of recommended venues
+ *         description: A list of recommended halls
  *         content:
  *           application/json:
  *             schema:
@@ -199,16 +199,16 @@ const router = Router();
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Venue'
+ *                     $ref: '#/components/schemas/Hall'
  */
-router.route('/recommendations').get(getRecommendedVenues);
+router.route('/recommendations').get(getRecommendedHalls);
 
 /**
  * @swagger
- * /venues:
+ * /halls:
  *   get:
- *     summary: Get all venues with optional filtering
- *     tags: [Venues]
+ *     summary: Get all halls with optional filtering
+ *     tags: [Halls]
  *     parameters:
  *       - in: query
  *         name: keyword
@@ -229,7 +229,7 @@ router.route('/recommendations').get(getRecommendedVenues);
  *           type: number
  *     responses:
  *       200:
- *         description: A list of venues
+ *         description: A list of halls
  *         content:
  *           application/json:
  *             schema:
@@ -240,16 +240,16 @@ router.route('/recommendations').get(getRecommendedVenues);
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Venue'
+ *                     $ref: '#/components/schemas/Hall'
  */
-router.route('/').get(getAllVenues);
+router.route('/').get(getAllHalls);
 
 /**
  * @swagger
- * /venues/{id}:
+ * /halls/{id}:
  *   get:
- *     summary: Get a venue by ID
- *     tags: [Venues]
+ *     summary: Get a hall by ID
+ *     tags: [Halls]
  *     parameters:
  *       - in: path
  *         name: id
@@ -258,7 +258,7 @@ router.route('/').get(getAllVenues);
  *         required: true
  *     responses:
  *       200:
- *         description: Venue details
+ *         description: Hall details
  *         content:
  *           application/json:
  *             schema:
@@ -267,25 +267,25 @@ router.route('/').get(getAllVenues);
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/Venue'
+ *                   $ref: '#/components/schemas/Hall'
  *       404:
- *         description: Venue not found
+ *         description: Hall not found
  */
-router.route('/:id').get(getVenueById);
+router.route('/:id').get(getHallById);
 
 router.use(verifyJWT);
 
 /**
  * @swagger
- * /venues/by-owner:
+ * /halls/by-owner:
  *   get:
- *     summary: Get all venues owned by the current user (owner/staff)
- *     tags: [Venues]
+ *     summary: Get all halls owned by the current user (owner/staff)
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of the user's venues
+ *         description: A list of the user's halls
  *         content:
  *           application/json:
  *             schema:
@@ -296,16 +296,16 @@ router.use(verifyJWT);
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Venue'
+ *                     $ref: '#/components/schemas/Hall'
  */
-router.route('/by-owner').get(authorizeRoles('owner', 'staff'), getVenuesByOwner);
+router.route('/by-owner').get(authorizeRoles('hall-owner', 'staff'), getHallsByOwner);
 
 /**
  * @swagger
- * /venues:
+ * /halls:
  *   post:
- *     summary: Create a new venue
- *     tags: [Venues]
+ *     summary: Create a new hall
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -313,10 +313,10 @@ router.route('/by-owner').get(authorizeRoles('owner', 'staff'), getVenuesByOwner
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/VenueInput'
+ *             $ref: '#/components/schemas/HallInput'
  *     responses:
  *       201:
- *         description: Venue created successfully
+ *         description: Hall created successfully
  *         content:
  *           application/json:
  *             schema:
@@ -325,19 +325,19 @@ router.route('/by-owner').get(authorizeRoles('owner', 'staff'), getVenuesByOwner
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/Venue'
+ *                   $ref: '#/components/schemas/Hall'
  *       400:
  *         description: Bad request (e.g., geocoding failed, invalid data)
  */
 router.route('/')
-    .post(authorizeRoles('owner', 'super-admin'), checkActiveLicense, createVenue);
+    .post(authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, createHall);
 
 /**
  * @swagger
- * /venues/{id}:
+ * /halls/{id}:
  *   put:
- *     summary: Update a venue
- *     tags: [Venues]
+ *     summary: Update a hall
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -351,10 +351,10 @@ router.route('/')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/VenueInput'
+ *             $ref: '#/components/schemas/HallInput'
  *     responses:
  *       200:
- *         description: Venue updated successfully
+ *         description: Hall updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -363,12 +363,12 @@ router.route('/')
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/Venue'
+ *                   $ref: '#/components/schemas/Hall'
  *       404:
- *         description: Venue not found
+ *         description: Hall not found
  *   delete:
- *     summary: Delete a venue
- *     tags: [Venues]
+ *     summary: Delete a hall
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -379,20 +379,20 @@ router.route('/')
  *         required: true
  *     responses:
  *       200:
- *         description: Venue deleted successfully
+ *         description: Hall deleted successfully
  *       404:
- *         description: Venue not found
+ *         description: Hall not found
  */
 router.route('/:id')
-    .put(authorizeVenueAccess, checkActiveLicense, updateVenue)
-    .delete(authorizeVenueAccess, checkActiveLicense, deleteVenue);
+    .put(authorizeHallAccess, checkActiveLicense, updateHall)
+    .delete(authorizeHallAccess, checkActiveLicense, deleteHall);
 
 /**
  * @swagger
- * /venues/media/generate-signature:
+ * /halls/media/generate-signature:
  *   post:
  *     summary: Generate a Cloudinary signature for media upload
- *     tags: [Venues]
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -408,10 +408,10 @@ router.route('/media/generate-signature')
 
 /**
  * @swagger
- * /venues/{id}/media:
+ * /halls/{id}/media:
  *   post:
- *     summary: Add media to a venue
- *     tags: [Venues]
+ *     summary: Add media to a hall
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -425,15 +425,15 @@ router.route('/media/generate-signature')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/VenueMediaInput'
+ *             $ref: '#/components/schemas/HallMediaInput'
  *     responses:
  *       200:
  *         description: Media added successfully
  *       400:
  *         description: Bad request (e.g., max number of images reached)
  *   delete:
- *     summary: Delete media from a venue
- *     tags: [Venues]
+ *     summary: Delete media from a hall
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -458,15 +458,15 @@ router.route('/media/generate-signature')
  *         description: Media deleted successfully
  */
 router.route('/:id/media')
-    .post(authorizeVenueAccess, checkActiveLicense, addVenueMedia)
-    .delete(authorizeVenueAccess, checkActiveLicense, deleteVenueMedia);
+    .post(authorizeHallAccess, checkActiveLicense, addHallMedia)
+    .delete(authorizeHallAccess, checkActiveLicense, deleteHallMedia);
 
 /**
  * @swagger
- * /venues/{id}/reservations:
+ * /halls/{id}/reservations:
  *   post:
- *     summary: Create a reservation (block dates) for a venue
- *     tags: [Venues]
+ *     summary: Create a reservation (block dates) for a hall
+ *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -488,6 +488,6 @@ router.route('/:id/media')
  *         description: Bad request (e.g., invalid pattern)
  */
 router.route('/:id/reservations')
-    .post(authorizeVenueAccess, checkActiveLicense, createReservation);
+    .post(authorizeHallAccess, checkActiveLicense, createReservation);
 
 export default router;

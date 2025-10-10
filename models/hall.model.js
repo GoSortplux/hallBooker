@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const venueSchema = new mongoose.Schema(
+const hallSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     staff: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -60,7 +60,7 @@ const venueSchema = new mongoose.Schema(
   }
 );
 
-venueSchema.virtual('directionUrl').get(function () {
+hallSchema.virtual('directionUrl').get(function () {
   if (this.geoLocation && this.geoLocation.coordinates) {
     const [lng, lat] = this.geoLocation.coordinates;
     return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
@@ -68,4 +68,4 @@ venueSchema.virtual('directionUrl').get(function () {
   return null;
 });
 
-export const Venue = mongoose.model('Venue', venueSchema);
+export const Hall = mongoose.model('Hall', hallSchema);
