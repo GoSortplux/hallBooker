@@ -1,6 +1,9 @@
 import cron from 'node-cron';
 import { Booking } from '../models/booking.model.js';
 import Setting from '../models/setting.model.js';
+import { User } from '../models/user.model.js';
+import sendEmail from '../services/email.service.js';
+import { generatePendingBookingCancelledEmail } from '../utils/emailTemplates.js';
 
 const deletePendingBookings = async () => {
     console.log('Running pending bookings cleanup job...');
@@ -15,18 +18,74 @@ const deletePendingBookings = async () => {
 
         const cutoffTime = new Date(Date.now() - deletionTime * 60 * 1000);
 
-        const result = await Booking.deleteMany({
+        const expiredBookings = await Booking.find({
             paymentStatus: 'pending',
             createdAt: { $lt: cutoffTime },
-        });
+        }).populate({
+            path: 'venue',
+            populate: {
+                path: 'owner staff',
+                select: 'email fullName',
+            },
+        }).populate('user', 'email fullName');
 
-        if (result.deletedCount > 0) {
-            console.log(`Successfully deleted ${result.deletedCount} pending bookings.`);
-        } else {
+        if (expiredBookings.length === 0) {
             console.log('No pending bookings to delete.');
+            return;
+        }
+
+        const adminUsers = await User.find({ role: 'super-admin' }).select('email fullName');
+        const adminEmails = adminUsers.map(admin => ({ email: admin.email, name: admin.fullName }));
+
+        for (const booking of expiredBookings) {
+            try {
+                const recipients = new Map();
+
+                // Add user
+                if (booking.user && booking.user.email) {
+                    recipients.set(booking.user.email, booking.user.fullName);
+                } else if (booking.walkInUserDetails && booking.walkInUserDetails.email) {
+                    recipients.set(booking.walkInUserDetails.email, booking.walkInUserDetails.fullName);
+                }
+
+                // Add venue owner
+                if (booking.venue && booking.venue.owner && booking.venue.owner.email) {
+                    recipients.set(booking.venue.owner.email, booking.venue.owner.fullName);
+                }
+
+                // Add venue staff
+                if (booking.venue && booking.venue.staff) {
+                    booking.venue.staff.forEach(staffMember => {
+                        if (staffMember && staffMember.email) {
+                            recipients.set(staffMember.email, staffMember.fullName);
+                        }
+                    });
+                }
+
+                // Add admins
+                adminEmails.forEach(admin => recipients.set(admin.email, admin.name));
+
+                // Send email to all unique recipients
+                for (const [email, name] of recipients.entries()) {
+                    await sendEmail({
+                        email,
+                        subject: `Booking Cancelled: ${booking.bookingId}`,
+                        html: generatePendingBookingCancelledEmail(name, booking),
+                    });
+                }
+
+                console.log(`Sent cancellation notifications for booking ${booking.bookingId}`);
+
+                // Finally, delete the booking
+                await Booking.findByIdAndDelete(booking._id);
+                console.log(`Successfully deleted pending booking ${booking.bookingId}`);
+
+            } catch (emailError) {
+                console.error(`Error processing booking ${booking.bookingId}:`, emailError);
+            }
         }
     } catch (error) {
-        console.error('Error deleting pending bookings:', error);
+        console.error('Error in pending bookings cleanup job:', error);
     }
 };
 
