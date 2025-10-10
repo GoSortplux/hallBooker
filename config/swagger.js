@@ -4,10 +4,10 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Venue Booking API",
+      title: "Hall Booking API",
       version: "1.0.0",
       description:
-        "API documentation for the Venue Booking application. This API allows users to find, book, and manage venues.",
+        "API documentation for the Hall Booking application. This API allows users to find, book, and manage halls.",
     },
     servers: [
       {

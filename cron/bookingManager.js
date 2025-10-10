@@ -22,7 +22,7 @@ const deletePendingBookings = async () => {
             paymentStatus: 'pending',
             createdAt: { $lt: cutoffTime },
         }).populate({
-            path: 'venue',
+            path: 'hall',
             populate: {
                 path: 'owner staff',
                 select: 'email fullName',
@@ -48,14 +48,14 @@ const deletePendingBookings = async () => {
                     recipients.set(booking.walkInUserDetails.email, booking.walkInUserDetails.fullName);
                 }
 
-                // Add venue owner
-                if (booking.venue && booking.venue.owner && booking.venue.owner.email) {
-                    recipients.set(booking.venue.owner.email, booking.venue.owner.fullName);
+                // Add hall owner
+                if (booking.hall && booking.hall.owner && booking.hall.owner.email) {
+                    recipients.set(booking.hall.owner.email, booking.hall.owner.fullName);
                 }
 
-                // Add venue staff
-                if (booking.venue && booking.venue.staff) {
-                    booking.venue.staff.forEach(staffMember => {
+                // Add hall staff
+                if (booking.hall && booking.hall.staff) {
+                    booking.hall.staff.forEach(staffMember => {
                         if (staffMember && staffMember.email) {
                             recipients.set(staffMember.email, staffMember.fullName);
                         }

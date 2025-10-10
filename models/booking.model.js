@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const bookingSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    venue: { type: mongoose.Schema.Types.ObjectId, ref: 'Venue', required: true },
+    hall: { type: mongoose.Schema.Types.ObjectId, ref: 'Hall', required: true },
     eventDetails: { type: String, required: true },
     startTime: { type: Date, required: true },
     endTime: { type: Date, required: true },

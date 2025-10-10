@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
-import { getSuperAdminAnalytics, getVenueOwnerAnalytics } from '../controllers/analytics.controller.js';
+import { getSuperAdminAnalytics, getHallOwnerAnalytics } from '../controllers/analytics.controller.js';
 
 const router = Router();
 
@@ -8,7 +8,7 @@ const router = Router();
  * @swagger
  * tags:
  *   name: Analytics
- *   description: Analytics for super admins and venue owners
+ *   description: Analytics for super admins and hall owners
  */
 
 /**
@@ -20,27 +20,27 @@ const router = Router();
  *       properties:
  *         totalUsers:
  *           type: number
- *         totalVenues:
+ *         totalHalls:
  *           type: number
  *         totalBookings:
  *           type: number
  *         totalRevenue:
  *           type: number
- *     VenueOwnerAnalytics:
+ *     HallOwnerAnalytics:
  *       type: object
  *       properties:
  *         totalBookings:
  *           type: number
  *         totalRevenue:
  *           type: number
- *         totalVenues:
+ *         totalHalls:
  *           type: number
- *         bookingsPerVenue:
+ *         bookingsPerHall:
  *           type: array
  *           items:
  *             type: object
  *             properties:
- *               venueName:
+ *               hallName:
  *                 type: string
  *               bookingCount:
  *                 type: number
@@ -73,15 +73,15 @@ router.route('/super-admin').get(authorizeRoles('super-admin'), getSuperAdminAna
 
 /**
  * @swagger
- * /analytics/venue-owner:
+ * /analytics/hall-owner:
  *   get:
- *     summary: Get analytics for venue owner
+ *     summary: Get analytics for hall owner
  *     tags: [Analytics]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Venue owner analytics data
+ *         description: Hall owner analytics data
  *         content:
  *           application/json:
  *             schema:
@@ -90,8 +90,8 @@ router.route('/super-admin').get(authorizeRoles('super-admin'), getSuperAdminAna
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/VenueOwnerAnalytics'
+ *                   $ref: '#/components/schemas/HallOwnerAnalytics'
  */
-router.route('/venue-owner').get(authorizeRoles('owner'), getVenueOwnerAnalytics);
+router.route('/hall-owner').get(authorizeRoles('hall-owner'), getHallOwnerAnalytics);
 
 export default router;

@@ -1,7 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 import geocoder from '../utils/geocoder.js';
 import {
   uploadOnCloudinary,
@@ -10,13 +10,13 @@ import {
 } from '../config/cloudinary.js';
 
 import sendEmail from '../services/email.service.js';
-import { generateVenueCreationEmail } from '../utils/emailTemplates.js';
+import { generateHallCreationEmail } from '../utils/emailTemplates.js';
 
 
-const createVenue = asyncHandler(async (req, res) => {
+const createHall = asyncHandler(async (req, res) => {
     const { name, location, capacity, description, pricing, ownerId } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
-    if (!resolvedOwnerId) throw new ApiError(400, "Venue owner must be specified.");
+    if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
     // Validate pricing
     if (!pricing || (typeof pricing !== 'object') || (!pricing.dailyRate && !pricing.hourlyRate)) {
@@ -34,38 +34,38 @@ const createVenue = asyncHandler(async (req, res) => {
         address: geocodedData[0].formattedAddress,
     };
 
-    const venue = await Venue.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId });
+    const hall = await Hall.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId });
 
     try {
         await sendEmail({
             email: req.user.email,
-            subject: 'Your New Venue is Ready!',
-            html: generateVenueCreationEmail(req.user.fullName, venue.name, venue.location),
+            subject: 'Your New Hall is Ready!',
+            html: generateHallCreationEmail(req.user.fullName, hall.name, hall.location),
         });
     } catch (emailError) {
-        console.error(`Venue creation email failed for ${req.user.email}:`, emailError.message);
+        console.error(`Hall creation email failed for ${req.user.email}:`, emailError.message);
     }
 
-    return res.status(201).json(new ApiResponse(201, venue, "Venue created successfully"));
+    return res.status(201).json(new ApiResponse(201, hall, "Hall created successfully"));
 });
 
-const getAllVenues = asyncHandler(async (req, res) => {
-    const venues = await Venue.find({}).populate('owner', 'fullName');
-    return res.status(200).json(new ApiResponse(200, venues, "Venues fetched successfully"));
+const getAllHalls = asyncHandler(async (req, res) => {
+    const halls = await Hall.find({}).populate('owner', 'fullName');
+    return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 
-const getVenueById = asyncHandler(async (req, res) => {
-    const venue = await Venue.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber');
-    if (!venue) throw new ApiError(404, "Venue not found");
-    return res.status(200).json(new ApiResponse(200, venue, "Venue details fetched successfully"));
+const getHallById = asyncHandler(async (req, res) => {
+    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber');
+    if (!hall) throw new ApiError(404, "Hall not found");
+    return res.status(200).json(new ApiResponse(200, hall, "Hall details fetched successfully"));
 });
 
-const updateVenue = asyncHandler(async (req, res) => {
+const updateHall = asyncHandler(async (req, res) => {
     const { location, allowRecurringBookings, recurringBookingDiscount, ...otherDetails } = req.body;
 
-    const venue = await Venue.findById(req.params.id);
-    if (!venue) {
-        throw new ApiError(404, "Venue not found.");
+    const hall = await Hall.findById(req.params.id);
+    if (!hall) {
+        throw new ApiError(404, "Hall not found.");
     }
 
     // Handle location update
@@ -74,8 +74,8 @@ const updateVenue = asyncHandler(async (req, res) => {
         if (!geocodedData.length) {
             throw new ApiError(400, 'Could not geocode the provided location. Please provide a valid address.');
         }
-        venue.location = location;
-        venue.geoLocation = {
+        hall.location = location;
+        hall.geoLocation = {
             type: 'Point',
             coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
             address: geocodedData[0].formattedAddress,
@@ -83,14 +83,14 @@ const updateVenue = asyncHandler(async (req, res) => {
     }
 
     // Handle other details
-    Object.assign(venue, otherDetails);
+    Object.assign(hall, otherDetails);
 
     // Handle recurring bookings settings
     if (allowRecurringBookings !== undefined) {
         if (typeof allowRecurringBookings !== 'boolean') {
             throw new ApiError(400, 'allowRecurringBookings must be a boolean.');
         }
-        venue.allowRecurringBookings = allowRecurringBookings;
+        hall.allowRecurringBookings = allowRecurringBookings;
     }
 
     if (recurringBookingDiscount) {
@@ -102,30 +102,30 @@ const updateVenue = asyncHandler(async (req, res) => {
             if (typeof percentage !== 'number' || percentage < 0 || percentage > 100) {
                 throw new ApiError(400, 'Discount percentage must be a number between 0 and 100.');
             }
-            venue.recurringBookingDiscount.percentage = percentage;
+            hall.recurringBookingDiscount.percentage = percentage;
         }
         if (minBookings !== undefined) {
             if (!Number.isInteger(minBookings) || minBookings < 1) {
                 throw new ApiError(400, 'Minimum bookings for discount must be a positive integer.');
             }
-            venue.recurringBookingDiscount.minBookings = minBookings;
+            hall.recurringBookingDiscount.minBookings = minBookings;
         }
     }
 
-    const updatedVenue = await venue.save({ runValidators: true });
+    const updatedHall = await hall.save({ runValidators: true });
 
-    return res.status(200).json(new ApiResponse(200, updatedVenue, "Venue updated successfully"));
+    return res.status(200).json(new ApiResponse(200, updatedHall, "Hall updated successfully"));
 });
 
-const deleteVenue = asyncHandler(async (req, res) => {
-    const venue = await Venue.findByIdAndDelete(req.params.id);
-    if (!venue) {
-        throw new ApiError(404, "Venue not found.");
+const deleteHall = asyncHandler(async (req, res) => {
+    const hall = await Hall.findByIdAndDelete(req.params.id);
+    if (!hall) {
+        throw new ApiError(404, "Hall not found.");
     }
-    return res.status(200).json(new ApiResponse(200, {}, "Venue deleted successfully"));
+    return res.status(200).json(new ApiResponse(200, {}, "Hall deleted successfully"));
 });
 
-const addVenueMedia = asyncHandler(async (req, res) => {
+const addHallMedia = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { imageUrl, videoUrl } = req.body;
 
@@ -133,30 +133,30 @@ const addVenueMedia = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Image or video URL is required.');
   }
 
-  const venue = await Venue.findById(id);
-  if (!venue) {
-    throw new ApiError(404, 'Venue not found.');
+  const hall = await Hall.findById(id);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found.');
   }
 
   if (imageUrl) {
-    if (venue.images.length >= 6) {
+    if (hall.images.length >= 6) {
       throw new ApiError(400, 'Cannot add more than 6 images.');
     }
-    venue.images.push(imageUrl);
+    hall.images.push(imageUrl);
   }
 
   if (videoUrl) {
-    venue.videos.push(videoUrl);
+    hall.videos.push(videoUrl);
   }
 
-  await venue.save({ validateBeforeSave: true });
+  await hall.save({ validateBeforeSave: true });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, venue, 'Venue media added successfully.'));
+    .json(new ApiResponse(200, hall, 'Hall media added successfully.'));
 });
 
-const deleteVenueMedia = asyncHandler(async (req, res) => {
+const deleteHallMedia = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { mediaUrl } = req.body;
 
@@ -164,13 +164,13 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Media URL is required for deletion.');
   }
 
-  const venue = await Venue.findById(id);
-  if (!venue) {
-    throw new ApiError(404, 'Venue not found.');
+  const hall = await Hall.findById(id);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found.');
   }
 
-  const isVideo = venue.videos.includes(mediaUrl);
-  if (isVideo && venue.videos.length === 1) {
+  const isVideo = hall.videos.includes(mediaUrl);
+  if (isVideo && hall.videos.length === 1) {
     throw new ApiError(400, 'Cannot delete the last video.');
   }
 
@@ -178,7 +178,7 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
   // It will not throw an error if the deletion fails, but it will log the error.
   await deleteFromCloudinary(mediaUrl);
 
-  const updateResult = await Venue.findByIdAndUpdate(
+  const updateResult = await Hall.findByIdAndUpdate(
     id,
     { $pull: { images: mediaUrl, videos: mediaUrl } },
     { new: true }
@@ -186,21 +186,21 @@ const deleteVenueMedia = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, updateResult, 'Venue media deleted successfully.'));
+    .json(new ApiResponse(200, updateResult, 'Hall media deleted successfully.'));
 });
 
-const getVenuesByOwner = asyncHandler(async (req, res) => {
+const getHallsByOwner = asyncHandler(async (req, res) => {
     let query = {};
-    if (req.user.role === 'venue-owner') {
+    if (req.user.role === 'hall-owner') {
         query = { owner: req.user._id };
     } else if (req.user.role === 'staff') {
         query = { staff: req.user._id };
     }
-    const venues = await Venue.find(query).populate('owner', 'fullName');
-    return res.status(200).json(new ApiResponse(200, venues, "Venues fetched successfully"));
+    const halls = await Hall.find(query).populate('owner', 'fullName');
+    return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 
-const getRecommendedVenues = asyncHandler(async (req, res) => {
+const getRecommendedHalls = asyncHandler(async (req, res) => {
     const { longitude, latitude, radius } = req.query;
 
     if (!longitude || !latitude) {
@@ -209,7 +209,7 @@ const getRecommendedVenues = asyncHandler(async (req, res) => {
 
     const maxDistance = (radius || 10) * 1000; // Default to 10km
 
-    const venues = await Venue.find({
+    const halls = await Hall.find({
         geoLocation: {
             $near: {
                 $geometry: {
@@ -221,7 +221,7 @@ const getRecommendedVenues = asyncHandler(async (req, res) => {
         },
     });
 
-    return res.status(200).json(new ApiResponse(200, venues, "Recommended venues fetched successfully"));
+    return res.status(200).json(new ApiResponse(200, halls, "Recommended halls fetched successfully"));
 });
 
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
@@ -245,9 +245,9 @@ const createReservation = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { reservationPattern, startDate, endDate, year, month, week, days } = req.body;
 
-  const venue = await Venue.findById(id);
-  if (!venue) {
-    throw new ApiError(404, 'Venue not found.');
+  const hall = await Hall.findById(id);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found.');
   }
 
   let datesToBlock = [];
@@ -313,27 +313,27 @@ const createReservation = asyncHandler(async (req, res) => {
       throw new ApiError(400, 'Invalid reservation pattern provided.');
   }
 
-  const existingBlockedDates = new Set(venue.blockedDates.map(d => d.getTime()));
+  const existingBlockedDates = new Set(hall.blockedDates.map(d => d.getTime()));
   const newDatesToBlock = datesToBlock.filter(d => !existingBlockedDates.has(d.getTime()));
 
   if (newDatesToBlock.length > 0) {
-    venue.blockedDates.push(...newDatesToBlock);
-    await venue.save({ validateBeforeSave: true });
+    hall.blockedDates.push(...newDatesToBlock);
+    await hall.save({ validateBeforeSave: true });
   }
 
-  return res.status(200).json(new ApiResponse(200, venue, 'Reservation created successfully.'));
+  return res.status(200).json(new ApiResponse(200, hall, 'Reservation created successfully.'));
 });
 
 export {
-    createVenue,
-    getAllVenues,
-    getVenueById,
-    updateVenue,
-    deleteVenue,
-    addVenueMedia,
-    deleteVenueMedia,
-    getVenuesByOwner,
-    getRecommendedVenues,
+    createHall,
+    getAllHalls,
+    getHallById,
+    updateHall,
+    deleteHall,
+    addHallMedia,
+    deleteHallMedia,
+    getHallsByOwner,
+    getRecommendedHalls,
     generateCloudinarySignature,
     createReservation,
 };

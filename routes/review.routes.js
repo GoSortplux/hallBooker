@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
-import { 
-    createReview, 
-    getReviewsForVenue,
+import {
+    createReview,
+    getReviewsForHall,
     updateReview,
     deleteReview
 } from '../controllers/review.controller.js';
@@ -13,7 +13,7 @@ const router = Router();
  * @swagger
  * tags:
  *   name: Reviews
- *   description: Venue reviews and ratings
+ *   description: Hall reviews and ratings
  */
 
 /**
@@ -27,8 +27,8 @@ const router = Router();
  *           type: string
  *         user:
  *           $ref: '#/components/schemas/User'
- *         venue:
- *           $ref: '#/components/schemas/Venue'
+ *         hall:
+ *           $ref: '#/components/schemas/Hall'
  *         rating:
  *           type: number
  *           minimum: 1
@@ -50,19 +50,19 @@ const router = Router();
 
 /**
  * @swagger
- * /reviews/venue/{venueId}:
+ * /reviews/hall/{hallId}:
  *   get:
- *     summary: Get all reviews for a specific venue
+ *     summary: Get all reviews for a specific hall
  *     tags: [Reviews]
  *     parameters:
  *       - in: path
- *         name: venueId
+ *         name: hallId
  *         schema:
  *           type: string
  *         required: true
  *     responses:
  *       200:
- *         description: A list of reviews for the venue
+ *         description: A list of reviews for the hall
  *         content:
  *           application/json:
  *             schema:
@@ -70,13 +70,13 @@ const router = Router();
  *               items:
  *                 $ref: '#/components/schemas/Review'
  *   post:
- *     summary: Create a new review for a venue
+ *     summary: Create a new review for a hall
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: venueId
+ *         name: hallId
  *         schema:
  *           type: string
  *         required: true
@@ -94,10 +94,10 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/Review'
  *       400:
- *         description: You have already reviewed this venue
+ *         description: You have already reviewed this hall
  */
-router.route('/venue/:venueId')
-    .get(getReviewsForVenue)
+router.route('/hall/:hallId')
+    .get(getReviewsForHall)
     .post(verifyJWT, createReview);
 
 /**
