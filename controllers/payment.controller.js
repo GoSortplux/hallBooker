@@ -33,8 +33,8 @@ const makePayment = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Booking not found');
     }
 
-    if (booking.paymentMethod === 'walk-in' || booking.bookingType === 'walk-in') {
-        throw new ApiError(400, 'This endpoint is for online payments only.');
+    if (booking.bookingType !== 'walk-in' && !req.user) {
+        throw new ApiError(401, 'You must be logged in to make a payment for a standard booking.');
     }
 
     if (!process.env.MONNIFY_CONTRACT_CODE) {
@@ -47,10 +47,24 @@ const makePayment = asyncHandler(async (req, res) => {
 
     const uniquePaymentReference = `${bookingId}_${Date.now()}`;
 
+    let customerName;
+    let customerEmail;
+
+    if (booking.bookingType === 'walk-in') {
+        if (!booking.walkInUserDetails || !booking.walkInUserDetails.fullName || !booking.walkInUserDetails.email) {
+            throw new ApiError(400, 'Walk-in booking is missing customer name or email for payment.');
+        }
+        customerName = booking.walkInUserDetails.fullName;
+        customerEmail = booking.walkInUserDetails.email;
+    } else {
+        customerName = req.user.fullName;
+        customerEmail = req.user.email;
+    }
+
     const data = {
         amount: booking.totalPrice,
-        customerName: req.user.fullName,
-        customerEmail: req.user.email,
+        customerName,
+        customerEmail,
         paymentReference: uniquePaymentReference,
         paymentDescription: `Payment for booking of ${booking.venue.name}`,
         currencyCode: 'NGN',
