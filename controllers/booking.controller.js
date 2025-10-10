@@ -271,6 +271,19 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'A valid paymentStatus ("pending" or "paid") is required.');
   }
 
+  const validPaymentMethods = ['cash', 'pos', 'bank-transfer', 'online'];
+  let finalPaymentMethod = paymentMethod;
+
+  if (paymentStatus === 'paid') {
+    if (!finalPaymentMethod || !validPaymentMethods.includes(finalPaymentMethod)) {
+      throw new ApiError(400, `A valid payment method is required when payment status is 'paid'. Must be one of: ${validPaymentMethods.join(', ')}`);
+    }
+  } else { // paymentStatus is 'pending'
+    if (!finalPaymentMethod || !validPaymentMethods.includes(finalPaymentMethod)) {
+      finalPaymentMethod = 'online'; // Default for pending payments or correct invalid ones
+    }
+  }
+
   const venue = await Venue.findById(venueId).populate('owner', 'email fullName');
   if (!venue) throw new ApiError(404, 'Venue not found');
 
@@ -325,7 +338,6 @@ const walkInBooking = asyncHandler(async (req, res) => {
 
   try {
     const bookingId = await generateBookingId(venue.name);
-    const finalPaymentStatus = paymentStatus || 'pending';
 
     const bookingData = {
       bookingId,
@@ -334,8 +346,8 @@ const walkInBooking = asyncHandler(async (req, res) => {
       endTime: newBookingEndTime,
       eventDetails,
       totalPrice,
-      paymentMethod: finalPaymentStatus === 'paid' ? paymentMethod : 'online',
-      paymentStatus: finalPaymentStatus,
+      paymentMethod: finalPaymentMethod,
+      paymentStatus: paymentStatus,
       bookingType: 'walk-in',
       bookedBy: req.user._id,
       walkInUserDetails: {
@@ -359,8 +371,8 @@ const walkInBooking = asyncHandler(async (req, res) => {
 
     if (walkInUserDetails.email) {
       const pdfReceipt = generatePdfReceipt(bookingForEmail);
-      const emailSubject = finalPaymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
-      const emailHtml = finalPaymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
+      const emailSubject = paymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
+      const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
 
       await sendEmail({
         email: walkInUserDetails.email,
@@ -385,7 +397,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
     })));
 
     await session.commitTransaction();
-    res.status(201).json(new ApiResponse(201, newBooking, `Walk-in booking created with ${finalPaymentStatus} status.`));
+    res.status(201).json(new ApiResponse(201, newBooking, `Walk-in booking created with ${paymentStatus} status.`));
   } catch (error) {
     await session.abortTransaction();
     console.error('Walk-in booking transaction failed:', error);

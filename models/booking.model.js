@@ -10,8 +10,8 @@ const bookingSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ['cash', 'pos', 'bank-transfer', 'online', 'pending'],
-      required: true,
+      enum: ['cash', 'pos', 'bank-transfer', 'online'],
+      required: true
     },
     paymentStatus: {
       type: String,
