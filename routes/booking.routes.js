@@ -176,7 +176,7 @@ router.use(verifyJWT);
  *                   items:
  *                     $ref: '#/components/schemas/Booking'
  *       400:
- *         description: Bad request (e.g., booking conflict)
+ *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
  */
 router.route('/recurring').post(createRecurringBooking);
 
@@ -202,7 +202,7 @@ router.route('/recurring').post(createRecurringBooking);
  *             schema:
  *               type: object
  *       400:
- *         description: Bad request (e.g., booking conflict)
+ *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
  */
 router.route('/')
     .post(createBooking);
@@ -234,7 +234,7 @@ router.route('/')
  *                 data:
  *                   $ref: '#/components/schemas/Booking'
  *       400:
- *         description: Bad request (e.g., booking conflict)
+ *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
  */
 router.route('/walk-in')
     .post(authorizeRoles('staff', 'owner', 'super-admin'), walkInBooking);
