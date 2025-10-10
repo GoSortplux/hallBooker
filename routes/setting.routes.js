@@ -1,5 +1,5 @@
 import express from 'express';
-import { setCommissionRate, getCommissionRate } from '../controllers/setting.controller.js';
+import { setCommissionRate, getCommissionRate, setPendingBookingDeletionTime } from '../controllers/setting.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -51,5 +51,30 @@ const router = express.Router();
  */
 router.post('/commission-rate', verifyJWT, authorizeRoles('super-admin'), setCommissionRate);
 router.get('/commission-rate', verifyJWT, authorizeRoles('super-admin'), getCommissionRate);
+
+/**
+ * @swagger
+ * /settings/pending-booking-deletion-time:
+ *   put:
+ *     summary: Set the time in minutes to wait before deleting a pending booking
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [time]
+ *             properties:
+ *               time:
+ *                 type: number
+ *                 description: The time in minutes
+ *     responses:
+ *       200:
+ *         description: Pending booking deletion time updated successfully
+ */
+router.put('/pending-booking-deletion-time', verifyJWT, authorizeRoles('super-admin'), setPendingBookingDeletionTime);
 
 export default router;

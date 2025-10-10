@@ -9,6 +9,7 @@ import swaggerSpec from './config/swagger.js';
 import connectDB from './config/db.js';
 import { notFound, errorHandler } from './middlewares/error.middleware.js';
 import initializeCronJobs from './cron/licenseManager.js';
+import initializeBookingCronJobs from './cron/bookingManager.js';
 
 // Route Imports
 import authRoutes from './routes/auth.routes.js';
@@ -34,6 +35,7 @@ const port = process.env.PORT || 5000;
 
 // Initialize Cron Jobs
 initializeCronJobs();
+initializeBookingCronJobs();
 
 // Middleware
 app.use(cors({
