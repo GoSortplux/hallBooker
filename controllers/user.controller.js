@@ -2,7 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 import mongoose from 'mongoose';
 import {
     createSubAccount as createMonnifySubAccount,
@@ -54,7 +54,7 @@ const updateUserBankAccount = asyncHandler(async (req, res) => {
     user.accountName = accountName;
     await user.save();
 
-    if (user.role === 'venue-owner') {
+    if (user.role === 'hall-owner') {
         const banks = await getBanks();
         const bank = banks.find(b => b.name.toLowerCase() === bankName.toLowerCase());
 
@@ -99,7 +99,7 @@ const updateUserBankAccount = asyncHandler(async (req, res) => {
 });
 
 const addStaff = asyncHandler(async (req, res) => {
-  const { fullName, email, phone, password, venueIds } = req.body;
+  const { fullName, email, phone, password, hallIds } = req.body;
   const ownerId = req.user._id;
 
   const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
@@ -118,9 +118,9 @@ const addStaff = asyncHandler(async (req, res) => {
 
   const createdStaff = await staff.save();
 
-  if (venueIds && venueIds.length > 0) {
-    await Venue.updateMany(
-      { _id: { $in: venueIds }, owner: ownerId },
+  if (hallIds && hallIds.length > 0) {
+    await Hall.updateMany(
+      { _id: { $in: hallIds }, owner: ownerId },
       { $addToSet: { staff: createdStaff._id } }
     );
   }
@@ -147,7 +147,7 @@ const removeStaff = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Staff not found');
   }
 
-  await Venue.updateMany({ owner: ownerId }, { $pull: { staff: staffId } });
+  await Hall.updateMany({ owner: ownerId }, { $pull: { staff: staffId } });
 
   await User.findByIdAndDelete(staffId);
 

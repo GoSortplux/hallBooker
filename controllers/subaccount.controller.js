@@ -9,8 +9,8 @@ const createSubAccount = asyncHandler(async (req, res) => {
   const { userId, bankCode, accountNumber, accountName, currencyCode = 'NGN' } = req.body;
 
   const user = await User.findById(userId);
-  if (!user || user.role !== 'venue-owner') {
-    throw new ApiError(404, 'Venue owner not found.');
+  if (!user || user.role !== 'hall-owner') {
+    throw new ApiError(404, 'Hall owner not found.');
   }
 
   const existingSubAccount = await SubAccount.findOne({ user: userId });

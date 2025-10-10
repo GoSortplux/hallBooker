@@ -3,7 +3,7 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { LicenseTier } from '../models/licenseTier.model.js';
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import mongoose from 'mongoose';
 import sendEmail from '../services/email.service.js';
@@ -29,9 +29,9 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(400, "You are already subscribed to this license tier.");
     }
 
-    const venueCount = await Venue.countDocuments({ owner: ownerId });
-    if (venueCount > tier.maxHalls) {
-        throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${tier.maxHalls}).`);
+    const hallCount = await Hall.countDocuments({ owner: ownerId });
+    if (hallCount > tier.maxHalls) {
+        throw new ApiError(400, `You have too many halls (${hallCount}) for the selected tier (max: ${tier.maxHalls}).`);
     }
 
     // Handle free tiers - activate directly without payment
@@ -48,7 +48,7 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
             expiryDate: expiryDate,
         });
 
-        await Venue.updateMany({ owner: ownerId }, { $set: { isActive: true } });
+        await Hall.updateMany({ owner: ownerId }, { $set: { isActive: true } });
 
         // Send confirmation emails
         sendEmail({
@@ -123,9 +123,9 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(400, "The new tier must be an upgrade. Choose a tier with a higher price.");
     }
 
-    const venueCount = await Venue.countDocuments({ owner: ownerId });
-    if (venueCount > newTier.maxHalls) {
-        throw new ApiError(400, `You have too many venues (${venueCount}) for the selected tier (max: ${newTier.maxHalls}).`);
+    const hallCount = await Hall.countDocuments({ owner: ownerId });
+    if (hallCount > newTier.maxHalls) {
+        throw new ApiError(400, `You have too many halls (${hallCount}) for the selected tier (max: ${newTier.maxHalls}).`);
     }
 
     // Mark the old subscription as 'upgraded'
@@ -187,22 +187,22 @@ const getSubscriptionHistoryForUser = asyncHandler(async (req, res) => {
 
 const getRecommendedTier = asyncHandler(async (req, res) => {
     const ownerId = req.user._id;
-    const venueCount = await Venue.countDocuments({ owner: ownerId });
+    const hallCount = await Hall.countDocuments({ owner: ownerId });
 
     let recommendedTier = await LicenseTier.findOne({
-        minHalls: { $lte: venueCount },
-        maxHalls: { $gte: venueCount },
+        minHalls: { $lte: hallCount },
+        maxHalls: { $gte: hallCount },
     }).sort({ price: 1 });
 
     if (!recommendedTier) {
         recommendedTier = await LicenseTier.findOne().sort({ maxHalls: -1 });
         if (recommendedTier) {
-            return res.status(200).json(new ApiResponse(200, { recommendedTier, venueCount, message: "You exceed the limits of our standard tiers. Here is our highest available tier." }, "Recommendation generated."));
+            return res.status(200).json(new ApiResponse(200, { recommendedTier, hallCount, message: "You exceed the limits of our standard tiers. Here is our highest available tier." }, "Recommendation generated."));
         }
         throw new ApiError(404, "No license tiers are available in the system.");
     }
 
-    res.status(200).json(new ApiResponse(200, { recommendedTier, venueCount }, "Recommended tier fetched successfully."));
+    res.status(200).json(new ApiResponse(200, { recommendedTier, hallCount }, "Recommended tier fetched successfully."));
 });
 
 

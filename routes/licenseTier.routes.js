@@ -36,12 +36,12 @@ const router = Router();
  *           type: array
  *           items:
  *             type: string
- *         maxVenues:
+ *         maxHalls:
  *           type: number
  *
  *     LicenseTierInput:
  *       type: object
- *       required: [name, price, durationInDays, features, maxVenues]
+ *       required: [name, price, durationInDays, features, maxHalls]
  *       properties:
  *         name:
  *           type: string
@@ -53,7 +53,7 @@ const router = Router();
  *           type: array
  *           items:
  *             type: string
- *         maxVenues:
+ *         maxHalls:
  *           type: number
  */
 
