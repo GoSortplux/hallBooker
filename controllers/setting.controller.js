@@ -36,7 +36,29 @@ const getCommissionRate = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, commissionRateSetting, 'Commission rate retrieved successfully'));
 });
 
+const setPendingBookingDeletionTime = asyncHandler(async (req, res) => {
+    const { time } = req.body;
+
+    if (time === undefined || typeof time !== 'number') {
+        throw new ApiError(400, 'Time is required and must be a number');
+    }
+
+    let setting = await Setting.findOne({ key: 'pendingBookingDeletionTime' });
+
+    if (setting) {
+        setting.value = time;
+        await setting.save();
+    } else {
+        setting = await Setting.create({ key: 'pendingBookingDeletionTime', value: time });
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, setting, 'Pending booking deletion time updated successfully'));
+});
+
 export {
   setCommissionRate,
   getCommissionRate,
+  setPendingBookingDeletionTime,
 };
