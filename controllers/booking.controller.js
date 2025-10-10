@@ -67,11 +67,19 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 
     const existingBooking = await Booking.findOne({
       venue: venueId,
-      status: 'confirmed',
       $or: [
-        { startTime: { $lt: bookingEnd, $gte: bookingStart } },
-        { endTime: { $gt: bookingStart, $lte: bookingEnd } },
+        { status: 'confirmed' },
+        { paymentStatus: 'pending' }
       ],
+      $and: [
+        {
+          $or: [
+            { startTime: { $lt: bookingEnd, $gte: bookingStart } },
+            { endTime: { $gt: bookingStart, $lte: bookingEnd } },
+            { startTime: { $lte: bookingStart }, endTime: { $gte: bookingEnd } }
+          ]
+        }
+      ]
     });
     if (existingBooking) {
       throw new ApiError(409, `Time slot on ${date.toDateString()} is already booked.`);
@@ -173,11 +181,19 @@ const createBooking = asyncHandler(async (req, res) => {
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
-    status: 'confirmed',
     $or: [
-      { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
-      { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
+        { status: 'confirmed' },
+        { paymentStatus: 'pending' }
     ],
+    $and: [
+        {
+          $or: [
+            { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
+            { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
+            { startTime: { $lte: newBookingStartTime }, endTime: { $gte: newBookingEndTime } }
+          ]
+        }
+    ]
   });
 
   if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
@@ -287,11 +303,19 @@ const walkInBooking = asyncHandler(async (req, res) => {
 
   const existingBooking = await Booking.findOne({
     venue: venueId,
-    status: 'confirmed',
     $or: [
-      { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
-      { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
+        { status: 'confirmed' },
+        { paymentStatus: 'pending' }
     ],
+    $and: [
+        {
+          $or: [
+            { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
+            { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
+            { startTime: { $lte: newBookingStartTime }, endTime: { $gte: newBookingEndTime } }
+          ]
+        }
+    ]
   });
 
   if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
