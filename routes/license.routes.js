@@ -15,7 +15,7 @@ const router = Router();
  * @swagger
  * tags:
  *   name: Licenses
- *   description: License and subscription management for venue owners
+ *   description: License and subscription management for hall owners
  */
 
 /**
@@ -56,7 +56,7 @@ router.use(verifyJWT);
  * @swagger
  * /licenses/recommend:
  *   get:
- *     summary: Get a recommended license tier for the venue owner
+ *     summary: Get a recommended license tier for the hall owner
  *     tags: [Licenses]
  *     security:
  *       - bearerAuth: []
@@ -74,7 +74,7 @@ router.use(verifyJWT);
  *                   $ref: '#/components/schemas/LicenseTier'
  */
 router.route('/recommend')
-    .get(authorizeRoles('owner'), getRecommendedTier);
+    .get(authorizeRoles('hall-owner'), getRecommendedTier);
 
 /**
  * @swagger
@@ -104,7 +104,7 @@ router.route('/recommend')
  *                   $ref: '#/components/schemas/License'
  */
 router.route('/')
-    .post(authorizeRoles('owner'), purchaseSubscription);
+    .post(authorizeRoles('hall-owner'), purchaseSubscription);
 
 /**
  * @swagger
@@ -134,7 +134,7 @@ router.route('/')
  *                   $ref: '#/components/schemas/License'
  */
 router.route('/upgrade')
-    .post(authorizeRoles('owner'), upgradeSubscription);
+    .post(authorizeRoles('hall-owner'), upgradeSubscription);
 
 /**
  * @swagger
@@ -160,7 +160,7 @@ router.route('/upgrade')
  *         description: No active subscription found
  */
 router.route('/my-subscription')
-    .get(authorizeRoles('owner'), getMyCurrentSubscription);
+    .get(authorizeRoles('hall-owner'), getMyCurrentSubscription);
 
 /**
  * @swagger
@@ -186,7 +186,7 @@ router.route('/my-subscription')
  *                     $ref: '#/components/schemas/License'
  */
 router.route('/my-history')
-    .get(authorizeRoles('owner'), getMySubscriptionHistory);
+    .get(authorizeRoles('hall-owner'), getMySubscriptionHistory);
 
 /**
  * @swagger

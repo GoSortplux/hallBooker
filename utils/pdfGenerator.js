@@ -49,8 +49,8 @@ const generatePdfReceipt = (booking) => {
       : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
 
     const tableBody = [
-        ['Venue', booking.venue.name],
-        ['Location', booking.venue.location],
+        ['Hall', booking.hall.name],
+        ['Location', booking.hall.location],
         ['Date', formattedDate],
         ['Time', `${startDate.toLocaleTimeString('en-US', timeOptions)} - ${endDate.toLocaleTimeString('en-US', timeOptions)}`],
         ['Duration', formatDuration(startDate, endDate)],

@@ -23,7 +23,7 @@ const router = Router();
  *       properties:
  *         userId:
  *           type: string
- *           description: The ID of the user (venue owner) to create the subaccount for.
+ *           description: The ID of the user (hall owner) to create the subaccount for.
  *         percentageCharge:
  *           type: number
  *           description: The percentage of the transaction to be paid to this subaccount.
@@ -45,7 +45,7 @@ const router = Router();
  * @swagger
  * /subaccounts:
  *   post:
- *     summary: Create a new subaccount for a venue owner (Super Admin only)
+ *     summary: Create a new subaccount for a hall owner (Super Admin only)
  *     tags: [Subaccounts]
  *     security:
  *       - bearerAuth: []

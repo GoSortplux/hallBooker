@@ -3,7 +3,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 import { Booking } from '../models/booking.model.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
 import Setting from '../models/setting.model.js';
@@ -21,7 +21,7 @@ import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdf
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
     const booking = await Booking.findOne({ bookingId }).populate({
-        path: 'venue',
+        path: 'hall',
         select: 'name owner',
         populate: {
             path: 'owner',
@@ -66,7 +66,7 @@ const makePayment = asyncHandler(async (req, res) => {
         customerName,
         customerEmail,
         paymentReference: uniquePaymentReference,
-        paymentDescription: `Payment for booking of ${booking.venue.name}`,
+        paymentDescription: `Payment for booking of ${booking.hall.name}`,
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
@@ -75,8 +75,8 @@ const makePayment = asyncHandler(async (req, res) => {
 
     const commissionSetting = await Setting.findOne({ key: 'commissionRate' });
     if (commissionSetting && commissionSetting.value > 0) {
-        const venueOwnerId = booking.venue.owner._id;
-        const subAccount = await SubAccount.findOne({ user: venueOwnerId });
+        const hallOwnerId = booking.hall.owner._id;
+        const subAccount = await SubAccount.findOne({ user: hallOwnerId });
 
         if (subAccount) {
             const commissionRate = commissionSetting.value / 100; // e.g., 5% -> 0.05
@@ -89,7 +89,7 @@ const makePayment = asyncHandler(async (req, res) => {
                 feeBearer: false
             }];
         } else {
-            console.log(`No sub-account found for venue owner ${venueOwnerId}. Proceeding without split.`);
+            console.log(`No sub-account found for hall owner ${hallOwnerId}. Proceeding without split.`);
         }
     }
 
@@ -130,7 +130,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
         booking.paymentStatus = 'paid';
         await booking.save();
 
-        const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('venue');
+        const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('hall');
 
         if (!confirmedBooking) {
             throw new ApiError(500, "Failed to retrieve confirmed booking details.");
@@ -180,8 +180,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
         // 2. Save the updated subscription to the database FIRST
         await subscription.save();
 
-        // 3. Activate the user's venues
-        await Venue.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
+        // 3. Activate the user's halls
+        await Hall.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
 
         // 4. Send receipt and confirmation emails (now that the subscription is saved)
         try {
