@@ -54,6 +54,9 @@ const hallSchema = new mongoose.Schema(
     },
     views: { type: Number, default: 0 },
     demoBookings: { type: Number, default: 0 },
+    isOnlineBookingEnabled: { type: Boolean, default: true },
+    onlineBookingEnableTime: { type: Date },
+    onlineBookingDisableTime: { type: Date },
   },
   {
     timestamps: true,

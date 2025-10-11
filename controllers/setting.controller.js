@@ -61,4 +61,48 @@ export {
   setCommissionRate,
   getCommissionRate,
   setPendingBookingDeletionTime,
+  setOnlineBookingReactivationTime,
+  setOnlineBookingDeactivationTime,
 };
+
+const setOnlineBookingReactivationTime = asyncHandler(async (req, res) => {
+    const { time } = req.body;
+
+    if (time === undefined || typeof time !== 'number') {
+        throw new ApiError(400, 'Time is required and must be a number');
+    }
+
+    let setting = await Setting.findOne({ key: 'onlineBookingReactivationTime' });
+
+    if (setting) {
+        setting.value = time;
+        await setting.save();
+    } else {
+        setting = await Setting.create({ key: 'onlineBookingReactivationTime', value: time });
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, setting, 'Online booking reactivation time updated successfully'));
+});
+
+const setOnlineBookingDeactivationTime = asyncHandler(async (req, res) => {
+    const { time } = req.body;
+
+    if (time === undefined || typeof time !== 'number') {
+        throw new ApiError(400, 'Time is required and must be a number');
+    }
+
+    let setting = await Setting.findOne({ key: 'onlineBookingDeactivationTime' });
+
+    if (setting) {
+        setting.value = time;
+        await setting.save();
+    } else {
+        setting = await Setting.create({ key: 'onlineBookingDeactivationTime', value: time });
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, setting, 'Online booking deactivation time updated successfully'));
+});
