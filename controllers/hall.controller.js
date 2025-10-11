@@ -13,6 +13,55 @@ import {
 
 import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
+import Setting from '../models/setting.model.js';
+
+
+const toggleOnlineBooking = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const hall = await Hall.findById(id);
+
+    if (!hall) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    // Fetch settings with defaults
+    const reactivationTimeSetting = await Setting.findOne({ key: 'onlineBookingReactivationTime' });
+    const deactivationTimeSetting = await Setting.findOne({ key: 'onlineBookingDeactivationTime' });
+
+    // Default reactivation time: 24 hours in minutes
+    const reactivationTime = reactivationTimeSetting ? reactivationTimeSetting.value : 24 * 60;
+    // Default deactivation time: 5 hours in minutes
+    const deactivationTime = deactivationTimeSetting ? deactivationTimeSetting.value : 5 * 60;
+
+    const now = new Date();
+
+    // Trying to enable
+    if (!hall.isOnlineBookingEnabled) {
+        if (hall.onlineBookingDisableTime) {
+            const canReactivateTime = new Date(hall.onlineBookingDisableTime.getTime() + reactivationTime * 60 * 1000);
+            if (now < canReactivateTime) {
+                throw new ApiError(400, `Online booking cannot be re-enabled until ${canReactivateTime.toLocaleString()}`);
+            }
+        }
+        hall.isOnlineBookingEnabled = true;
+        hall.onlineBookingEnableTime = now;
+    }
+    // Trying to disable
+    else {
+        if (hall.onlineBookingEnableTime) {
+            const canDeactivateTime = new Date(hall.onlineBookingEnableTime.getTime() + deactivationTime * 60 * 1000);
+            if (now < canDeactivateTime) {
+                throw new ApiError(400, `Online booking cannot be disabled until ${canDeactivateTime.toLocaleString()}`);
+            }
+        }
+        hall.isOnlineBookingEnabled = false;
+        hall.onlineBookingDisableTime = now;
+    }
+
+    await hall.save({ validateBeforeSave: true });
+
+    return res.status(200).json(new ApiResponse(200, hall, "Online booking status updated successfully"));
+});
 
 
 const createHall = asyncHandler(async (req, res) => {
@@ -59,6 +108,12 @@ const getAllHalls = asyncHandler(async (req, res) => {
 const getHallById = asyncHandler(async (req, res) => {
     const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber');
     if (!hall) throw new ApiError(404, "Hall not found");
+
+    if (!hall.isOnlineBookingEnabled) {
+        const hallData = hall.toObject();
+        hallData.bookingMessage = "Online booking is currently unavailable — walk-in only.";
+        return res.status(200).json(new ApiResponse(200, hallData, "Hall details fetched successfully"));
+    }
 
     try {
         let userId = null;
@@ -423,6 +478,7 @@ const bookDemo = asyncHandler(async (req, res) => {
 });
 
 export {
+    toggleOnlineBooking,
     createHall,
     getAllHalls,
     getHallById,

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { verifyJWT, authorizeRoles, authorizeHallAccess } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js';
 import {
+    toggleOnlineBooking,
     createHall,
     getAllHalls,
     getHallById,
@@ -510,5 +511,30 @@ router.route('/:id/media')
  */
 router.route('/:id/reservations')
     .post(authorizeHallAccess, checkActiveLicense, createReservation);
+
+/**
+ * @swagger
+ * /halls/{id}/toggle-online-booking:
+ *   put:
+ *     summary: Toggle the online booking status for a hall
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Online booking status updated successfully
+ *       400:
+ *         description: Bad request (e.g., trying to toggle too soon)
+ *       404:
+ *         description: Hall not found
+ */
+router.route('/:id/toggle-online-booking')
+    .put(authorizeHallAccess, checkActiveLicense, toggleOnlineBooking);
 
 export default router;
