@@ -52,6 +52,13 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
+    selectedFacilities: [
+      {
+        name: { type: String, required: true },
+        cost: { type: Number, required: true },
+        chargeMethod: { type: String, required: true },
+      },
+    ],
   },
   { timestamps: true }
 );

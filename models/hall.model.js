@@ -31,7 +31,21 @@ const hallSchema = new mongoose.Schema(
     videos: {
       type: [{ type: String }],
     },
-    facilities: { type: Map, of: String },
+    facilities: [
+      {
+        name: { type: String, required: true },
+        available: { type: Boolean, default: true },
+        chargeable: { type: Boolean, default: false },
+        chargeMethod: {
+          type: String,
+          enum: ['free', 'flat', 'per_hour'],
+          default: 'free',
+        },
+        cost: { type: Number, default: 0 },
+      },
+    ],
+    carParkCapacity: { type: Number },
+    hallSize: { type: String },
     pricing: {
       dailyRate: { type: Number },
       hourlyRate: { type: Number },

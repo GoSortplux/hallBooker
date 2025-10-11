@@ -138,7 +138,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 });
 
 const createBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails } = req.body;
+  const { hallId, startTime, endTime, eventDetails, selectedFacilityNames } = req.body;
 
   const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
   if (!hall) throw new ApiError(404, 'Hall not found');
@@ -170,7 +170,8 @@ const createBooking = asyncHandler(async (req, res) => {
   }
 
   // Use the helper function for validation and price calculation
-  const { totalPrice } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing);
+  const selectedFacilities = hall.facilities.filter(f => selectedFacilityNames?.includes(f.name));
+  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, selectedFacilities);
 
   if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
     throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
@@ -215,6 +216,7 @@ const createBooking = asyncHandler(async (req, res) => {
       paymentStatus: 'pending',
       bookingType: 'online',
       bookedBy: req.user._id,
+      selectedFacilities: facilitiesWithCalculatedCosts,
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
@@ -261,7 +263,7 @@ const createBooking = asyncHandler(async (req, res) => {
 });
 
 const walkInBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails } = req.body;
+  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilityNames } = req.body;
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
     throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
@@ -305,7 +307,8 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Booking must be in the future.');
   }
 
-  const { totalPrice } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing);
+  const selectedFacilities = hall.facilities.filter(f => selectedFacilityNames?.includes(f.name));
+  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, selectedFacilities);
 
   if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
     throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
@@ -355,6 +358,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
         email: walkInUserDetails.email,
         phone: walkInUserDetails.phone,
       },
+      selectedFacilities: facilitiesWithCalculatedCosts,
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
