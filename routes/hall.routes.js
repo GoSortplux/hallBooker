@@ -13,6 +13,7 @@ import {
     getRecommendedHalls,
     generateCloudinarySignature,
     createReservation,
+    bookDemo,
 } from '../controllers/hall.controller.js';
 
 const router = Router();
@@ -272,6 +273,26 @@ router.route('/').get(getAllHalls);
  *         description: Hall not found
  */
 router.route('/:id').get(getHallById);
+
+/**
+ * @swagger
+ * /halls/{id}/book-demo:
+ *   post:
+ *     summary: Record a "Book a Demo" click for a hall
+ *     tags: [Halls]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Demo booking click recorded successfully
+ *       404:
+ *         description: Hall not found
+ */
+router.route('/:id/book-demo').post(bookDemo);
 
 router.use(verifyJWT);
 

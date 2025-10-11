@@ -52,6 +52,8 @@ const hallSchema = new mongoose.Schema(
       percentage: { type: Number, default: 0 },
       minBookings: { type: Number, default: 0 },
     },
+    views: { type: Number, default: 0 },
+    demoBookings: { type: Number, default: 0 },
   },
   {
     timestamps: true,

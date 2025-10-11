@@ -1,7 +1,9 @@
+import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Hall } from '../models/hall.model.js';
+import { Analytics } from '../models/analytics.model.js';
 import geocoder from '../utils/geocoder.js';
 import {
   uploadOnCloudinary,
@@ -57,6 +59,46 @@ const getAllHalls = asyncHandler(async (req, res) => {
 const getHallById = asyncHandler(async (req, res) => {
     const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber');
     if (!hall) throw new ApiError(404, "Hall not found");
+
+    try {
+        let userId = null;
+        const token = req.cookies?.accessToken || req.headers.authorization?.split(' ')[1];
+        if (token) {
+            try {
+                const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+                userId = decodedToken?._id;
+            } catch (error) {
+                // Invalid token, proceed as anonymous
+            }
+        }
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const analyticsQuery = {
+            hall: req.params.id,
+            type: 'view',
+            ...(userId ? { user: userId } : { ipAddress: req.ip }),
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        };
+
+        const alreadyViewedToday = await Analytics.findOne(analyticsQuery);
+
+        if (!alreadyViewedToday) {
+            await Analytics.create({
+                hall: req.params.id,
+                type: 'view',
+                ...(userId ? { user: userId } : { ipAddress: req.ip }),
+            });
+            hall.views += 1;
+            await hall.save({ validateBeforeSave: false });
+        }
+    } catch (error) {
+        console.error('Analytics view tracking failed:', error);
+    }
+
     return res.status(200).json(new ApiResponse(200, hall, "Hall details fetched successfully"));
 });
 
@@ -324,6 +366,62 @@ const createReservation = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, hall, 'Reservation created successfully.'));
 });
 
+const bookDemo = asyncHandler(async (req, res) => {
+    const hallId = req.params.id;
+
+    const hallExists = await Hall.findById(hallId);
+    if (!hallExists) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    let userId = null;
+    const token = req.cookies?.accessToken || req.headers.authorization?.split(' ')[1];
+    if (token) {
+        try {
+            const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+            userId = decodedToken?._id;
+        } catch (error) {
+            // Invalid token, proceed as anonymous
+        }
+    }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const analyticsQuery = {
+        hall: hallId,
+        type: 'demo-booking',
+        ...(userId ? { user: userId } : { ipAddress: req.ip }),
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+    };
+
+    const alreadyClickedToday = await Analytics.findOne(analyticsQuery);
+
+    if (!alreadyClickedToday) {
+        try {
+            await Analytics.create({
+                hall: hallId,
+                type: 'demo-booking',
+                ...(userId ? { user: userId } : { ipAddress: req.ip }),
+            });
+            await Hall.findByIdAndUpdate(hallId, { $inc: { demoBookings: 1 } });
+        } catch (error) {
+            console.error('Analytics demo booking tracking failed:', error);
+        }
+    }
+
+    const hallWithContact = await Hall.findById(hallId).populate('owner', 'phone whatsappNumber');
+
+    const ownerContact = {
+        phone: hallWithContact.owner?.phone,
+        whatsappNumber: hallWithContact.owner?.whatsappNumber,
+    };
+
+    return res.status(200).json(new ApiResponse(200, ownerContact, "Owner contact details fetched successfully."));
+});
+
 export {
     createHall,
     getAllHalls,
@@ -336,4 +434,5 @@ export {
     getRecommendedHalls,
     generateCloudinarySignature,
     createReservation,
+    bookDemo,
 };
