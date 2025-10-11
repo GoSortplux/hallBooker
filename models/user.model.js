@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'hall-owner', 'staff', 'super-admin'],
       default: 'user',
     },
+    status: {
+      type: String,
+      enum: ['not-applied', 'pending', 'approved'],
+      default: 'not-applied',
+    },
     bankName: {
       type: String,
       trim: true,

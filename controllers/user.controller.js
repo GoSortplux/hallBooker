@@ -10,6 +10,14 @@ import {
     getBanks,
 } from '../services/payment.service.js';
 import { SubAccount } from '../models/subaccount.model.js';
+import sendEmail from '../services/email.service.js';
+import {
+    generateHallOwnerApplicationEmailForUser,
+    generateHallOwnerApplicationEmailForAdmin,
+    generateHallOwnerApprovalEmailForUser,
+    generateHallOwnerCreationEmailForUser,
+    generatePromotionToHallOwnerEmailForUser,
+} from '../utils/emailTemplates.js';
 
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({});
@@ -154,6 +162,42 @@ const removeStaff = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, {}, 'Staff removed successfully'));
 });
 
+const applyHallOwner = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (user.status === 'pending') {
+        throw new ApiError(400, 'You have already applied to be a hall owner. Your application is pending review.');
+    }
+
+    if (user.status === 'approved') {
+        throw new ApiError(400, 'Your application has already been approved.');
+    }
+
+    user.status = 'pending';
+    await user.save({ validateBeforeSave: false });
+
+    // Send email notifications
+    const userEmailHtml = generateHallOwnerApplicationEmailForUser(user.fullName);
+    await sendEmail({
+        email: user.email,
+        subject: 'Application to Become a Hall Owner Received',
+        html: userEmailHtml,
+    });
+
+    const superAdmins = await User.find({ role: 'super-admin' });
+    for (const admin of superAdmins) {
+        const adminEmailHtml = generateHallOwnerApplicationEmailForAdmin(user.fullName, user.email);
+        await sendEmail({
+            email: admin.email,
+            subject: 'New Hall Owner Application',
+            html: adminEmailHtml,
+        });
+    }
+
+    res.status(200).json(new ApiResponse(200, {}, "Your application to become a hall owner has been submitted successfully."));
+});
+
 export { 
     getAllUsers, 
     getUserById, 
@@ -162,5 +206,90 @@ export {
     updateUserBankAccount,
     addStaff,
     getMyStaff,
-    removeStaff
+    removeStaff,
+    applyHallOwner,
+    createHallOwner,
+    approveHallOwner,
+    promoteToHallOwner
 };
+
+const createHallOwner = asyncHandler(async (req, res) => {
+    const { fullName, email, phone, password } = req.body;
+
+    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    if (existingUser) {
+        throw new ApiError(409, 'User with this email or phone already exists');
+    }
+
+    const user = new User({
+        fullName,
+        email,
+        phone,
+        password,
+        role: 'hall-owner',
+        status: 'approved',
+    });
+
+    await user.save();
+
+    const userEmailHtml = generateHallOwnerCreationEmailForUser(user.fullName, password);
+    await sendEmail({
+        email: user.email,
+        subject: 'Welcome to HallBooker!',
+        html: userEmailHtml,
+    });
+
+    res.status(201).json(new ApiResponse(201, user, "Hall owner created successfully."));
+});
+
+const approveHallOwner = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    if (user.status !== 'pending') {
+        throw new ApiError(400, 'User has not applied to be a hall owner.');
+    }
+
+    user.status = 'approved';
+    user.role = 'hall-owner';
+    await user.save({ validateBeforeSave: false });
+
+    const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName);
+    await sendEmail({
+        email: user.email,
+        subject: 'Application Approved!',
+        html: userEmailHtml,
+    });
+
+    res.status(200).json(new ApiResponse(200, {}, "User's application to become a hall owner has been approved."));
+});
+
+const promoteToHallOwner = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    if (user.role === 'hall-owner') {
+        throw new ApiError(400, 'User is already a hall owner.');
+    }
+
+    user.role = 'hall-owner';
+    user.status = 'approved';
+    await user.save({ validateBeforeSave: false });
+
+    const userEmailHtml = generatePromotionToHallOwnerEmailForUser(user.fullName);
+    await sendEmail({
+        email: user.email,
+        subject: 'You have been promoted!',
+        html: userEmailHtml,
+    });
+
+    res.status(200).json(new ApiResponse(200, {}, "User has been promoted to a hall owner."));
+});
