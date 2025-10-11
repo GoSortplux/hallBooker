@@ -42,6 +42,11 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
+ *         selectedFacilityNames:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: An array of names of the selected facilities.
  *         numberOfPeople:
  *           type: number
  *         eventType:
@@ -118,6 +123,11 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
+ *         selectedFacilityNames:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: An array of names of the selected facilities.
  *         paymentMethod:
  *           type: string
  *           enum: [cash, pos, transfer]
