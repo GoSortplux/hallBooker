@@ -30,6 +30,25 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
+ *     Facility:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: "Backup generator"
+ *         available:
+ *           type: boolean
+ *           example: true
+ *         chargeable:
+ *           type: boolean
+ *           example: true
+ *         chargeMethod:
+ *           type: string
+ *           enum: [free, flat, per_hour]
+ *           example: "per_hour"
+ *         cost:
+ *           type: number
+ *           example: 50
  *     Hall:
  *       type: object
  *       properties:
@@ -81,10 +100,16 @@ const router = Router();
  *                    type: number
  *                  hourRate:
  *                    type: number
- *         features:
+ *         facilities:
  *           type: array
  *           items:
- *             type: string
+ *             $ref: '#/components/schemas/Facility'
+ *         carParkCapacity:
+ *           type: number
+ *           example: 50
+ *         hallSize:
+ *           type: string
+ *           example: "100 sqm"
  *         rules:
  *           type: array
  *           items:
@@ -119,10 +144,16 @@ const router = Router();
  *           type: string
  *         pricing:
  *           type: object
- *         features:
+ *         facilities:
  *           type: array
  *           items:
- *             type: string
+ *             $ref: '#/components/schemas/Facility'
+ *         carParkCapacity:
+ *           type: number
+ *           example: 50
+ *         hallSize:
+ *           type: string
+ *           example: "100 sqm"
  *         rules:
  *           type: array
  *           items:

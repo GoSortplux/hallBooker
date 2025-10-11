@@ -81,6 +81,23 @@ const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
 const generatePaymentConfirmationEmail = (booking) => {
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
+    let facilitiesHtml = '';
+    if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
+        const facilityRows = booking.selectedFacilities.map(f => `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${f.cost.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        facilitiesHtml = `
+            <tr style="background-color: #f2f2f2;">
+                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Facilities</th>
+            </tr>
+            ${facilityRows}
+        `;
+    }
+
     const startDate = new Date(booking.startTime);
     const endDate = new Date(booking.endTime);
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -150,6 +167,7 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
                 </tr>
+                ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
@@ -167,6 +185,23 @@ const generatePaymentConfirmationEmail = (booking) => {
 
 const generateBookingConfirmationEmail = (booking) => {
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+
+    let facilitiesHtml = '';
+    if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
+        const facilityRows = booking.selectedFacilities.map(f => `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${f.cost.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        facilitiesHtml = `
+            <tr style="background-color: #f2f2f2;">
+                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Facilities</th>
+            </tr>
+            ${facilityRows}
+        `;
+    }
 
     const startDate = new Date(booking.startTime);
     const endDate = new Date(booking.endTime);
@@ -236,6 +271,7 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
                 </tr>
+                ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>

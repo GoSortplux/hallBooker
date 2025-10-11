@@ -1,6 +1,6 @@
 import { ApiError } from './apiError.js';
 
-export const calculateBookingPriceAndValidate = (startTime, endTime, pricing) => {
+export const calculateBookingPriceAndValidate = (startTime, endTime, pricing, selectedFacilities = []) => {
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
 
@@ -20,22 +20,22 @@ export const calculateBookingPriceAndValidate = (startTime, endTime, pricing) =>
   }
 
   const { hourlyRate, dailyRate } = pricing;
-  let totalPrice;
+  let hallPrice;
 
   // Case 1: Hall has both hourly and daily rates
   if (hourlyRate && dailyRate) {
     if (bookingDurationHours < 24) {
       // Use hourly rate for bookings less than 24 hours
-      totalPrice = bookingDurationHours * hourlyRate;
+      hallPrice = bookingDurationHours * hourlyRate;
     } else {
       // Use daily rate for bookings 24 hours or longer
       const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-      totalPrice = bookingDurationDays * dailyRate;
+      hallPrice = bookingDurationDays * dailyRate;
     }
   }
   // Case 2: Hall has only an hourly rate
   else if (hourlyRate) {
-    totalPrice = bookingDurationHours * hourlyRate;
+    hallPrice = bookingDurationHours * hourlyRate;
   }
   // Case 3: Hall has only a daily rate
   else if (dailyRate) {
@@ -43,12 +43,36 @@ export const calculateBookingPriceAndValidate = (startTime, endTime, pricing) =>
       throw new ApiError(400, 'This hall requires a minimum booking of 24 hours.');
     }
     const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-    totalPrice = bookingDurationDays * dailyRate;
+    hallPrice = bookingDurationDays * dailyRate;
   }
   // Case 4: No valid pricing (should be caught earlier, but good to have)
   else {
     throw new ApiError(400, 'Hall does not have valid pricing information.');
   }
 
-  return { totalPrice };
+  let facilitiesPrice = 0;
+  const facilitiesWithCalculatedCosts = [];
+
+  if (selectedFacilities && Array.isArray(selectedFacilities)) {
+    selectedFacilities.forEach(facility => {
+      let calculatedCost = 0;
+      if (facility.chargeable) {
+        if (facility.chargeMethod === 'flat') {
+          calculatedCost = facility.cost;
+        } else if (facility.chargeMethod === 'per_hour') {
+          calculatedCost = facility.cost * bookingDurationHours;
+        }
+      }
+      facilitiesPrice += calculatedCost;
+      facilitiesWithCalculatedCosts.push({
+        name: facility.name,
+        cost: calculatedCost,
+        chargeMethod: facility.chargeMethod,
+      });
+    });
+  }
+
+  const totalPrice = hallPrice + facilitiesPrice;
+
+  return { totalPrice, facilitiesWithCalculatedCosts };
 };
