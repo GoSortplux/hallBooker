@@ -8,7 +8,11 @@ import {
     updateUserBankAccount,
     addStaff,
     getMyStaff,
-    removeStaff
+    removeStaff,
+    applyHallOwner,
+    createHallOwner,
+    approveHallOwner,
+    promoteToHallOwner
 } from '../controllers/user.controller.js';
 
 const router = Router();
@@ -197,8 +201,37 @@ router.route('/my-staff')
 router.route('/remove-staff/:staffId')
     .delete(verifyJWT, authorizeRoles('owner'), removeStaff);
 
+/**
+ * @swagger
+ * /users/apply-hall-owner:
+ *   post:
+ *     summary: Apply to become a hall owner
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Application submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.route('/apply-hall-owner')
+    .post(verifyJWT, authorizeRoles('user'), applyHallOwner);
+
 // Admin routes
 router.use(verifyJWT, authorizeRoles('super-admin'));
+
+router.route('/create-hall-owner').post(createHallOwner);
+router.route('/approve-hall-owner/:id').patch(approveHallOwner);
+router.route('/promote-to-hall-owner/:id').patch(promoteToHallOwner);
 
 /**
  * @swagger

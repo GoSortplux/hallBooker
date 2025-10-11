@@ -497,4 +497,79 @@ export {
   generateHallCreationEmail,
   generateLicensePurchaseEmail,
   generatePendingBookingCancelledEmail,
+  generateHallOwnerApplicationEmailForUser,
+  generateHallOwnerApplicationEmailForAdmin,
+  generateHallOwnerApprovalEmailForUser,
+  generateHallOwnerCreationEmailForUser,
+  generatePromotionToHallOwnerEmailForUser,
+};
+
+const generateHallOwnerApplicationEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Application Received</h2>
+      <p>Hi ${name},</p>
+      <p>We have received your application to become a hall owner. Our team will review your application and get back to you shortly.</p>
+      <p>Thank you for your interest in HallBooker.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerApplicationEmailForAdmin = (userName, userEmail) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">New Hall Owner Application</h2>
+      <p>A new application to become a hall owner has been submitted.</p>
+      <h3>User Details:</h3>
+      <ul>
+        <li><strong>Name:</strong> ${userName}</li>
+        <li><strong>Email:</strong> ${userEmail}</li>
+      </ul>
+      <p>Please review the application in the admin dashboard.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerApprovalEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #4CAF50;">Application Approved!</h2>
+      <p>Hi ${name},</p>
+      <p>Congratulations! Your application to become a hall owner has been approved. You can now log in to your dashboard and start managing your halls.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerCreationEmailForUser = (name, password) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Welcome to HallBooker!</h2>
+      <p>Hi ${name},</p>
+      <p>A hall owner account has been created for you on HallBooker. You can log in with the following temporary password:</p>
+      <p style="font-size: 24px; font-weight: bold; color: #444; letter-spacing: 2px; border: 1px solid #ddd; padding: 10px; display: inline-block;">
+        ${password}
+      </p>
+      <p>We recommend changing your password after your first login.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generatePromotionToHallOwnerEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #4CAF50;">You have been promoted!</h2>
+      <p>Hi ${name},</p>
+      <p>Congratulations! You have been promoted to a hall owner. You can now log in to your dashboard and start managing your halls.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
 };
