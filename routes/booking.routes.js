@@ -211,6 +211,11 @@ router.route('/recurring').post(createRecurringBooking);
  *           application/json:
  *             schema:
  *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
  *       400:
  *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
  */
@@ -324,6 +329,15 @@ router.route('/search/:bookingId')
  *     responses:
  *       200:
  *         description: Booking details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
  *       404:
  *         description: Booking not found.
  *   patch:
@@ -346,6 +360,15 @@ router.route('/search/:bookingId')
  *     responses:
  *       200:
  *         description: Booking updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
  *       404:
  *         description: Booking not found.
  *   put:
@@ -362,6 +385,15 @@ router.route('/search/:bookingId')
  *     responses:
  *       200:
  *         description: Booking cancelled successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
  *       404:
  *         description: Booking not found.
  */
