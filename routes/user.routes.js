@@ -65,9 +65,15 @@ const router = Router();
  *         email:
  *           type: string
  *           format: email
+ *         phone:
+ *           type: string
  *         password:
  *           type: string
  *           format: password
+ *         hallIds:
+ *           type: array
+ *           items:
+ *             type: string
  */
 
 /**
@@ -185,12 +191,7 @@ router.route('/my-staff')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: Staff not found
  *         content:
@@ -336,12 +337,7 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: User not found
  *         content:

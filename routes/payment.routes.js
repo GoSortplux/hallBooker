@@ -13,43 +13,6 @@ const router = Router();
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     PaymentInitializationResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         message:
- *           type: string
- *         data:
- *           type: object
- *           properties:
- *             authorizationUrl:
- *               type: string
- *               format: uri
- *             accessCode:
- *               type: string
- *             reference:
- *               type: string
- *     PaymentVerificationResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         message:
- *           type: string
- *         data:
- *           type: object
- *           properties:
- *             status:
- *               type: string
- *             booking:
- *               $ref: '#/components/schemas/Booking'
- */
-
-/**
- * @swagger
  * /payments/initialize/{bookingId}:
  *   post:
  *     summary: Initialize a payment for a booking

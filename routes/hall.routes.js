@@ -321,6 +321,10 @@ router.route('/:id').get(getHallById);
  *     responses:
  *       200:
  *         description: Demo booking click recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: Hall not found
  */
@@ -433,6 +437,10 @@ router.route('/')
  *     responses:
  *       200:
  *         description: Hall deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: Hall not found
  */
@@ -509,6 +517,10 @@ router.route('/media/generate-signature')
  *     responses:
  *       200:
  *         description: Media deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
  */
 router.route('/:id/media')
     .post(authorizeHallAccess, checkActiveLicense, addHallMedia)
@@ -537,6 +549,10 @@ router.route('/:id/media')
  *     responses:
  *       200:
  *         description: Reservation created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       400:
  *         description: Bad request (e.g., invalid pattern)
  */
@@ -560,6 +576,10 @@ router.route('/:id/reservations')
  *     responses:
  *       200:
  *         description: Online booking status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       400:
  *         description: Bad request (e.g., trying to toggle too soon)
  *       404:
