@@ -12,12 +12,61 @@ import {
     applyHallOwner,
     createHallOwner,
     approveHallOwner,
-    promoteToHallOwner
+    promoteToHallOwner,
+    reviewHallOwnerApplication
 } from '../controllers/user.controller.js';
 
 const router = Router();
 
 /**
+ * @swagger
+ * /users/review-application/{id}:
+ *   patch:
+ *     summary: Review a hall owner application (super-admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The user ID of the applicant
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [approve, reject]
+ *                 description: The action to take on the application
+ *               rejectionReason:
+ *                 type: string
+ *                 description: The reason for rejecting the application (required if action is 'reject')
+ *     responses:
+ *       200:
+ *         description: Application reviewed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
  * @swagger
  * tags:
  *   name: Users
@@ -210,6 +259,16 @@ router.route('/remove-staff/:staffId')
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hasReadTermsOfService:
+ *                 type: boolean
+ *                 example: true
  *     responses:
  *       200:
  *         description: Application submitted successfully
@@ -231,7 +290,7 @@ router.route('/apply-hall-owner')
 router.use(verifyJWT, authorizeRoles('super-admin'));
 
 router.route('/create-hall-owner').post(createHallOwner);
-router.route('/approve-hall-owner/:id').patch(approveHallOwner);
+router.route('/review-application/:id').patch(reviewHallOwnerApplication);
 router.route('/promote-to-hall-owner/:id').patch(promoteToHallOwner);
 
 /**

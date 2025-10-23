@@ -17,8 +17,16 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['not-applied', 'pending', 'approved'],
+      enum: ['not-applied', 'pending', 'approved', 'rejected'],
       default: 'not-applied',
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+    },
+    hasReadTermsOfService: {
+      type: Boolean,
+      default: false,
     },
     bankName: {
       type: String,

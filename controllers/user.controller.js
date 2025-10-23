@@ -15,9 +15,61 @@ import {
     generateHallOwnerApplicationEmailForUser,
     generateHallOwnerApplicationEmailForAdmin,
     generateHallOwnerApprovalEmailForUser,
+    generateHallOwnerRejectionEmailForUser,
     generateHallOwnerCreationEmailForUser,
     generatePromotionToHallOwnerEmailForUser,
 } from '../utils/emailTemplates.js';
+
+const reviewHallOwnerApplication = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { action, rejectionReason } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+        throw new ApiError(400, 'Invalid action specified. Must be "approve" or "reject".');
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    if (user.status !== 'pending') {
+        throw new ApiError(400, 'This application is not pending review.');
+    }
+
+    if (action === 'approve') {
+        user.status = 'approved';
+        user.role = 'hall-owner';
+        user.rejectionReason = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName);
+        await sendEmail({
+            email: user.email,
+            subject: 'Application Approved!',
+            html: userEmailHtml,
+        });
+
+        res.status(200).json(new ApiResponse(200, {}, "User's application has been approved."));
+    } else if (action === 'reject') {
+        if (!rejectionReason) {
+            throw new ApiError(400, 'Rejection reason is required when rejecting an application.');
+        }
+        user.status = 'rejected';
+        user.rejectionReason = rejectionReason;
+        await user.save({ validateBeforeSave: false });
+
+        const userEmailHtml = generateHallOwnerRejectionEmailForUser(user.fullName, rejectionReason);
+        await sendEmail({
+            email: user.email,
+            subject: 'Application Status Update',
+            html: userEmailHtml,
+        });
+
+        res.status(200).json(new ApiResponse(200, {}, "User's application has been rejected."));
+    }
+});
 
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({});
@@ -163,6 +215,12 @@ const removeStaff = asyncHandler(async (req, res) => {
 });
 
 const applyHallOwner = asyncHandler(async (req, res) => {
+    const { hasReadTermsOfService } = req.body;
+
+    if (!hasReadTermsOfService) {
+        throw new ApiError(400, 'You must read and agree to the terms of service to become a hall owner.');
+    }
+
     const userId = req.user._id;
     const user = await User.findById(userId);
 
@@ -174,7 +232,12 @@ const applyHallOwner = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Your application has already been approved.');
     }
 
+    if (user.status === 'rejected') {
+        user.rejectionReason = undefined;
+    }
+
     user.status = 'pending';
+    user.hasReadTermsOfService = true;
     await user.save({ validateBeforeSave: false });
 
     // Send email notifications
@@ -210,7 +273,8 @@ export {
     applyHallOwner,
     createHallOwner,
     approveHallOwner,
-    promoteToHallOwner
+    promoteToHallOwner,
+    reviewHallOwnerApplication
 };
 
 const createHallOwner = asyncHandler(async (req, res) => {

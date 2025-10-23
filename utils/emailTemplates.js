@@ -538,6 +538,24 @@ export {
   generateHallOwnerApprovalEmailForUser,
   generateHallOwnerCreationEmailForUser,
   generatePromotionToHallOwnerEmailForUser,
+  generateHallOwnerRejectionEmailForUser,
+};
+
+const generateHallOwnerRejectionEmailForUser = (name, reason) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #d9534f;">Application Status Update</h2>
+      <p>Hi ${name},</p>
+      <p>Thank you for your interest in becoming a hall owner. After careful review, we regret to inform you that your application has been rejected.</p>
+      <p><strong>Reason for rejection:</strong></p>
+      <p style="padding: 10px; border-left: 4px solid #d9534f; background-color: #f9f9f9;">
+        ${reason}
+      </p>
+      <p>If you have any questions, please contact our support team.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
 };
 
 const generateHallOwnerApplicationEmailForUser = (name) => {
