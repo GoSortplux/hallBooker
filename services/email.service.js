@@ -3,6 +3,12 @@ import { ApiError } from '../utils/apiError.js';
 
 const sendEmail = async (options) => {
   try {
+    console.log('--- Email Config For Debugging ---');
+    console.log('Host:', process.env.EMAIL_HOST);
+    console.log('Port:', process.env.EMAIL_PORT);
+    console.log('Secure:', process.env.EMAIL_SECURE);
+    console.log('---------------------------------');
+
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
