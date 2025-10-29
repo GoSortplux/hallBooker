@@ -1,7 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { ApiError } from '../utils/ApiError.js';
+import { ApiError } from '../utils/apiError.js';
 import { User } from '../models/user.model.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
+import { ApiResponse } from '../utils/apiResponse.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
   const users = await User.find({ role: 'hall-owner', status: 'pending' }).select(
