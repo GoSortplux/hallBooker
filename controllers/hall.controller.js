@@ -3,7 +3,9 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Hall } from '../models/hall.model.js';
+import { User } from '../models/user.model.js';
 import { Analytics } from '../models/analytics.model.js';
+import { createNotification } from '../services/notification.service.js';
 import geocoder from '../utils/geocoder.js';
 import {
   uploadOnCloudinary,
@@ -88,14 +90,32 @@ const createHall = asyncHandler(async (req, res) => {
     const hall = await Hall.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment });
 
     try {
+        const io = req.app.get('io');
         await sendEmail({
+            io,
             email: req.user.email,
             subject: 'Your New Hall is Ready!',
             html: generateHallCreationEmail(req.user.fullName, hall.name, hall.location),
+            notification: {
+                recipient: req.user._id.toString(),
+                message: `Your new hall, ${hall.name}, has been created successfully.`,
+                link: `/halls/${hall._id}`,
+            },
         });
     } catch (emailError) {
         console.error(`Hall creation email failed for ${req.user.email}:`, emailError.message);
     }
+
+    const io = req.app.get('io');
+    const admins = await User.find({ role: 'super-admin' });
+    admins.forEach(admin => {
+      createNotification(
+        io,
+        admin._id.toString(),
+        `A new hall has been created: ${hall.name}.`,
+        `/halls/${hall._id}`
+      );
+    });
 
     return res.status(201).json(new ApiResponse(201, hall, "Hall created successfully"));
 });

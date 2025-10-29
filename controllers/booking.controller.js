@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
+import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
@@ -225,8 +226,10 @@ const createBooking = asyncHandler(async (req, res) => {
     const bookingForEmail = { ...newBooking.toObject(), user: req.user, hall: hall };
 
     const pdfReceipt = generatePdfReceipt(bookingForEmail);
+    const io = req.app.get('io');
 
     await sendEmail({
+      io,
       email: req.user.email,
       subject: 'Booking Confirmation - HallBooker',
       html: generateBookingConfirmationEmail(bookingForEmail),
@@ -234,7 +237,12 @@ const createBooking = asyncHandler(async (req, res) => {
         filename: `receipt-${bookingForEmail.bookingId}.pdf`,
         content: Buffer.from(pdfReceipt),
         contentType: 'application/pdf'
-      }]
+      }],
+      notification: {
+        recipient: req.user._id.toString(),
+        message: `Your booking for ${hall.name} has been confirmed.`,
+        link: `/bookings/${newBooking._id}`,
+      },
     });
 
     const admins = await User.find({ role: 'super-admin' });
@@ -242,11 +250,21 @@ const createBooking = asyncHandler(async (req, res) => {
 
     const notificationEmails = [hall.owner.email, ...adminEmails];
 
-    await Promise.all(notificationEmails.map(email => sendEmail({
-      email,
-      subject: 'New Booking Notification',
-      html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
-    })));
+    await Promise.all(notificationEmails.map(email => {
+        const userIsAdmin = admins.some(admin => admin.email === email);
+        const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+        sendEmail({
+            io,
+            email,
+            subject: 'New Booking Notification',
+            html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
+            notification: {
+                recipient: recipient.toString(),
+                message: `A new booking has been made for hall: ${hall.name}.`,
+                link: `/bookings/${newBooking._id}`,
+            },
+        })
+    }));
 
     await session.commitTransaction();
     res.status(201).json(new ApiResponse(201, newBooking, 'Booking created successfully!'));
@@ -378,7 +396,9 @@ const walkInBooking = asyncHandler(async (req, res) => {
       const emailSubject = paymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
       const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
 
+      const io = req.app.get('io');
       await sendEmail({
+        io,
         email: walkInUserDetails.email,
         subject: emailSubject,
         html: emailHtml,
@@ -386,7 +406,12 @@ const walkInBooking = asyncHandler(async (req, res) => {
           filename: `receipt-${bookingForEmail.bookingId}.pdf`,
           content: Buffer.from(pdfReceipt),
           contentType: 'application/pdf'
-        }]
+        }],
+        notification: {
+            recipient: hall.owner._id.toString(), // Or a generic system user?
+            message: `A walk-in booking for ${hall.name} has been confirmed.`,
+            link: `/bookings/${newBooking._id}`,
+          },
       });
     }
 
@@ -394,11 +419,22 @@ const walkInBooking = asyncHandler(async (req, res) => {
     const adminEmails = admins.map(admin => admin.email);
     const notificationEmails = [hall.owner.email, ...adminEmails];
 
-    await Promise.all(notificationEmails.map(email => sendEmail({
-      email,
-      subject: 'New Walk-in Booking Notification',
-      html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
-    })));
+    await Promise.all(notificationEmails.map(email => {
+        const userIsAdmin = admins.some(admin => admin.email === email);
+        const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+        sendEmail({
+            io,
+            email,
+            subject: 'New Walk-in Booking Notification',
+            html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
+            notification: {
+                recipient: recipient.toString(),
+                message: `A new walk-in booking has been made for hall: ${hall.name}.`,
+                link: `/bookings/${newBooking._id}`,
+            },
+        })
+    }));
+
 
     await session.commitTransaction();
     res.status(201).json(new ApiResponse(201, newBooking, `Walk-in booking created with ${paymentStatus} status.`));
@@ -441,7 +477,7 @@ const updateBookingDetails = asyncHandler(async (req, res) => {
 });
 
 const cancelBooking = asyncHandler(async (req, res) => {
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id).populate('hall').populate('user');
     if (!booking) throw new ApiError(404, "Booking not found");
 
     if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
@@ -450,6 +486,38 @@ const cancelBooking = asyncHandler(async (req, res) => {
     
     booking.status = 'cancelled';
     await booking.save();
+
+    const io = req.app.get('io');
+    const hallOwner = booking.hall.owner;
+    const user = booking.user;
+
+    // Notify hall owner
+    createNotification(
+      io,
+      hallOwner.toString(),
+      `Booking #${booking.bookingId} for your hall ${booking.hall.name} has been cancelled.`,
+      `/bookings/${booking._id}`
+    );
+
+    // Notify user
+    createNotification(
+      io,
+      user._id.toString(),
+      `Your booking #${booking.bookingId} for hall ${booking.hall.name} has been cancelled.`,
+      `/bookings/${booking._id}`
+    );
+
+    // Notify admins
+    const admins = await User.find({ role: 'super-admin' });
+    admins.forEach(admin => {
+      createNotification(
+        io,
+        admin._id.toString(),
+        `Booking #${booking.bookingId} for hall ${booking.hall.name} has been cancelled.`,
+        `/bookings/${booking._id}`
+      );
+    });
+
     res.status(200).json(new ApiResponse(200, booking, "Booking cancelled successfully."));
 });
 

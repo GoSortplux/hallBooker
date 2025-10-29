@@ -1,8 +1,11 @@
 import { Review } from '../models/review.model.js';
 import { Booking } from '../models/booking.model.js';
+import { Hall } from '../models/hall.model.js';
+import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { createNotification } from '../services/notification.service.js';
 
 const createReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
@@ -17,6 +20,29 @@ const createReview = asyncHandler(async (req, res) => {
   if (!booking) throw new ApiError(403, "You can only review halls you have booked and attended.");
 
   const review = await Review.create({ rating, comment, hall: hallId, user: req.user._id });
+
+  const hall = await Hall.findById(hallId);
+  const io = req.app.get('io');
+
+  // Notify hall owner
+  createNotification(
+    io,
+    hall.owner.toString(),
+    `You have received a new review for your hall: ${hall.name}.`,
+    `/halls/${hallId}/reviews`
+  );
+
+  // Notify admins
+  const admins = await User.find({ role: 'super-admin' });
+  admins.forEach(admin => {
+    createNotification(
+      io,
+      admin._id.toString(),
+      `A new review has been submitted for hall: ${hall.name}.`,
+      `/halls/${hallId}/reviews`
+    );
+  });
+
   res.status(201).json(new ApiResponse(201, review, 'Review submitted successfully.'));
 });
 

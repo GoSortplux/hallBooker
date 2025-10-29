@@ -5,7 +5,7 @@ import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateSubscriptionExpiryWarningEmail, generateSubscriptionExpiredEmail } from '../utils/emailTemplates.js';
 
-const sendExpirationWarnings = async () => {
+const sendExpirationWarnings = async (io) => {
     console.log('Running subscription expiration warning check...');
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
@@ -21,9 +21,14 @@ const sendExpirationWarnings = async () => {
     for (const sub of upcomingExpirations) {
         try {
             await sendEmail({
+                io,
                 email: sub.owner.email,
                 subject: 'Your HallBooker Subscription is Expiring Soon',
                 html: generateSubscriptionExpiryWarningEmail(sub.owner.fullName, sub.tier.name, sub.expiryDate),
+                notification: {
+                    recipient: sub.owner._id.toString(),
+                    message: `Your ${sub.tier.name} subscription is expiring soon.`,
+                },
             });
             console.log(`Expiration warning sent to ${sub.owner.email}`);
         } catch (err) {
@@ -32,7 +37,7 @@ const sendExpirationWarnings = async () => {
     }
 };
 
-const deactivateExpiredSubscriptions = async () => {
+const deactivateExpiredSubscriptions = async (io) => {
     console.log('Running daily subscription deactivation check...');
     const expiredSubscriptions = await SubscriptionHistory.find({
         expiryDate: { $ne: null, $lt: new Date() },
@@ -49,9 +54,14 @@ const deactivateExpiredSubscriptions = async () => {
 
         try {
             await sendEmail({
+                io,
                 email: sub.owner.email,
                 subject: 'Your HallBooker Subscription Has Expired',
-                html: generateSubscriptionExpiredEmail(sub.owner.fullName, sub.tier.name)
+                html: generateSubscriptionExpiredEmail(sub.owner.fullName, sub.tier.name),
+                notification: {
+                    recipient: sub.owner._id.toString(),
+                    message: `Your ${sub.tier.name} subscription has expired.`,
+                },
             });
         } catch (err) {
             console.error(`Failed to send expiration email to ${sub.owner.email}`, err);
@@ -59,14 +69,14 @@ const deactivateExpiredSubscriptions = async () => {
     }
 };
 
-const initializeCronJobs = () => {
+const initializeCronJobs = (io) => {
     // Schedule the deactivation task to run once a day at 2 AM
-    cron.schedule('0 2 * * *', deactivateExpiredSubscriptions, {
+    cron.schedule('0 2 * * *', () => deactivateExpiredSubscriptions(io), {
         timezone: "Africa/Lagos"
     });
 
     // Schedule the warning task to run once a day at 9 AM
-    cron.schedule('0 9 * * *', sendExpirationWarnings, {
+    cron.schedule('0 9 * * *', () => sendExpirationWarnings(io), {
         timezone: "Africa/Lagos"
     });
 

@@ -45,10 +45,16 @@ const reviewHallOwnerApplication = asyncHandler(async (req, res) => {
         await user.save({ validateBeforeSave: false });
 
         const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName);
+        const io = req.app.get('io');
         await sendEmail({
+            io,
             email: user.email,
             subject: 'Application Approved!',
             html: userEmailHtml,
+            notification: {
+                recipient: user._id.toString(),
+                message: 'Your application to become a hall owner has been approved.',
+            },
         });
 
         res.status(200).json(new ApiResponse(200, {}, "User's application has been approved."));
@@ -61,10 +67,16 @@ const reviewHallOwnerApplication = asyncHandler(async (req, res) => {
         await user.save({ validateBeforeSave: false });
 
         const userEmailHtml = generateHallOwnerRejectionEmailForUser(user.fullName, rejectionReason);
+        const io = req.app.get('io');
         await sendEmail({
+            io,
             email: user.email,
             subject: 'Application Status Update',
             html: userEmailHtml,
+            notification: {
+                recipient: user._id.toString(),
+                message: 'Your application to become a hall owner has been rejected.',
+            },
         });
 
         res.status(200).json(new ApiResponse(200, {}, "User's application has been rejected."));
@@ -241,20 +253,31 @@ const applyHallOwner = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Send email notifications
+    const io = req.app.get('io');
     const userEmailHtml = generateHallOwnerApplicationEmailForUser(user.fullName);
     await sendEmail({
+        io,
         email: user.email,
         subject: 'Application to Become a Hall Owner Received',
         html: userEmailHtml,
+        notification: {
+            recipient: user._id.toString(),
+            message: 'Your application to become a hall owner has been received.',
+        },
     });
 
     const superAdmins = await User.find({ role: 'super-admin' });
     for (const admin of superAdmins) {
         const adminEmailHtml = generateHallOwnerApplicationEmailForAdmin(user.fullName, user.email);
         await sendEmail({
+            io,
             email: admin.email,
             subject: 'New Hall Owner Application',
             html: adminEmailHtml,
+            notification: {
+                recipient: admin._id.toString(),
+                message: `A new hall owner application has been submitted by ${user.fullName}.`,
+            },
         });
     }
 
@@ -296,11 +319,17 @@ const createHallOwner = asyncHandler(async (req, res) => {
 
     await user.save();
 
+    const io = req.app.get('io');
     const userEmailHtml = generateHallOwnerCreationEmailForUser(user.fullName, password);
     await sendEmail({
+        io,
         email: user.email,
         subject: 'Welcome to HallBooker!',
         html: userEmailHtml,
+        notification: {
+            recipient: user._id.toString(),
+            message: 'A new hall owner account has been created for you.',
+        },
     });
 
     res.status(201).json(new ApiResponse(201, user, "Hall owner created successfully."));
@@ -322,11 +351,17 @@ const approveHallOwner = asyncHandler(async (req, res) => {
     user.role = 'hall-owner';
     await user.save({ validateBeforeSave: false });
 
+    const io = req.app.get('io');
     const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName);
     await sendEmail({
+        io,
         email: user.email,
         subject: 'Application Approved!',
         html: userEmailHtml,
+        notification: {
+            recipient: user._id.toString(),
+            message: 'Your application to become a hall owner has been approved.',
+        },
     });
 
     res.status(200).json(new ApiResponse(200, {}, "User's application to become a hall owner has been approved."));
@@ -348,11 +383,17 @@ const promoteToHallOwner = asyncHandler(async (req, res) => {
     user.status = 'approved';
     await user.save({ validateBeforeSave: false });
 
+    const io = req.app.get('io');
     const userEmailHtml = generatePromotionToHallOwnerEmailForUser(user.fullName);
     await sendEmail({
+        io,
         email: user.email,
         subject: 'You have been promoted!',
         html: userEmailHtml,
+        notification: {
+            recipient: user._id.toString(),
+            message: 'You have been promoted to a hall owner.',
+        },
     });
 
     res.status(200).json(new ApiResponse(200, {}, "User has been promoted to a hall owner."));

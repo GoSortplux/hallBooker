@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { getHallOwnerApplications } from '../controllers/admin.controller.js';
+import {
+  getHallOwnerApplications,
+  approveHallOwnerApplication,
+  rejectHallOwnerApplication,
+} from '../controllers/admin.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -64,5 +68,13 @@ const router = Router();
 router
   .route('/')
   .get(verifyJWT, authorizeRoles('super-admin'), getHallOwnerApplications);
+
+router
+  .route('/:userId/approve')
+  .patch(verifyJWT, authorizeRoles('super-admin'), approveHallOwnerApplication);
+
+router
+    .route('/:userId/reject')
+    .patch(verifyJWT, authorizeRoles('super-admin'), rejectHallOwnerApplication)
 
 export default router;

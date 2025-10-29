@@ -3,6 +3,7 @@ import { ApiError } from '../utils/apiError.js';
 import { User } from '../models/user.model.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import sendEmail from '../services/email.service.js';
+import { createNotification } from '../services/notification.service.js';
 import crypto from 'crypto';
 import { generateVerificationEmail, generateWelcomeEmail } from '../utils/emailTemplates.js';
 
@@ -28,10 +29,16 @@ const verifyEmail = asyncHandler(async (req, res) => {
   await user.save();
 
   try {
+    const io = req.app.get('io');
     await sendEmail({
+      io,
       email: user.email,
       subject: 'Welcome to HallBooker!',
       html: generateWelcomeEmail(user.fullName),
+      notification: {
+        recipient: user._id.toString(),
+        message: 'Your email has been verified. Welcome to HallBooker!',
+      },
     });
   } catch (emailError) {
       console.error(`Welcome email failed for ${user.email}:`, emailError.message);
@@ -55,10 +62,16 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
   await user.save();
 
   try {
+    const io = req.app.get('io');
     await sendEmail({
+      io,
       email: user.email,
       subject: 'Verify Your Email Address',
       html: generateVerificationEmail(user.fullName, verificationToken),
+      notification: {
+        recipient: user._id.toString(),
+        message: 'A verification email has been sent to your email address.',
+      },
     });
   } catch (emailError) {
     console.error(`Verification email failed for ${user.email}:`, emailError.message);
@@ -85,10 +98,16 @@ const registerUser = asyncHandler(async (req, res) => {
   await user.save();
 
   try {
+    const io = req.app.get('io');
     await sendEmail({
+      io,
       email: user.email,
       subject: 'Verify Your Email Address',
       html: generateVerificationEmail(user.fullName, verificationToken),
+      notification: {
+        recipient: user._id.toString(),
+        message: 'A verification email has been sent to your email address.',
+      },
     });
   } catch (emailError) {
     console.error(`Verification email failed for ${user.email}:`, emailError.message);
@@ -97,6 +116,19 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const createdUser = await User.findById(user._id);
+
+  if (createdUser.role === 'hall-owner') {
+    const io = req.app.get('io');
+    const admins = await User.find({ role: 'super-admin' });
+    admins.forEach(admin => {
+      createNotification(
+        io,
+        admin._id.toString(),
+        `A new hall owner application has been submitted by ${createdUser.fullName}.`,
+        `/admin/hall-owner-applications`
+      );
+    });
+  }
 
   return res.status(201).json(new ApiResponse(201, { user: createdUser }, 'User registered successfully. Please check your email to verify your account.'));
 });
@@ -132,10 +164,16 @@ const forgotPassword = asyncHandler(async (req, res) => {
     const message = `Forgot your password? Submit a PATCH request with your new password to: ${resetURL}.\nThis link is valid for 10 minutes. If you didn't forget your password, please ignore this email.`;
 
     try {
+        const io = req.app.get('io');
         await sendEmail({
+            io,
             email: user.email,
             subject: 'Your password reset token (valid for 10 min)',
-            html: `<p>${message}</p>`
+            html: `<p>${message}</p>`,
+            notification: {
+                recipient: user._id.toString(),
+                message: 'A password reset token has been sent to your email address.',
+            },
         });
         res.status(200).json(new ApiResponse(200, {}, 'Token sent to email!'));
     } catch (err) {

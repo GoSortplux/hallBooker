@@ -154,11 +154,18 @@ const verifyPayment = asyncHandler(async (req, res) => {
             };
 
             const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
+            const io = req.app.get('io');
             await sendEmail({
+                io,
                 email: emailToSend,
                 subject: 'Payment Confirmation and Receipt',
                 html: generatePaymentConfirmationEmail(bookingForEmail),
                 attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+                notification: {
+                    recipient: confirmedBooking.user._id.toString(),
+                    message: `Your payment for booking #${confirmedBooking.bookingId} has been confirmed.`,
+                    link: `/bookings/${confirmedBooking._id}`,
+                },
             });
         }
 
@@ -186,27 +193,43 @@ const verifyPayment = asyncHandler(async (req, res) => {
         // 4. Send receipt and confirmation emails (now that the subscription is saved)
         try {
             const pdfBuffer = Buffer.from(generateSubscriptionPdfReceipt(subscription));
+            const io = req.app.get('io');
             // Send detailed email with receipt
             await sendEmail({
+                io,
                 email: subscription.owner.email,
                 subject: 'Your Subscription Payment Receipt',
                 html: generateSubscriptionPaymentEmail(subscription),
                 attachments: [{ filename: `receipt-${subscription._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+                notification: {
+                    recipient: subscription.owner._id.toString(),
+                    message: `Your payment for the ${subscription.tier.name} subscription has been confirmed.`,
+                },
             });
 
             // Send simple confirmation email
             await sendEmail({
+                io,
                 email: subscription.owner.email,
                 subject: 'Your Subscription is Confirmed!',
                 html: generateSubscriptionConfirmationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price, subscription.expiryDate),
+                notification: {
+                    recipient: subscription.owner._id.toString(),
+                    message: `Your subscription for the ${subscription.tier.name} tier is now active.`,
+                },
             });
 
             const admin = await User.findOne({ role: 'super-admin' });
             if (admin) {
                 await sendEmail({
+                    io,
                     email: admin.email,
                     subject: 'New Subscription Purchase',
                     html: generateAdminLicenseNotificationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price),
+                    notification: {
+                        recipient: admin._id.toString(),
+                        message: `${subscription.owner.fullName} has subscribed to the ${subscription.tier.name} tier.`,
+                    },
                 });
             }
         } catch (emailError) {

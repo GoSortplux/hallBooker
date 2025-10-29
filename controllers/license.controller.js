@@ -50,19 +50,30 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
 
         await Hall.updateMany({ owner: ownerId }, { $set: { isActive: true } });
 
+        const io = req.app.get('io');
         // Send confirmation emails
         sendEmail({
+            io,
             email: req.user.email,
             subject: 'Your Free Subscription is Active!',
             html: generateSubscriptionConfirmationEmail(req.user.fullName, tier.name, 0, expiryDate),
+            notification: {
+                recipient: req.user._id.toString(),
+                message: `Your free subscription for the ${tier.name} tier has been activated.`,
+            },
         }).catch(err => console.error(`Free subscription user notification email failed:`, err));
 
         const admin = await User.findOne({ role: 'super-admin' });
         if (admin) {
             sendEmail({
+                io,
                 email: admin.email,
                 subject: 'New Free Subscription Activated',
                 html: generateAdminLicenseNotificationEmail(req.user.fullName, tier.name, 0),
+                notification: {
+                    recipient: admin._id.toString(),
+                    message: `${req.user.fullName} has activated a free subscription for the ${tier.name} tier.`,
+                },
             }).catch(err => console.error(`Free subscription admin notification email failed:`, err));
         }
 

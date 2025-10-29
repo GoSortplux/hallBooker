@@ -5,7 +5,7 @@ import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generatePendingBookingCancelledEmail } from '../utils/emailTemplates.js';
 
-const deletePendingBookings = async () => {
+const deletePendingBookings = async (io) => {
     console.log('Running pending bookings cleanup job...');
 
     try {
@@ -67,10 +67,28 @@ const deletePendingBookings = async () => {
 
                 // Send email to all unique recipients
                 for (const [email, name] of recipients.entries()) {
+                    let recipientId;
+                    if(booking.user && email === booking.user.email) {
+                        recipientId = booking.user._id;
+                    } else if (booking.hall.owner && email === booking.hall.owner.email) {
+                        recipientId = booking.hall.owner._id;
+                    } else {
+                        const admin = adminUsers.find(admin => admin.email === email);
+                        if (admin) {
+                            recipientId = admin._id;
+                        }
+                    }
+
                     await sendEmail({
+                        io,
                         email,
                         subject: `Booking Cancelled: ${booking.bookingId}`,
                         html: generatePendingBookingCancelledEmail(name, booking),
+                        notification: {
+                            recipient: recipientId.toString(),
+                            message: `Booking #${booking.bookingId} has been cancelled due to non-payment.`,
+                            link: `/bookings/${booking._id}`,
+                        },
                     });
                 }
 
@@ -89,9 +107,9 @@ const deletePendingBookings = async () => {
     }
 };
 
-const initializeBookingCronJobs = () => {
+const initializeBookingCronJobs = (io) => {
     // Schedule the cleanup task to run every minute
-    cron.schedule('* * * * *', deletePendingBookings, {
+    cron.schedule('* * * * *', () => deletePendingBookings(io), {
         timezone: "Africa/Lagos"
     });
 
