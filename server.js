@@ -24,6 +24,7 @@ import settingRoutes from './routes/setting.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import subAccountRoutes from './routes/subaccount.routes.js';
+import locationRoutes from './routes/location.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +69,7 @@ app.use('/api/v1/settings', settingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/subaccounts', subAccountRoutes);
+app.use('/api/v1/locations', locationRoutes);
 
 // Fallback route to serve index.html
 app.get('*', (req, res) => {
