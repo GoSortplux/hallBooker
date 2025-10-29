@@ -1,4 +1,6 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -24,6 +26,7 @@ import settingRoutes from './routes/setting.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import subAccountRoutes from './routes/subaccount.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -32,11 +35,22 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN,
+    credentials: true,
+  },
+});
+
+// Make io accessible to our router
+app.set('io', io);
+
 const port = process.env.PORT || 5000;
 
 // Initialize Cron Jobs
-initializeCronJobs();
-initializeBookingCronJobs();
+initializeCronJobs(io);
+initializeBookingCronJobs(io);
 
 // Middleware
 app.use(cors({
@@ -68,6 +82,7 @@ app.use('/api/v1/settings', settingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/subaccounts', subAccountRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Fallback route to serve index.html
 app.get('*', (req, res) => {
@@ -78,6 +93,20 @@ app.get('*', (req, res) => {
 app.use(notFound);
 app.use(errorHandler);
 
-app.listen(port, () => {
+// Socket.io connection
+io.on('connection', (socket) => {
+  console.log('a user connected:', socket.id);
+
+  socket.on('join', (userId) => {
+    socket.join(userId);
+    console.log(`User ${userId} joined room`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('user disconnected:', socket.id);
+  });
+});
+
+httpServer.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });

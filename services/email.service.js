@@ -1,7 +1,9 @@
 import nodemailer from 'nodemailer';
 import { ApiError } from '../utils/apiError.js';
+import { createNotification } from './notification.service.js';
 
 const sendEmail = async (options) => {
+  const { io, notification, ...emailOptions } = options;
   try {
     console.log('--- Email Config For Debugging ---');
     console.log('Host:', process.env.EMAIL_HOST);
@@ -21,15 +23,18 @@ const sendEmail = async (options) => {
 
     const mailOptions = {
       from: process.env.EMAIL_FROM,
-      to: options.email,
-      subject: options.subject,
-      html: options.html,
-      attachments: options.attachments,
+      to: emailOptions.email,
+      subject: emailOptions.subject,
+      html: emailOptions.html,
+      attachments: emailOptions.attachments,
     };
 
     console.log('Attempting to send email...');
     await transporter.sendMail(mailOptions);
     console.log('Email sent!');
+    if (io && notification) {
+        createNotification(io, notification.recipient, notification.message, notification.link);
+      }
   } catch (error) {
     console.error("Email sending failed:", error);
     throw new ApiError(500, "The email could not be sent.");
