@@ -3,6 +3,7 @@ import {
   getNotifications,
   markAsRead,
   markAllAsRead,
+  markAsUnread,
 } from '../controllers/notification.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 
@@ -73,5 +74,30 @@ router.route('/read-all').post(markAllAsRead);
  *         description: Notification not found.
  */
 router.route('/:notificationId/read').post(markAsRead);
+
+/**
+ * @swagger
+ * /api/v1/notifications/{notificationId}/unread:
+ *   post:
+ *     summary: Mark a single notification as unread
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: notificationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the notification to mark as unread.
+ *     responses:
+ *       200:
+ *         description: The notification was marked as unread.
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Notification not found.
+ */
+router.route('/:notificationId/unread').post(markAsUnread);
 
 export default router;
