@@ -217,7 +217,7 @@ router.route('/add-staff')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/my-staff')
-    .get(verifyJWT, authorizeRoles('owner'), getMyStaff);
+    .get(verifyJWT, authorizeRoles('hall-owner'), getMyStaff);
 
 /**
  * @swagger
