@@ -1,2513 +1,967 @@
-{
-  "name": "Nigeria",
-  "iso2": "NG",
-  "states": [
-    {
-      "name": "Adamawa",
-      "lgas": [
-        {
-          "name": "Demsa"
-        },
-        {
-          "name": "Fufure"
-        },
-        {
-          "name": "Ganye"
-        },
-        {
-          "name": "Gayuk"
-        },
-        {
-          "name": "Gombi"
-        },
-        {
-          "name": "Grie"
-        },
-        {
-          "name": "Hong"
-        },
-        {
-          "name": "Jada"
-        },
-        {
-          "name": "Larmurde"
-        },
-        {
-          "name": "Madagali"
-        },
-        {
-          "name": "Maiha"
-        },
-        {
-          "name": "Mayo Belwa"
-        },
-        {
-          "name": "Michika"
-        },
-        {
-          "name": "Mubi North"
-        },
-        {
-          "name": "Mubi South"
-        },
-        {
-          "name": "Numan"
-        },
-        {
-          "name": "Shelleng"
-        },
-        {
-          "name": "Song"
-        },
-        {
-          "name": "Toungo"
-        },
-        {
-          "name": "Yola North"
-        },
-        {
-          "name": "Yola South"
-        }
-      ]
-    },
-    {
-      "name": "Akwa Ibom",
-      "lgas": [
-        {
-          "name": "Abak"
-        },
-        {
-          "name": "Eastern Obolo"
-        },
-        {
-          "name": "Eket"
-        },
-        {
-          "name": "Esit Eket"
-        },
-        {
-          "name": "Essien Udim"
-        },
-        {
-          "name": "Etim Ekpo"
-        },
-        {
-          "name": "Etinan"
-        },
-        {
-          "name": "Ibeno"
-        },
-        {
-          "name": "Ibesikpo Asutan"
-        },
-        {
-          "name": "Ibiono-Ibom"
-        },
-        {
-          "name": "Ikot Abasi"
-        },
-        {
-          "name": "Ika"
-        },
-        {
-          "name": "Ikono"
-        },
-        {
-          "name": "Ikot Ekpene"
-        },
-        {
-          "name": "Ini"
-        },
-        {
-          "name": "Mkpat-Enin"
-        },
-        {
-          "name": "Itu"
-        },
-        {
-          "name": "Mbo"
-        },
-        {
-          "name": "Nsit-Atai"
-        },
-        {
-          "name": "Nsit-Ibom"
-        },
-        {
-          "name": "Nsit-Ubium"
-        },
-        {
-          "name": "Obot Akara"
-        },
-        {
-          "name": "Okobo"
-        },
-        {
-          "name": "Onna"
-        },
-        {
-          "name": "Oron"
-        },
-        {
-          "name": "Udung-Uko"
-        },
-        {
-          "name": "Ukanafun"
-        },
-        {
-          "name": "Oruk Anam"
-        },
-        {
-          "name": "Uruan"
-        },
-        {
-          "name": "Urue-Offong/Oruko"
-        },
-        {
-          "name": "Uyo"
-        }
-      ]
-    },
-    {
-      "name": "Anambra",
-      "lgas": [
-        {
-          "name": "Aguata"
-        },
-        {
-          "name": "Anambra East"
-        },
-        {
-          "name": "Anaocha"
-        },
-        {
-          "name": "Awka North"
-        },
-        {
-          "name": "Anambra West"
-        },
-        {
-          "name": "Awka South"
-        },
-        {
-          "name": "Ayamelum"
-        },
-        {
-          "name": "Dunukofia"
-        },
-        {
-          "name": "Ekwusigo"
-        },
-        {
-          "name": "Idemili North"
-        },
-        {
-          "name": "Idemili South"
-        },
-        {
-          "name": "Ihiala"
-        },
-        {
-          "name": "Njikoka"
-        },
-        {
-          "name": "Nnewi North"
-        },
-        {
-          "name": "Nnewi South"
-        },
-        {
-          "name": "Ogbaru"
-        },
-        {
-          "name": "Onitsha North"
-        },
-        {
-          "name": "Onitsha South"
-        },
-        {
-          "name": "Orumba North"
-        },
-        {
-          "name": "Orumba South"
-        },
-        {
-          "name": "Oyi"
-        }
-      ]
-    },
-    {
-      "name": "Ogun",
-      "lgas": [
-        {
-          "name": "Abeokuta North"
-        },
-        {
-          "name": "Abeokuta South"
-        },
-        {
-          "name": "Ado-Odo/Ota"
-        },
-        {
-          "name": "Egbado North"
-        },
-        {
-          "name": "Ewekoro"
-        },
-        {
-          "name": "Egbado South"
-        },
-        {
-          "name": "Ijebu North"
-        },
-        {
-          "name": "Ijebu East"
-        },
-        {
-          "name": "Ifo"
-        },
-        {
-          "name": "Ijebu Ode"
-        },
-        {
-          "name": "Ijebu North East"
-        },
-        {
-          "name": "Imeko Afon"
-        },
-        {
-          "name": "Ikenne"
-        },
-        {
-          "name": "Ipokia"
-        },
-        {
-          "name": "Odeda"
-        },
-        {
-          "name": "Obafemi Owode"
-        },
-        {
-          "name": "Odogbolu"
-        },
-        {
-          "name": "Remo North"
-        },
-        {
-          "name": "Ogun Waterside"
-        },
-        {
-          "name": "Shagamu"
-        }
-      ]
-    },
-    {
-      "name": "Ondo",
-      "lgas": [
-        {
-          "name": "Akoko North-East"
-        },
-        {
-          "name": "Akoko North-West"
-        },
-        {
-          "name": "Akoko South-West"
-        },
-        {
-          "name": "Akoko South-East"
-        },
-        {
-          "name": "Akure North"
-        },
-        {
-          "name": "Akure South"
-        },
-        {
-          "name": "Ese Odo"
-        },
-        {
-          "name": "Idanre"
-        },
-        {
-          "name": "Ifedore"
-        },
-        {
-          "name": "Ilaje"
-        },
-        {
-          "name": "Irele"
-        },
-        {
-          "name": "Ile Oluji/Okeigbo"
-        },
-        {
-          "name": "Odigbo"
-        },
-        {
-          "name": "Okitipupa"
-        },
-        {
-          "name": "Ondo West"
-        },
-        {
-          "name": "Ose"
-        },
-        {
-          "name": "Ondo East"
-        },
-        {
-          "name": "Owo"
-        }
-      ]
-    },
-    {
-      "name": "Rivers",
-      "lgas": [
-        {
-          "name": "Abua/Odual"
-        },
-        {
-          "name": "Ahoada East"
-        },
-        {
-          "name": "Ahoada West"
-        },
-        {
-          "name": "Andoni"
-        },
-        {
-          "name": "Akuku-Toru"
-        },
-        {
-          "name": "Asari-Toru"
-        },
-        {
-          "name": "Bonny"
-        },
-        {
-          "name": "Degema"
-        },
-        {
-          "name": "Emuoha"
-        },
-        {
-          "name": "Eleme"
-        },
-        {
-          "name": "Ikwerre"
-        },
-        {
-          "name": "Etche"
-        },
-        {
-          "name": "Gokana"
-        },
-        {
-          "name": "Khana"
-        },
-        {
-          "name": "Obio/Akpor"
-        },
-        {
-          "name": "Ogba/Egbema/Ndoni"
-        },
-        {
-          "name": "Ogu/Bolo"
-        },
-        {
-          "name": "Okrika"
-        },
-        {
-          "name": "Omuma"
-        },
-        {
-          "name": "Opobo/Nkoro"
-        },
-        {
-          "name": "Oyigbo"
-        },
-        {
-          "name": "Port Harcourt"
-        },
-        {
-          "name": "Tai"
-        }
-      ]
-    },
-    {
-      "name": "Bauchi",
-      "lgas": [
-        {
-          "name": "Alkaleri"
-        },
-        {
-          "name": "Bauchi"
-        },
-        {
-          "name": "Bogoro"
-        },
-        {
-          "name": "Damban"
-        },
-        {
-          "name": "Darazo"
-        },
-        {
-          "name": "Dass"
-        },
-        {
-          "name": "Gamawa"
-        },
-        {
-          "name": "Ganjuwa"
-        },
-        {
-          "name": "Giade"
-        },
-        {
-          "name": "Itas/Gadau"
-        },
-        {
-          "name": "Jama'are"
-        },
-        {
-          "name": "Katagum"
-        },
-        {
-          "name": "Kirfi"
-        },
-        {
-          "name": "Misau"
-        },
-        {
-          "name": "Ningi"
-        },
-        {
-          "name": "Shira"
-        },
-        {
-          "name": "Tafawa Balewa"
-        },
-        {
-          "name": "Toro"
-        },
-        {
-          "name": "Warji"
-        },
-        {
-          "name": "Zaki"
-        }
-      ]
-    },
-    {
-      "name": "Benue",
-      "lgas": [
-        {
-          "name": "Agatu"
-        },
-        {
-          "name": "Apa"
-        },
-        {
-          "name": "Ado"
-        },
-        {
-          "name": "Buruku"
-        },
-        {
-          "name": "Gboko"
-        },
-        {
-          "name": "Guma"
-        },
-        {
-          "name": "Gwer East"
-        },
-        {
-          "name": "Gwer West"
-        },
-        {
-          "name": "Katsina-Ala"
-        },
-        {
-          "name": "Konshisha"
-        },
-        {
-          "name": "Kwande"
-        },
-        {
-          "name": "Logo"
-        },
-        {
-          "name": "Makurdi"
-        },
-        {
-          "name": "Obi"
-        },
-        {
-          "name": "Ogbadibo"
-        },
-        {
-          "name": "Ohimini"
-        },
-        {
-          "name": "Oju"
-        },
-        {
-          "name": "Okpokwu"
-        },
-        {
-          "name": "Oturkpo"
-        },
-        {
-          "name": "Tarka"
-        },
-        {
-          "name": "Ukum"
-        },
-        {
-          "name": "Ushongo"
-        },
-        {
-          "name": "Vandeikya"
-        }
-      ]
-    },
-    {
-      "name": "Borno",
-      "lgas": [
-        {
-          "name": "Abadam"
-        },
-        {
-          "name": "Askira/Uba"
-        },
-        {
-          "name": "Bama"
-        },
-        {
-          "name": "Bayo"
-        },
-        {
-          "name": "Biu"
-        },
-        {
-          "name": "Chibok"
-        },
-        {
-          "name": "Damboa"
-        },
-        {
-          "name": "Dikwa"
-        },
-        {
-          "name": "Guzamala"
-        },
-        {
-          "name": "Gubio"
-        },
-        {
-          "name": "Hawul"
-        },
-        {
-          "name": "Gwoza"
-        },
-        {
-          "name": "Jere"
-        },
-        {
-          "name": "Kaga"
-        },
-        {
-          "name": "Kala/Balge"
-        },
-        {
-          "name": "Konduga"
-        },
-        {
-          "name": "Kukawa"
-        },
-        {
-          "name": "Kwaya Kusar"
-        },
-        {
-          "name": "Mafa"
-        },
-        {
-          "name": "Magumeri"
-        },
-        {
-          "name": "Maiduguri"
-        },
-        {
-          "name": "Mobbar"
-        },
-        {
-          "name": "Marte"
-        },
-        {
-          "name": "Monguno"
-        },
-        {
-          "name": "Ngala"
-        },
-        {
-          "name": "Nganzai"
-        },
-        {
-          "name": "Shani"
-        }
-      ]
-    },
-    {
-      "name": "Bayelsa",
-      "lgas": [
-        {
-          "name": "Brass"
-        },
-        {
-          "name": "Ekeremor"
-        },
-        {
-          "name": "Kolokuma/Opokuma"
-        },
-        {
-          "name": "Nembe"
-        },
-        {
-          "name": "Ogbia"
-        },
-        {
-          "name": "Sagbama"
-        },
-        {
-          "name": "Southern Ijaw"
-        },
-        {
-          "name": "Yenagoa"
-        }
-      ]
-    },
-    {
-      "name": "Cross River",
-      "lgas": [
-        {
-          "name": "Abi"
-        },
-        {
-          "name": "Akamkpa"
-        },
-        {
-          "name": "Akpabuyo"
-        },
-        {
-          "name": "Bakassi"
-        },
-        {
-          "name": "Bekwarra"
-        },
-        {
-          "name": "Biase"
-        },
-        {
-          "name": "Boki"
-        },
-        {
-          "name": "Calabar Municipal"
-        },
-        {
-          "name": "Calabar South"
-        },
-        {
-          "name": "Etung"
-        },
-        {
-          "name": "Ikom"
-        },
-        {
-          "name": "Obanliku"
-        },
-        {
-          "name": "Obubra"
-        },
-        {
-          "name": "Obudu"
-        },
-        {
-          "name": "Odukpani"
-        },
-        {
-          "name": "Ogoja"
-        },
-        {
-          "name": "Yakuur"
-        },
-        {
-          "name": "Yala"
-        }
-      ]
-    },
-    {
-      "name": "Delta",
-      "lgas": [
-        {
-          "name": "Aniocha North"
-        },
-        {
-          "name": "Aniocha South"
-        },
-        {
-          "name": "Bomadi"
-        },
-        {
-          "name": "Burutu"
-        },
-        {
-          "name": "Ethiope West"
-        },
-        {
-          "name": "Ethiope East"
-        },
-        {
-          "name": "Ika North East"
-        },
-        {
-          "name": "Ika South"
-        },
-        {
-          "name": "Isoko North"
-        },
-        {
-          "name": "Isoko South"
-        },
-        {
-          "name": "Ndokwa East"
-        },
-        {
-          "name": "Ndokwa West"
-        },
-        {
-          "name": "Okpe"
-        },
-        {
-          "name": "Oshimili North"
-        },
-        {
-          "name": "Oshimili South"
-        },
-        {
-          "name": "Patani"
-        },
-        {
-          "name": "Sapele"
-        },
-        {
-          "name": "Udu"
-        },
-        {
-          "name": "Ughelli North"
-        },
-        {
-          "name": "Ukwuani"
-        },
-        {
-          "name": "Ughelli South"
-        },
-        {
-          "name": "Uvwie"
-        },
-        {
-          "name": "Warri North"
-        },
-        {
-          "name": "Warri South"
-        },
-        {
-          "name": "Warri South West"
-        }
-      ]
-    },
-    {
-      "name": "Ebonyi",
-      "lgas": [
-        {
-          "name": "Abakaliki"
-        },
-        {
-          "name": "Afikpo North"
-        },
-        {
-          "name": "Ebonyi"
-        },
-        {
-          "name": "Afikpo South"
-        },
-        {
-          "name": "Ezza North"
-        },
-        {
-          "name": "Ikwo"
-        },
-        {
-          "name": "Ezza South"
-        },
-        {
-          "name": "Ivo"
-        },
-        {
-          "name": "Ishielu"
-        },
-        {
-          "name": "Izzi"
-        },
-        {
-          "name": "Ohaozara"
-        },
-        {
-          "name": "Ohaukwu"
-        },
-        {
-          "name": "Onicha"
-        }
-      ]
-    },
-    {
-      "name": "Edo",
-      "lgas": [
-        {
-          "name": "Akoko-Edo"
-        },
-        {
-          "name": "Egor"
-        },
-        {
-          "name": "Esan Central"
-        },
-        {
-          "name": "Esan North-East"
-        },
-        {
-          "name": "Esan South-East"
-        },
-        {
-          "name": "Esan West"
-        },
-        {
-          "name": "Etsako Central"
-        },
-        {
-          "name": "Etsako East"
-        },
-        {
-          "name": "Etsako West"
-        },
-        {
-          "name": "Igueben"
-        },
-        {
-          "name": "Ikpoba Okha"
-        },
-        {
-          "name": "Orhionmwon"
-        },
-        {
-          "name": "Oredo"
-        },
-        {
-          "name": "Ovia North-East"
-        },
-        {
-          "name": "Ovia South-West"
-        },
-        {
-          "name": "Owan East"
-        },
-        {
-          "name": "Owan West"
-        },
-        {
-          "name": "Uhunmwonde"
-        }
-      ]
-    },
-    {
-      "name": "Ekiti",
-      "lgas": [
-        {
-          "name": "Ado Ekiti"
-        },
-        {
-          "name": "Efon"
-        },
-        {
-          "name": "Ekiti East"
-        },
-        {
-          "name": "Ekiti South-West"
-        },
-        {
-          "name": "Ekiti West"
-        },
-        {
-          "name": "Emure"
-        },
-        {
-          "name": "Gbonyin"
-        },
-        {
-          "name": "Ido Osi"
-        },
-        {
-          "name": "Ijero"
-        },
-        {
-          "name": "Ikere"
-        },
-        {
-          "name": "Ilejemeje"
-        },
-        {
-          "name": "Irepodun/Ifelodun"
-        },
-        {
-          "name": "Ikole"
-        },
-        {
-          "name": "Ise/Orun"
-        },
-        {
-          "name": "Moba"
-        },
-        {
-          "name": "Oye"
-        }
-      ]
-    },
-    {
-      "name": "Enugu",
-      "lgas": [
-        {
-          "name": "Awgu"
-        },
-        {
-          "name": "Aninri"
-        },
-        {
-          "name": "Enugu East"
-        },
-        {
-          "name": "Enugu North"
-        },
-        {
-          "name": "Ezeagu"
-        },
-        {
-          "name": "Enugu South"
-        },
-        {
-          "name": "Igbo Etiti"
-        },
-        {
-          "name": "Igbo Eze North"
-        },
-        {
-          "name": "Igbo Eze South"
-        },
-        {
-          "name": "Isi Uzo"
-        },
-        {
-          "name": "Nkanu East"
-        },
-        {
-          "name": "Nkanu West"
-        },
-        {
-          "name": "Nsukka"
-        },
-        {
-          "name": "Udenu"
-        },
-        {
-          "name": "Oji River"
-        },
-        {
-          "name": "Uzo Uwani"
-        },
-        {
-          "name": "Udi"
-        }
-      ]
-    },
-    {
-      "name": "Federal Capital Territory",
-      "lgas": [
-        {
-          "name": "Abaji"
-        },
-        {
-          "name": "Bwari"
-        },
-        {
-          "name": "Gwagwalada"
-        },
-        {
-          "name": "Kuje"
-        },
-        {
-          "name": "Kwali"
-        },
-        {
-          "name": "Municipal Area Council"
-        }
-      ]
-    },
-    {
-      "name": "Gombe",
-      "lgas": [
-        {
-          "name": "Akko"
-        },
-        {
-          "name": "Balanga"
-        },
-        {
-          "name": "Billiri"
-        },
-        {
-          "name": "Dukku"
-        },
-        {
-          "name": "Funakaye"
-        },
-        {
-          "name": "Gombe"
-        },
-        {
-          "name": "Kaltungo"
-        },
-        {
-          "name": "Kwami"
-        },
-        {
-          "name": "Nafada"
-        },
-        {
-          "name": "Shongom"
-        },
-        {
-          "name": "Yamaltu/Deba"
-        }
-      ]
-    },
-    {
-      "name": "Jigawa",
-      "lgas": [
-        {
-          "name": "Auyo"
-        },
-        {
-          "name": "Babura"
-        },
-        {
-          "name": "Buji"
-        },
-        {
-          "name": "Biriniwa"
-        },
-        {
-          "name": "Birnin Kudu"
-        },
-        {
-          "name": "Dutse"
-        },
-        {
-          "name": "Gagarawa"
-        },
-        {
-          "name": "Garki"
-        },
-        {
-          "name": "Gumel"
-        },
-        {
-          "name": "Guri"
-        },
-        {
-          "name": "Gwaram"
-        },
-        {
-          "name": "Gwiwa"
-        },
-        {
-          "name": "Hadejia"
-        },
-        {
-          "name": "Jahun"
-        },
-        {
-          "name": "Kafin Hausa"
-        },
-        {
-          "name": "Kazaure"
-        },
-        {
-          "name": "Kiri Kasama"
-        },
-        {
-          "name": "Kiyawa"
-        },
-        {
-          "name": "Kaugama"
-        },
-        {
-          "name": "Maigatari"
-        },
-        {
-          "name": "Malam Madori"
-        },
-        {
-          "name": "Miga"
-        },
-        {
-          "name": "Sule Tankarkar"
-        },
-        {
-          "name": "Roni"
-        },
-        {
-          "name": "Ringim"
-        },
-        {
-          "name": "Yankwashi"
-        },
-        {
-          "name": "Taura"
-        }
-      ]
-    },
-    {
-      "name": "Oyo",
-      "lgas": [
-        {
-          "name": "Afijio"
-        },
-        {
-          "name": "Akinyele"
-        },
-        {
-          "name": "Atiba"
-        },
-        {
-          "name": "Atisbo"
-        },
-        {
-          "name": "Egbeda"
-        },
-        {
-          "name": "Ibadan North"
-        },
-        {
-          "name": "Ibadan North-East"
-        },
-        {
-          "name": "Ibadan North-West"
-        },
-        {
-          "name": "Ibadan South-East"
-        },
-        {
-          "name": "Ibarapa Central"
-        },
-        {
-          "name": "Ibadan South-West"
-        },
-        {
-          "name": "Ibarapa East"
-        },
-        {
-          "name": "Ido"
-        },
-        {
-          "name": "Ibarapa North"
-        },
-        {
-          "name": "Irepo"
-        },
-        {
-          "name": "Iseyin"
-        },
-        {
-          "name": "Itesiwaju"
-        },
-        {
-          "name": "Iwajowa"
-        },
-        {
-          "name": "Kajola"
-        },
-        {
-          "name": "Lagelu"
-        },
-        {
-          "name": "Ogbomosho North"
-        },
-        {
-          "name": "Ogbomosho South"
-        },
-        {
-          "name": "Ogo Oluwa"
-        },
-        {
-          "name": "Olorunsogo"
-        },
-        {
-          "name": "Oluyole"
-        },
-        {
-          "name": "Ona Ara"
-        },
-        {
-          "name": "Orelope"
-        },
-        {
-          "name": "Ori Ire"
-        },
-        {
-          "name": "Oyo"
-        },
-        {
-          "name": "Oyo East"
-        },
-        {
-          "name": "Saki East"
-        },
-        {
-          "name": "Saki West"
-        },
-        {
-          "name": "Surulere Oyo State"
-        }
-      ]
-    },
-    {
-      "name": "Imo",
-      "lgas": [
-        {
-          "name": "Aboh Mbaise"
-        },
-        {
-          "name": "Ahiazu Mbaise"
-        },
-        {
-          "name": "Ehime Mbano"
-        },
-        {
-          "name": "Ezinihitte"
-        },
-        {
-          "name": "Ideato North"
-        },
-        {
-          "name": "Ideato South"
-        },
-        {
-          "name": "Ihitte/Uboma"
-        },
-        {
-          "name": "Ikeduru"
-        },
-        {
-          "name": "Isiala Mbano"
-        },
-        {
-          "name": "Mbaitoli"
-        },
-        {
-          "name": "Isu"
-        },
-        {
-          "name": "Ngor Okpala"
-        },
-        {
-          "name": "Njaba"
-        },
-        {
-          "name": "Nkwerre"
-        },
-        {
-          "name": "Nwangele"
-        },
-        {
-          "name": "Obowo"
-        },
-        {
-          "name": "Oguta"
-        },
-        {
-          "name": "Ohaji/Egbema"
-        },
-        {
-          "name": "Okigwe"
-        },
-        {
-          "name": "Orlu"
-        },
-        {
-          "name": "Orsu"
-        },
-        {
-          "name": "Oru East"
-        },
-        {
-          "name": "Oru West"
-        },
-        {
-          "name": "Owerri Municipal"
-        },
-        {
-          "name": "Owerri North"
-        },
-        {
-          "name": "Unuimo"
-        },
-        {
-          "name": "Owerri West"
-        }
-      ]
-    },
-    {
-      "name": "Kaduna",
-      "lgas": [
-        {
-          "name": "Birnin Gwari"
-        },
-        {
-          "name": "Chikun"
-        },
-        {
-          "name": "Giwa"
-        },
-        {
-          "name": "Ikara"
-        },
-        {
-          "name": "Igabi"
-        },
-        {
-          "name": "Jaba"
-        },
-        {
-          "name": "Jema'a"
-        },
-        {
-          "name": "Kachia"
-        },
-        {
-          "name": "Kaduna North"
-        },
-        {
-          "name": "Kaduna South"
-        },
-        {
-          "name": "Kagarko"
-        },
-        {
-          "name": "Kajuru"
-        },
-        {
-          "name": "Kaura"
-        },
-        {
-          "name": "Kauru"
-        },
-        {
-          "name": "Kubau"
-        },
-        {
-          "name": "Kudan"
-        },
-        {
-          "name": "Lere"
-        },
-        {
-          "name": "Makarfi"
-        },
-        {
-          "name": "Sabon Gari"
-        },
-        {
-          "name": "Sanga"
-        },
-        {
-          "name": "Soba"
-        },
-        {
-          "name": "Zangon Kataf"
-        },
-        {
-          "name": "Zaria"
-        }
-      ]
-    },
-    {
-      "name": "Kebbi",
-      "lgas": [
-        {
-          "name": "Aleiro"
-        },
-        {
-          "name": "Argungu"
-        },
-        {
-          "name": "Arewa Dandi"
-        },
-        {
-          "name": "Augie"
-        },
-        {
-          "name": "Bagudo"
-        },
-        {
-          "name": "Birnin Kebbi"
-        },
-        {
-          "name": "Bunza"
-        },
-        {
-          "name": "Dandi"
-        },
-        {
-          "name": "Fakai"
-        },
-        {
-          "name": "Gwandu"
-        },
-        {
-          "name": "Jega"
-        },
-        {
-          "name": "Kalgo"
-        },
-        {
-          "name": "Koko/Besse"
-        },
-        {
-          "name": "Maiyama"
-        },
-        {
-          "name": "Ngaski"
-        },
-        {
-          "name": "Shanga"
-        },
-        {
-          "name": "Suru"
-        },
-        {
-          "name": "Sakaba"
-        },
-        {
-          "name": "Wasagu/Danko"
-        },
-        {
-          "name": "Yauri"
-        },
-        {
-          "name": "Zuru"
-        }
-      ]
-    },
-    {
-      "name": "Kano",
-      "lgas": [
-        {
-          "name": "Ajingi"
-        },
-        {
-          "name": "Albasu"
-        },
-        {
-          "name": "Bagwai"
-        },
-        {
-          "name": "Bebeji"
-        },
-        {
-          "name": "Bichi"
-        },
-        {
-          "name": "Bunkure"
-        },
-        {
-          "name": "Dala"
-        },
-        {
-          "name": "Dambatta"
-        },
-        {
-          "name": "Dawakin Kudu"
-        },
-        {
-          "name": "Dawakin Tofa"
-        },
-        {
-          "name": "Doguwa"
-        },
-        {
-          "name": "Fagge"
-        },
-        {
-          "name": "Gabasawa"
-        },
-        {
-          "name": "Garko"
-        },
-        {
-          "name": "Garun Mallam"
-        },
-        {
-          "name": "Gezawa"
-        },
-        {
-          "name": "Gaya"
-        },
-        {
-          "name": "Gwale"
-        },
-        {
-          "name": "Gwarzo"
-        },
-        {
-          "name": "Kabo"
-        },
-        {
-          "name": "Kano Municipal"
-        },
-        {
-          "name": "Karaye"
-        },
-        {
-          "name": "Kibiya"
-        },
-        {
-          "name": "Kiru"
-        },
-        {
-          "name": "Kumbotso"
-        },
-        {
-          "name": "Kunchi"
-        },
-        {
-          "name": "Kura"
-        },
-        {
-          "name": "Madobi"
-        },
-        {
-          "name": "Makoda"
-        },
-        {
-          "name": "Minjibir"
-        },
-        {
-          "name": "Nasarawa"
-        },
-        {
-          "name": "Rano"
-        },
-        {
-          "name": "Rimin Gado"
-        },
-        {
-          "name": "Rogo"
-        },
-        {
-          "name": "Shanono"
-        },
-        {
-          "name": "Takai"
-        },
-        {
-          "name": "Sumaila"
-        },
-        {
-          "name": "Tarauni"
-        },
-        {
-          "name": "Tofa"
-        },
-        {
-          "name": "Tsanyawa"
-        },
-        {
-          "name": "Tudun Wada"
-        },
-        {
-          "name": "Ungogo"
-        },
-        {
-          "name": "Warawa"
-        },
-        {
-          "name": "Wudil"
-        }
-      ]
-    },
-    {
-      "name": "Kogi",
-      "lgas": [
-        {
-          "name": "Ajaokuta"
-        },
-        {
-          "name": "Adavi"
-        },
-        {
-          "name": "Ankpa"
-        },
-        {
-          "name": "Bassa"
-        },
-        {
-          "name": "Dekina"
-        },
-        {
-          "name": "Ibaji"
-        },
-        {
-          "name": "Idah"
-        },
-        {
-          "name": "Igalamela Odolu"
-        },
-        {
-          "name": "Ijumu"
-        },
-        {
-          "name": "Kogi"
-        },
-        {
-          "name": "Kabba/Bunu"
-        },
-        {
-          "name": "Lokoja"
-        },
-        {
-          "name": "Ofu"
-        },
-        {
-          "name": "Mopa Muro"
-        },
-        {
-          "name": "Ogori/Magongo"
-        },
-        {
-          "name": "Okehi"
-        },
-        {
-          "name": "Okene"
-        },
-        {
-          "name": "Olamaboro"
-        },
-        {
-          "name": "Omala"
-        },
-        {
-          "name": "Yagba East"
-        },
-        {
-          "name": "Yagba West"
-        }
-      ]
-    },
-    {
-      "name": "Osun",
-      "lgas": [
-        {
-          "name": "Aiyedire"
-        },
-        {
-          "name": "Atakunmosa West"
-        },
-        {
-          "name": "Atakunmosa East"
-        },
-        {
-          "name": "Aiyedaade"
-        },
-        {
-          "name": "Boluwaduro"
-        },
-        {
-          "name": "Boripe"
-        },
-        {
-          "name": "Ife East"
-        },
-        {
-          "name": "Ede South"
-        },
-        {
-          "name": "Ife North"
-        },
-        {
-          "name": "Ede North"
-        },
-        {
-          "name": "Ife South"
-        },
-        {
-          "name": "Ejigbo"
-        },
-        {
-          "name": "Ife Central"
-        },
-        {
-          "name": "Ifedayo"
-        },
-        {
-          "name": "Egbedore"
-        },
-        {
-          "name": "Ila"
-        },
-        {
-          "name": "Ifelodun"
-        },
-        {
-          "name": "Ilesa East"
-        },
-        {
-          "name": "Ilesa West"
-        },
-        {
-          "name": "Irepodun"
-        },
-        {
-          "name": "Irewole"
-        },
-        {
-          "name": "Isokan"
-        },
-        {
-          "name": "Iwo"
-        },
-        {
-          "name": "Obokun"
-        },
-        {
-          "name": "Odo Otin"
-        },
-        {
-          "name": "Ola Oluwa"
-        },
-        {
-          "name": "Olorunda"
-        },
-        {
-          "name": "Oriade"
-        },
-        {
-          "name": "Orolu"
-        },
-        {
-          "name": "Osogbo"
-        }
-      ]
-    },
-    {
-      "name": "Sokoto",
-      "lgas": [
-        {
-          "name": "Gudu"
-        },
-        {
-          "name": "Gwadabawa"
-        },
-        {
-          "name": "Illela"
-        },
-        {
-          "name": "Isa"
-        },
-        {
-          "name": "Kebbe"
-        },
-        {
-          "name": "Kware"
-        },
-        {
-          "name": "Rabah"
-        },
-        {
-          "name": "Sabon Birni"
-        },
-        {
-          "name": "Shagari"
-        },
-        {
-          "name": "Silame"
-        },
-        {
-          "name": "Sokoto North"
-        },
-        {
-          "name": "Sokoto South"
-        },
-        {
-          "name": "Tambuwal"
-        },
-        {
-          "name": "Tangaza"
-        },
-        {
-          "name": "Tureta"
-        },
-        {
-          "name": "Wamako"
-        },
-        {
-          "name": "Wurno"
-        },
-        {
-          "name": "Yabo"
-        },
-        {
-          "name": "Binji"
-        },
-        {
-          "name": "Bodinga"
-        },
-        {
-          "name": "Dange Shuni"
-        },
-        {
-          "name": "Goronyo"
-        },
-        {
-          "name": "Gada"
-        }
-      ]
-    },
-    {
-      "name": "Plateau",
-      "lgas": [
-        {
-          "name": "Bokkos"
-        },
-        {
-          "name": "Barkin Ladi"
-        },
-        {
-          "name": "Bassa"
-        },
-        {
-          "name": "Jos East"
-        },
-        {
-          "name": "Jos North"
-        },
-        {
-          "name": "Jos South"
-        },
-        {
-          "name": "Kanam"
-        },
-        {
-          "name": "Kanke"
-        },
-        {
-          "name": "Langtang South"
-        },
-        {
-          "name": "Langtang North"
-        },
-        {
-          "name": "Mangu"
-        },
-        {
-          "name": "Mikang"
-        },
-        {
-          "name": "Pankshin"
-        },
-        {
-          "name": "Qua'an Pan"
-        },
-        {
-          "name": "Riyom"
-        },
-        {
-          "name": "Shendam"
-        },
-        {
-          "name": "Wase"
-        }
-      ]
-    },
-    {
-      "name": "Taraba",
-      "lgas": [
-        {
-          "name": "Ardo Kola"
-        },
-        {
-          "name": "Bali"
-        },
-        {
-          "name": "Donga"
-        },
-        {
-          "name": "Gashaka"
-        },
-        {
-          "name": "Gassol"
-        },
-        {
-          "name": "Ibi"
-        },
-        {
-          "name": "Jalingo"
-        },
-        {
-          "name": "Karim Lamido"
-        },
-        {
-          "name": "Kumi"
-        },
-        {
-          "name": "Lau"
-        },
-        {
-          "name": "Sardauna"
-        },
-        {
-          "name": "Takum"
-        },
-        {
-          "name": "Ussa"
-        },
-        {
-          "name": "Wukari"
-        },
-        {
-          "name": "Yorro"
-        },
-        {
-          "name": "Zing"
-        }
-      ]
-    },
-    {
-      "name": "Yobe",
-      "lgas": [
-        {
-          "name": "Bade"
-        },
-        {
-          "name": "Bursari"
-        },
-        {
-          "name": "Damaturu"
-        },
-        {
-          "name": "Fika"
-        },
-        {
-          "name": "Fune"
-        },
-        {
-          "name": "Geidam"
-        },
-        {
-          "name": "Gujba"
-        },
-        {
-          "name": "Gulani"
-        },
-        {
-          "name": "Jakusko"
-        },
-        {
-          "name": "Karasuwa"
-        },
-        {
-          "name": "Machina"
-        },
-        {
-          "name": "Nangere"
-        },
-        {
-          "name": "Nguru"
-        },
-        {
-          "name": "Potiskum"
-        },
-        {
-          "name": "Tarmuwa"
-        },
-        {
-          "name": "Yunusari"
-        },
-        {
-          "name": "Yusufari"
-        }
-      ]
-    },
-    {
-      "name": "Zamfara",
-      "lgas": [
-        {
-          "name": "Anka"
-        },
-        {
-          "name": "Birnin Magaji/Kiyaw"
-        },
-        {
-          "name": "Bakura"
-        },
-        {
-          "name": "Bukkuyum"
-        },
-        {
-          "name": "Bungudu"
-        },
-        {
-          "name": "Gummi"
-        },
-        {
-          "name": "Gusau"
-        },
-        {
-          "name": "Kaura Namoda"
-        },
-        {
-          "name": "Maradun"
-        },
-        {
-          "name": "Shinkafi"
-        },
-        {
-          "name": "Maru"
-        },
-        {
-          "name": "Talata Mafara"
-        },
-        {
-          "name": "Tsafe"
-        },
-        {
-          "name": "Zurmi"
-        }
-      ]
-    },
-    {
-      "name": "Lagos",
-      "lgas": [
-        {
-          "name": "Agege"
-        },
-        {
-          "name": "Ajeromi-Ifelodun"
-        },
-        {
-          "name": "Alimosho"
-        },
-        {
-          "name": "Amuwo-Odofin"
-        },
-        {
-          "name": "Badagry"
-        },
-        {
-          "name": "Apapa"
-        },
-        {
-          "name": "Epe"
-        },
-        {
-          "name": "Eti Osa"
-        },
-        {
-          "name": "Ibeju-Lekki"
-        },
-        {
-          "name": "Ifako-Ijaiye"
-        },
-        {
-          "name": "Ikeja"
-        },
-        {
-          "name": "Ikorodu"
-        },
-        {
-          "name": "Kosofe"
-        },
-        {
-          "name": "Lagos Island"
-        },
-        {
-          "name": "Mushin"
-        },
-        {
-          "name": "Lagos Mainland"
-        },
-        {
-          "name": "Ojo"
-        },
-        {
-          "name": "Oshodi-Isolo"
-        },
-        {
-          "name": "Shomolu"
-        },
-        {
-          "name": "Surulere Lagos State"
-        }
-      ]
-    },
-    {
-      "name": "Katsina",
-      "lgas": [
-        {
-          "name": "Bakori"
-        },
-        {
-          "name": "Batagarawa"
-        },
-        {
-          "name": "Batsari"
-        },
-        {
-          "name": "Baure"
-        },
-        {
-          "name": "Bindawa"
-        },
-        {
-          "name": "Charanchi"
-        },
-        {
-          "name": "Danja"
-        },
-        {
-          "name": "Dandume"
-        },
-        {
-          "name": "Dan Musa"
-        },
-        {
-          "name": "Daura"
-        },
-        {
-          "name": "Dutsi"
-        },
-        {
-          "name": "Dutsin Ma"
-        },
-        {
-          "name": "Faskari"
-        },
-        {
-          "name": "Funtua"
-        },
-        {
-          "name": "Ingawa"
-        },
-        {
-          "name": "Jibia"
-        },
-        {
-          "name": "Kafur"
-        },
-        {
-          "name": "Kaita"
-        },
-        {
-          "name": "Kankara"
-        },
-        {
-          "name": "Kankia"
-        },
-        {
-          "name": "Katsina"
-        },
-        {
-          "name": "Kurfi"
-        },
-        {
-          "name": "Kusada"
-        },
-        {
-          "name": "Mai'Adua"
-        },
-        {
-          "name": "Malumfashi"
-        },
-        {
-          "name": "Mani"
-        },
-        {
-          "name": "Mashi"
-        },
-        {
-          "name": "Matazu"
-        },
-        {
-          "name": "Musawa"
-        },
-        {
-          "name": "Rimi"
-        },
-        {
-          "name": "Sabuwa"
-        },
-        {
-          "name": "Safana"
-        },
-        {
-          "name": "Sandamu"
-        },
-        {
-          "name": "Zango"
-        }
-      ]
-    },
-    {
-      "name": "Kwara",
-      "lgas": [
-        {
-          "name": "Asa"
-        },
-        {
-          "name": "Baruten"
-        },
-        {
-          "name": "Edu"
-        },
-        {
-          "name": "Ilorin East"
-        },
-        {
-          "name": "Ifelodun"
-        },
-        {
-          "name": "Ilorin South"
-        },
-        {
-          "name": "Ekiti Kwara State"
-        },
-        {
-          "name": "Ilorin West"
-        },
-        {
-          "name": "Irepodun"
-        },
-        {
-          "name": "Isin"
-        },
-        {
-          "name": "Kaiama"
-        },
-        {
-          "name": "Moro"
-        },
-        {
-          "name": "Offa"
-        },
-        {
-          "name": "Oke Ero"
-        },
-        {
-          "name": "Oyun"
-        },
-        {
-          "name": "Pategi"
-        }
-      ]
-    },
-    {
-      "name": "Nasarawa",
-      "lgas": [
-        {
-          "name": "Akwanga"
-        },
-        {
-          "name": "Awe"
-        },
-        {
-          "name": "Doma"
-        },
-        {
-          "name": "Karu"
-        },
-        {
-          "name": "Keana"
-        },
-        {
-          "name": "Keffi"
-        },
-        {
-          "name": "Lafia"
-        },
-        {
-          "name": "Kokona"
-        },
-        {
-          "name": "Nasarawa Egon"
-        },
-        {
-          "name": "Nasarawa"
-        },
-        {
-          "name": "Obi"
-        },
-        {
-          "name": "Toto"
-        },
-        {
-          "name": "Wamba"
-        }
-      ]
-    },
-    {
-      "name": "Niger",
-      "lgas": [
-        {
-          "name": "Agaie"
-        },
-        {
-          "name": "Agwara"
-        },
-        {
-          "name": "Bida"
-        },
-        {
-          "name": "Borgu"
-        },
-        {
-          "name": "Bosso"
-        },
-        {
-          "name": "Chanchaga"
-        },
-        {
-          "name": "Edati"
-        },
-        {
-          "name": "Gbako"
-        },
-        {
-          "name": "Gurara"
-        },
-        {
-          "name": "Katcha"
-        },
-        {
-          "name": "Kontagora"
-        },
-        {
-          "name": "Lapai"
-        },
-        {
-          "name": "Lavun"
-        },
-        {
-          "name": "Mariga"
-        },
-        {
-          "name": "Magama"
-        },
-        {
-          "name": "Mokwa"
-        },
-        {
-          "name": "Mashegu"
-        },
-        {
-          "name": "Moya"
-        },
-        {
-          "name": "Paikoro"
-        },
-        {
-          "name": "Rafi"
-        },
-        {
-          "name": "Rijau"
-        },
-        {
-          "name": "Shiroro"
-        },
-        {
-          "name": "Suleja"
-        },
-        {
-          "name": "Tafa"
-        },
-        {
-          "name": "Wushishi"
-        }
-      ]
-    },
-    {
-      "name": "Abia",
-      "lgas": [
-        {
-          "name": "Aba North"
-        },
-        {
-          "name": "Arochukwu"
-        },
-        {
-          "name": "Aba South"
-        },
-        {
-          "name": "Bende"
-        },
-        {
-          "name": "Isiala Ngwa North"
-        },
-        {
-          "name": "Ikwuano"
-        },
-        {
-          "name": "Isiala Ngwa South"
-        },
-        {
-          "name": "Isuikwuato"
-        },
-        {
-          "name": "Obi Ngwa"
-        },
-        {
-          "name": "Ohafia"
-        },
-        {
-          "name": "Osisioma"
-        },
-        {
-          "name": "Ugwunagbo"
-        },
-        {
-          "name": "Ukwa East"
-        },
-        {
-          "name": "Ukwa West"
-        },
-        {
-          "name": "Umuahia North"
-        },
-        {
-          "name": "Umuahia South"
-        },
-        {
-          "name": "Umu Nneochi"
-        }
-      ]
-    }
-  ]
-}
+[
+  {
+    "name": "Nigeria",
+    "iso2": "NG",
+    "states": [
+      {
+        "name": "Adamawa",
+        "lgas": [
+          { "name": "Demsa" },
+          { "name": "Fufure" },
+          { "name": "Ganye" },
+          { "name": "Gayuk" },
+          { "name": "Gombi" },
+          { "name": "Grie" },
+          { "name": "Hong" },
+          { "name": "Jada" },
+          { "name": "Larmurde" },
+          { "name": "Madagali" },
+          { "name": "Maiha" },
+          { "name": "Mayo Belwa" },
+          { "name": "Michika" },
+          { "name": "Mubi North" },
+          { "name": "Mubi South" },
+          { "name": "Numan" },
+          { "name": "Shelleng" },
+          { "name": "Song" },
+          { "name": "Toungo" },
+          { "name": "Yola North" },
+          { "name": "Yola South" }
+        ]
+      },
+      {
+        "name": "Akwa Ibom",
+        "lgas": [
+          { "name": "Abak" },
+          { "name": "Eastern Obolo" },
+          { "name": "Eket" },
+          { "name": "Esit Eket" },
+          { "name": "Essien Udim" },
+          { "name": "Etim Ekpo" },
+          { "name": "Etinan" },
+          { "name": "Ibeno" },
+          { "name": "Ibesikpo Asutan" },
+          { "name": "Ibiono-Ibom" },
+          { "name": "Ikot Abasi" },
+          { "name": "Ika" },
+          { "name": "Ikono" },
+          { "name": "Ikot Ekpene" },
+          { "name": "Ini" },
+          { "name": "Mkpat-Enin" },
+          { "name": "Itu" },
+          { "name": "Mbo" },
+          { "name": "Nsit-Atai" },
+          { "name": "Nsit-Ibom" },
+          { "name": "Nsit-Ubium" },
+          { "name": "Obot Akara" },
+          { "name": "Okobo" },
+          { "name": "Onna" },
+          { "name": "Oron" },
+          { "name": "Udung-Uko" },
+          { "name": "Ukanafun" },
+          { "name": "Oruk Anam" },
+          { "name": "Uruan" },
+          { "name": "Urue-Offong/Oruko" },
+          { "name": "Uyo" }
+        ]
+      },
+      {
+        "name": "Anambra",
+        "lgas": [
+          { "name": "Aguata" },
+          { "name": "Anambra East" },
+          { "name": "Anaocha" },
+          { "name": "Awka North" },
+          { "name": "Anambra West" },
+          { "name": "Awka South" },
+          { "name": "Ayamelum" },
+          { "name": "Dunukofia" },
+          { "name": "Ekwusigo" },
+          { "name": "Idemili North" },
+          { "name": "Idemili South" },
+          { "name": "Ihiala" },
+          { "name": "Njikoka" },
+          { "name": "Nnewi North" },
+          { "name": "Nnewi South" },
+          { "name": "Ogbaru" },
+          { "name": "Onitsha North" },
+          { "name": "Onitsha South" },
+          { "name": "Orumba North" },
+          { "name": "Orumba South" },
+          { "name": "Oyi" }
+        ]
+      },
+      {
+        "name": "Ogun",
+        "lgas": [
+          { "name": "Abeokuta North" },
+          { "name": "Abeokuta South" },
+          { "name": "Ado-Odo/Ota" },
+          { "name": "Egbado North" },
+          { "name": "Ewekoro" },
+          { "name": "Egbado South" },
+          { "name": "Ijebu North" },
+          { "name": "Ijebu East" },
+          { "name": "Ifo" },
+          { "name": "Ijebu Ode" },
+          { "name": "Ijebu North East" },
+          { "name": "Imeko Afon" },
+          { "name": "Ikenne" },
+          { "name": "Ipokia" },
+          { "name": "Odeda" },
+          { "name": "Obafemi Owode" },
+          { "name": "Odogbolu" },
+          { "name": "Remo North" },
+          { "name": "Ogun Waterside" },
+          { "name": "Shagamu" }
+        ]
+      },
+      {
+        "name": "Ondo",
+        "lgas": [
+          { "name": "Akoko North-East" },
+          { "name": "Akoko North-West" },
+          { "name": "Akoko South-West" },
+          { "name": "Akoko South-East" },
+          { "name": "Akure North" },
+          { "name": "Akure South" },
+          { "name": "Ese Odo" },
+          { "name": "Idanre" },
+          { "name": "Ifedore" },
+          { "name": "Ilaje" },
+          { "name": "Irele" },
+          { "name": "Ile Oluji/Okeigbo" },
+          { "name": "Odigbo" },
+          { "name": "Okitipupa" },
+          { "name": "Ondo West" },
+          { "name": "Ose" },
+          { "name": "Ondo East" },
+          { "name": "Owo" }
+        ]
+      },
+      {
+        "name": "Rivers",
+        "lgas": [
+          { "name": "Abua/Odual" },
+          { "name": "Ahoada East" },
+          { "name": "Ahoada West" },
+          { "name": "Andoni" },
+          { "name": "Akuku-Toru" },
+          { "name": "Asari-Toru" },
+          { "name": "Bonny" },
+          { "name": "Degema" },
+          { "name": "Emuoha" },
+          { "name": "Eleme" },
+          { "name": "Ikwerre" },
+          { "name": "Etche" },
+          { "name": "Gokana" },
+          { "name": "Khana" },
+          { "name": "Obio/Akpor" },
+          { "name": "Ogba/Egbema/Ndoni" },
+          { "name": "Ogu/Bolo" },
+          { "name": "Okrika" },
+          { "name": "Omuma" },
+          { "name": "Opobo/Nkoro" },
+          { "name": "Oyigbo" },
+          { "name": "Port Harcourt" },
+          { "name": "Tai" }
+        ]
+      },
+      {
+        "name": "Bauchi",
+        "lgas": [
+          { "name": "Alkaleri" },
+          { "name": "Bauchi" },
+          { "name": "Bogoro" },
+          { "name": "Damban" },
+          { "name": "Darazo" },
+          { "name": "Dass" },
+          { "name": "Gamawa" },
+          { "name": "Ganjuwa" },
+          { "name": "Giade" },
+          { "name": "Itas/Gadau" },
+          { "name": "Jama'are" },
+          { "name": "Katagum" },
+          { "name": "Kirfi" },
+          { "name": "Misau" },
+          { "name": "Ningi" },
+          { "name": "Shira" },
+          { "name": "Tafawa Balewa" },
+          { "name": "Toro" },
+          { "name": "Warji" },
+          { "name": "Zaki" }
+        ]
+      },
+      {
+        "name": "Benue",
+        "lgas": [
+          { "name": "Agatu" },
+          { "name": "Apa" },
+          { "name": "Ado" },
+          { "name": "Buruku" },
+          { "name": "Gboko" },
+          { "name": "Guma" },
+          { "name": "Gwer East" },
+          { "name": "Gwer West" },
+          { "name": "Katsina-Ala" },
+          { "name": "Konshisha" },
+          { "name": "Kwande" },
+          { "name": "Logo" },
+          { "name": "Makurdi" },
+          { "name": "Obi" },
+          { "name": "Ogbadibo" },
+          { "name": "Ohimini" },
+          { "name": "Oju" },
+          { "name": "Okpokwu" },
+          { "name": "Oturkpo" },
+          { "name": "Tarka" },
+          { "name": "Ukum" },
+          { "name": "Ushongo" },
+          { "name": "Vandeikya" }
+        ]
+      },
+      {
+        "name": "Borno",
+        "lgas": [
+          { "name": "Abadam" },
+          { "name": "Askira/Uba" },
+          { "name": "Bama" },
+          { "name": "Bayo" },
+          { "name": "Biu" },
+          { "name": "Chibok" },
+          { "name": "Damboa" },
+          { "name": "Dikwa" },
+          { "name": "Guzamala" },
+          { "name": "Gubio" },
+          { "name": "Hawul" },
+          { "name": "Gwoza" },
+          { "name": "Jere" },
+          { "name": "Kaga" },
+          { "name": "Kala/Balge" },
+          { "name": "Konduga" },
+          { "name": "Kukawa" },
+          { "name": "Kwaya Kusar" },
+          { "name": "Mafa" },
+          { "name": "Magumeri" },
+          { "name": "Maiduguri" },
+          { "name": "Mobbar" },
+          { "name": "Marte" },
+          { "name": "Monguno" },
+          { "name": "Ngala" },
+          { "name": "Nganzai" },
+          { "name": "Shani" }
+        ]
+      },
+      {
+        "name": "Bayelsa",
+        "lgas": [
+          { "name": "Brass" },
+          { "name": "Ekeremor" },
+          { "name": "Kolokuma/Opokuma" },
+          { "name": "Nembe" },
+          { "name": "Ogbia" },
+          { "name": "Sagbama" },
+          { "name": "Southern Ijaw" },
+          { "name": "Yenagoa" }
+        ]
+      },
+      {
+        "name": "Cross River",
+        "lgas": [
+          { "name": "Abi" },
+          { "name": "Akamkpa" },
+          { "name": "Akpabuyo" },
+          { "name": "Bakassi" },
+          { "name": "Bekwarra" },
+          { "name": "Biase" },
+          { "name": "Boki" },
+          { "name": "Calabar Municipal" },
+          { "name": "Calabar South" },
+          { "name": "Etung" },
+          { "name": "Ikom" },
+          { "name": "Obanliku" },
+          { "name": "Obubra" },
+          { "name": "Obudu" },
+          { "name": "Odukpani" },
+          { "name": "Ogoja" },
+          { "name": "Yakuur" },
+          { "name": "Yala" }
+        ]
+      },
+      {
+        "name": "Delta",
+        "lgas": [
+          { "name": "Aniocha North" },
+          { "name": "Aniocha South" },
+          { "name": "Bomadi" },
+          { "name": "Burutu" },
+          { "name": "Ethiope West" },
+          { "name": "Ethiope East" },
+          { "name": "Ika North East" },
+          { "name": "Ika South" },
+          { "name": "Isoko North" },
+          { "name": "Isoko South" },
+          { "name": "Ndokwa East" },
+          { "name": "Ndokwa West" },
+          { "name": "Okpe" },
+          { "name": "Oshimili North" },
+          { "name": "Oshimili South" },
+          { "name": "Patani" },
+          { "name": "Sapele" },
+          { "name": "Udu" },
+          { "name": "Ughelli North" },
+          { "name": "Ukwuani" },
+          { "name": "Ughelli South" },
+          { "name": "Uvwie" },
+          { "name": "Warri North" },
+          { "name": "Warri South" },
+          { "name": "Warri South West" }
+        ]
+      },
+      {
+        "name": "Ebonyi",
+        "lgas": [
+          { "name": "Abakaliki" },
+          { "name": "Afikpo North" },
+          { "name": "Ebonyi" },
+          { "name": "Afikpo South" },
+          { "name": "Ezza North" },
+          { "name": "Ikwo" },
+          { "name": "Ezza South" },
+          { "name": "Ivo" },
+          { "name": "Ishielu" },
+          { "name": "Izzi" },
+          { "name": "Ohaozara" },
+          { "name": "Ohaukwu" },
+          { "name": "Onicha" }
+        ]
+      },
+      {
+        "name": "Edo",
+        "lgas": [
+          { "name": "Akoko-Edo" },
+          { "name": "Egor" },
+          { "name": "Esan Central" },
+          { "name": "Esan North-East" },
+          { "name": "Esan South-East" },
+          { "name": "Esan West" },
+          { "name": "Etsako Central" },
+          { "name": "Etsako East" },
+          { "name": "Etsako West" },
+          { "name": "Igueben" },
+          { "name": "Ikpoba Okha" },
+          { "name": "Orhionmwon" },
+          { "name": "Oredo" },
+          { "name": "Ovia North-East" },
+          { "name": "Ovia South-West" },
+          { "name": "Owan East" },
+          { "name": "Owan West" },
+          { "name": "Uhunmwonde" }
+        ]
+      },
+      {
+        "name": "Ekiti",
+        "lgas": [
+          { "name": "Ado Ekiti" },
+          { "name": "Efon" },
+          { "name": "Ekiti East" },
+          { "name": "Ekiti South-West" },
+          { "name": "Ekiti West" },
+          { "name": "Emure" },
+          { "name": "Gbonyin" },
+          { "name": "Ido Osi" },
+          { "name": "Ijero" },
+          { "name": "Ikere" },
+          { "name": "Ilejemeje" },
+          { "name": "Irepodun/Ifelodun" },
+          { "name": "Ikole" },
+          { "name": "Ise/Orun" },
+          { "name": "Moba" },
+          { "name": "Oye" }
+        ]
+      },
+      {
+        "name": "Enugu",
+        "lgas": [
+          { "name": "Awgu" },
+          { "name": "Aninri" },
+          { "name": "Enugu East" },
+          { "name": "Enugu North" },
+          { "name": "Ezeagu" },
+          { "name": "Enugu South" },
+          { "name": "Igbo Etiti" },
+          { "name": "Igbo Eze North" },
+          { "name": "Igbo Eze South" },
+          { "name": "Isi Uzo" },
+          { "name": "Nkanu East" },
+          { "name": "Nkanu West" },
+          { "name": "Nsukka" },
+          { "name": "Udenu" },
+          { "name": "Oji River" },
+          { "name": "Uzo Uwani" },
+          { "name": "Udi" }
+        ]
+      },
+      {
+        "name": "Federal Capital Territory",
+        "lgas": [
+          { "name": "Abaji" },
+          { "name": "Bwari" },
+          { "name": "Gwagwalada" },
+          { "name": "Kuje" },
+          { "name": "Kwali" },
+          { "name": "Municipal Area Council" }
+        ]
+      },
+      {
+        "name": "Gombe",
+        "lgas": [
+          { "name": "Akko" },
+          { "name": "Balanga" },
+          { "name": "Billiri" },
+          { "name": "Dukku" },
+          { "name": "Funakaye" },
+          { "name": "Gombe" },
+          { "name": "Kaltungo" },
+          { "name": "Kwami" },
+          { "name": "Nafada" },
+          { "name": "Shongom" },
+          { "name": "Yamaltu/Deba" }
+        ]
+      },
+      {
+        "name": "Jigawa",
+        "lgas": [
+          { "name": "Auyo" },
+          { "name": "Babura" },
+          { "name": "Buji" },
+          { "name": "Biriniwa" },
+          { "name": "Birnin Kudu" },
+          { "name": "Dutse" },
+          { "name": "Gagarawa" },
+          { "name": "Garki" },
+          { "name": "Gumel" },
+          { "name": "Guri" },
+          { "name": "Gwaram" },
+          { "name": "Gwiwa" },
+          { "name": "Hadejia" },
+          { "name": "Jahun" },
+          { "name": "Kafin Hausa" },
+          { "name": "Kazaure" },
+          { "name": "Kiri Kasama" },
+          { "name": "Kiyawa" },
+          { "name": "Kaugama" },
+          { "name": "Maigatari" },
+          { "name": "Malam Madori" },
+          { "name": "Miga" },
+          { "name": "Sule Tankarkar" },
+          { "name": "Roni" },
+          { "name": "Ringim" },
+          { "name": "Yankwashi" },
+          { "name": "Taura" }
+        ]
+      },
+      {
+        "name": "Oyo",
+        "lgas": [
+          { "name": "Afijio" },
+          { "name": "Akinyele" },
+          { "name": "Atiba" },
+          { "name": "Atisbo" },
+          { "name": "Egbeda" },
+          { "name": "Ibadan North" },
+          { "name": "Ibadan North-East" },
+          { "name": "Ibadan North-West" },
+          { "name": "Ibadan South-East" },
+          { "name": "Ibarapa Central" },
+          { "name": "Ibadan South-West" },
+          { "name": "Ibarapa East" },
+          { "name": "Ido" },
+          { "name": "Ibarapa North" },
+          { "name": "Irepo" },
+          { "name": "Iseyin" },
+          { "name": "Itesiwaju" },
+          { "name": "Iwajowa" },
+          { "name": "Kajola" },
+          { "name": "Lagelu" },
+          { "name": "Ogbomosho North" },
+          { "name": "Ogbomosho South" },
+          { "name": "Ogo Oluwa" },
+          { "name": "Olorunsogo" },
+          { "name": "Oluyole" },
+          { "name": "Ona Ara" },
+          { "name": "Orelope" },
+          { "name": "Ori Ire" },
+          { "name": "Oyo" },
+          { "name": "Oyo East" },
+          { "name": "Saki East" },
+          { "name": "Saki West" },
+          { "name": "Surulere Oyo State" }
+        ]
+      },
+      {
+        "name": "Imo",
+        "lgas": [
+          { "name": "Aboh Mbaise" },
+          { "name": "Ahiazu Mbaise" },
+          { "name": "Ehime Mbano" },
+          { "name": "Ezinihitte" },
+          { "name": "Ideato North" },
+          { "name": "Ideato South" },
+          { "name": "Ihitte/Uboma" },
+          { "name": "Ikeduru" },
+          { "name": "Isiala Mbano" },
+          { "name": "Mbaitoli" },
+          { "name": "Isu" },
+          { "name": "Ngor Okpala" },
+          { "name": "Njaba" },
+          { "name": "Nkwerre" },
+          { "name": "Nwangele" },
+          { "name": "Obowo" },
+          { "name": "Oguta" },
+          { "name": "Ohaji/Egbema" },
+          { "name": "Okigwe" },
+          { "name": "Orlu" },
+          { "name": "Orsu" },
+          { "name": "Oru East" },
+          { "name": "Oru West" },
+          { "name": "Owerri Municipal" },
+          { "name": "Owerri North" },
+          { "name": "Unuimo" },
+          { "name": "Owerri West" }
+        ]
+      },
+      {
+        "name": "Kaduna",
+        "lgas": [
+          { "name": "Birnin Gwari" },
+          { "name": "Chikun" },
+          { "name": "Giwa" },
+          { "name": "Ikara" },
+          { "name": "Igabi" },
+          { "name": "Jaba" },
+          { "name": "Jema'a" },
+          { "name": "Kachia" },
+          { "name": "Kaduna North" },
+          { "name": "Kaduna South" },
+          { "name": "Kagarko" },
+          { "name": "Kajuru" },
+          { "name": "Kaura" },
+          { "name": "Kauru" },
+          { "name": "Kubau" },
+          { "name": "Kudan" },
+          { "name": "Lere" },
+          { "name": "Makarfi" },
+          { "name": "Sabon Gari" },
+          { "name": "Sanga" },
+          { "name": "Soba" },
+          { "name": "Zangon Kataf" },
+          { "name": "Zaria" }
+        ]
+      },
+      {
+        "name": "Kebbi",
+        "lgas": [
+          { "name": "Aleiro" },
+          { "name": "Argungu" },
+          { "name": "Arewa Dandi" },
+          { "name": "Augie" },
+          { "name": "Bagudo" },
+          { "name": "Birnin Kebbi" },
+          { "name": "Bunza" },
+          { "name": "Dandi" },
+          { "name": "Fakai" },
+          { "name": "Gwandu" },
+          { "name": "Jega" },
+          { "name": "Kalgo" },
+          { "name": "Koko/Besse" },
+          { "name": "Maiyama" },
+          { "name": "Ngaski" },
+          { "name": "Shanga" },
+          { "name": "Suru" },
+          { "name": "Sakaba" },
+          { "name": "Wasagu/Danko" },
+          { "name": "Yauri" },
+          { "name": "Zuru" }
+        ]
+      },
+      {
+        "name": "Kano",
+        "lgas": [
+          { "name": "Ajingi" },
+          { "name": "Albasu" },
+          { "name": "Bagwai" },
+          { "name": "Bebeji" },
+          { "name": "Bichi" },
+          { "name": "Bunkure" },
+          { "name": "Dala" },
+          { "name": "Dambatta" },
+          { "name": "Dawakin Kudu" },
+          { "name": "Dawakin Tofa" },
+          { "name": "Doguwa" },
+          { "name": "Fagge" },
+          { "name": "Gabasawa" },
+          { "name": "Garko" },
+          { "name": "Garun Mallam" },
+          { "name": "Gezawa" },
+          { "name": "Gaya" },
+          { "name": "Gwale" },
+          { "name": "Gwarzo" },
+          { "name": "Kabo" },
+          { "name": "Kano Municipal" },
+          { "name": "Karaye" },
+          { "name": "Kibiya" },
+          { "name": "Kiru" },
+          { "name": "Kumbotso" },
+          { "name": "Kunchi" },
+          { "name": "Kura" },
+          { "name": "Madobi" },
+          { "name": "Makoda" },
+          { "name": "Minjibir" },
+          { "name": "Nasarawa" },
+          { "name": "Rano" },
+          { "name": "Rimin Gado" },
+          { "name": "Rogo" },
+          { "name": "Shanono" },
+          { "name": "Takai" },
+          { "name": "Sumaila" },
+          { "name": "Tarauni" },
+          { "name": "Tofa" },
+          { "name": "Tsanyawa" },
+          { "name": "Tudun Wada" },
+          { "name": "Ungogo" },
+          { "name": "Warawa" },
+          { "name": "Wudil" }
+        ]
+      },
+      {
+        "name": "Kogi",
+        "lgas": [
+          { "name": "Ajaokuta" },
+          { "name": "Adavi" },
+          { "name": "Ankpa" },
+          { "name": "Bassa" },
+          { "name": "Dekina" },
+          { "name": "Ibaji" },
+          { "name": "Idah" },
+          { "name": "Igalamela Odolu" },
+          { "name": "Ijumu" },
+          { "name": "Kogi" },
+          { "name": "Kabba/Bunu" },
+          { "name": "Lokoja" },
+          { "name": "Ofu" },
+          { "name": "Mopa Muro" },
+          { "name": "Ogori/Magongo" },
+          { "name": "Okehi" },
+          { "name": "Okene" },
+          { "name": "Olamaboro" },
+          { "name": "Omala" },
+          { "name": "Yagba East" },
+          { "name": "Yagba West" }
+        ]
+      },
+      {
+        "name": "Osun",
+        "lgas": [
+          { "name": "Aiyedire" },
+          { "name": "Atakunmosa West" },
+          { "name": "Atakunmosa East" },
+          { "name": "Aiyedaade" },
+          { "name": "Boluwaduro" },
+          { "name": "Boripe" },
+          { "name": "Ife East" },
+          { "name": "Ede South" },
+          { "name": "Ife North" },
+          { "name": "Ede North" },
+          { "name": "Ife South" },
+          { "name": "Ejigbo" },
+          { "name": "Ife Central" },
+          { "name": "Ifedayo" },
+          { "name": "Egbedore" },
+          { "name": "Ila" },
+          { "name": "Ifelodun" },
+          { "name": "Ilesa East" },
+          { "name": "Ilesa West" },
+          { "name": "Irepodun" },
+          { "name": "Irewole" },
+          { "name": "Isokan" },
+          { "name": "Iwo" },
+          { "name": "Obokun" },
+          { "name": "Odo Otin" },
+          { "name": "Ola Oluwa" },
+          { "name": "Olorunda" },
+          { "name": "Oriade" },
+          { "name": "Orolu" },
+          { "name": "Osogbo" }
+        ]
+      },
+      {
+        "name": "Sokoto",
+        "lgas": [
+          { "name": "Gudu" },
+          { "name": "Gwadabawa" },
+          { "name": "Illela" },
+          { "name": "Isa" },
+          { "name": "Kebbe" },
+          { "name": "Kware" },
+          { "name": "Rabah" },
+          { "name": "Sabon Birni" },
+          { "name": "Shagari" },
+          { "name": "Silame" },
+          { "name": "Sokoto North" },
+          { "name": "Sokoto South" },
+          { "name": "Tambuwal" },
+          { "name": "Tangaza" },
+          { "name": "Tureta" },
+          { "name": "Wamako" },
+          { "name": "Wurno" },
+          { "name": "Yabo" },
+          { "name": "Binji" },
+          { "name": "Bodinga" },
+          { "name": "Dange Shuni" },
+          { "name": "Goronyo" },
+          { "name": "Gada" }
+        ]
+      },
+      {
+        "name": "Plateau",
+        "lgas": [
+          { "name": "Bokkos" },
+          { "name": "Barkin Ladi" },
+          { "name": "Bassa" },
+          { "name": "Jos East" },
+          { "name": "Jos North" },
+          { "name": "Jos South" },
+          { "name": "Kanam" },
+          { "name": "Kanke" },
+          { "name": "Langtang South" },
+          { "name": "Langtang North" },
+          { "name": "Mangu" },
+          { "name": "Mikang" },
+          { "name": "Pankshin" },
+          { "name": "Qua'an Pan" },
+          { "name": "Riyom" },
+          { "name": "Shendam" },
+          { "name": "Wase" }
+        ]
+      },
+      {
+        "name": "Taraba",
+        "lgas": [
+          { "name": "Ardo Kola" },
+          { "name": "Bali" },
+          { "name": "Donga" },
+          { "name": "Gashaka" },
+          { "name": "Gassol" },
+          { "name": "Ibi" },
+          { "name": "Jalingo" },
+          { "name": "Karim Lamido" },
+          { "name": "Kumi" },
+          { "name": "Lau" },
+          { "name": "Sardauna" },
+          { "name": "Takum" },
+          { "name": "Ussa" },
+          { "name": "Wukari" },
+          { "name": "Yorro" },
+          { "name": "Zing" }
+        ]
+      },
+      {
+        "name": "Yobe",
+        "lgas": [
+          { "name": "Bade" },
+          { "name": "Bursari" },
+          { "name": "Damaturu" },
+          { "name": "Fika" },
+          { "name": "Fune" },
+          { "name": "Geidam" },
+          { "name": "Gujba" },
+          { "name": "Gulani" },
+          { "name": "Jakusko" },
+          { "name": "Karasuwa" },
+          { "name": "Machina" },
+          { "name": "Nangere" },
+          { "name": "Nguru" },
+          { "name": "Potiskum" },
+          { "name": "Tarmuwa" },
+          { "name": "Yunusari" },
+          { "name": "Yusufari" }
+        ]
+      },
+      {
+        "name": "Zamfara",
+        "lgas": [
+          { "name": "Anka" },
+          { "name": "Birnin Magaji/Kiyaw" },
+          { "name": "Bakura" },
+          { "name": "Bukkuyum" },
+          { "name": "Bungudu" },
+          { "name": "Gummi" },
+          { "name": "Gusau" },
+          { "name": "Kaura Namoda" },
+          { "name": "Maradun" },
+          { "name": "Shinkafi" },
+          { "name": "Maru" },
+          { "name": "Talata Mafara" },
+          { "name": "Tsafe" },
+          { "name": "Zurmi" }
+        ]
+      },
+      {
+        "name": "Lagos",
+        "lgas": [
+          { "name": "Agege" },
+          { "name": "Ajeromi-Ifelodun" },
+          { "name": "Alimosho" },
+          { "name": "Amuwo-Odofin" },
+          { "name": "Badagry" },
+          { "name": "Apapa" },
+          { "name": "Epe" },
+          { "name": "Eti Osa" },
+          { "name": "Ibeju-Lekki" },
+          { "name": "Ifako-Ijaiye" },
+          { "name": "Ikeja" },
+          { "name": "Ikorodu" },
+          { "name": "Kosofe" },
+          { "name": "Lagos Island" },
+          { "name": "Mushin" },
+          { "name": "Lagos Mainland" },
+          { "name": "Ojo" },
+          { "name": "Oshodi-Isolo" },
+          { "name": "Shomolu" },
+          { "name": "Surulere Lagos State" }
+        ]
+      },
+      {
+        "name": "Katsina",
+        "lgas": [
+          { "name": "Bakori" },
+          { "name": "Batagarawa" },
+          { "name": "Batsari" },
+          { "name": "Baure" },
+          { "name": "Bindawa" },
+          { "name": "Charanchi" },
+          { "name": "Danja" },
+          { "name": "Dandume" },
+          { "name": "Dan Musa" },
+          { "name": "Daura" },
+          { "name": "Dutsi" },
+          { "name": "Dutsin Ma" },
+          { "name": "Faskari" },
+          { "name": "Funtua" },
+          { "name": "Ingawa" },
+          { "name": "Jibia" },
+          { "name": "Kafur" },
+          { "name": "Kaita" },
+          { "name": "Kankara" },
+          { "name": "Kankia" },
+          { "name": "Katsina" },
+          { "name": "Kurfi" },
+          { "name": "Kusada" },
+          { "name": "Mai'Adua" },
+          { "name": "Malumfashi" },
+          { "name": "Mani" },
+          { "name": "Mashi" },
+          { "name": "Matazu" },
+          { "name": "Musawa" },
+          { "name": "Rimi" },
+          { "name": "Sabuwa" },
+          { "name": "Safana" },
+          { "name": "Sandamu" },
+          { "name": "Zango" }
+        ]
+      },
+      {
+        "name": "Kwara",
+        "lgas": [
+          { "name": "Asa" },
+          { "name": "Baruten" },
+          { "name": "Edu" },
+          { "name": "Ilorin East" },
+          { "name": "Ifelodun" },
+          { "name": "Ilorin South" },
+          { "name": "Ekiti Kwara State" },
+          { "name": "Ilorin West" },
+          { "name": "Irepodun" },
+          { "name": "Isin" },
+          { "name": "Kaiama" },
+          { "name": "Moro" },
+          { "name": "Offa" },
+          { "name": "Oke Ero" },
+          { "name": "Oyun" },
+          { "name": "Pategi" }
+        ]
+      },
+      {
+        "name": "Nasarawa",
+        "lgas": [
+          { "name": "Akwanga" },
+          { "name": "Awe" },
+          { "name": "Doma" },
+          { "name": "Karu" },
+          { "name": "Keana" },
+          { "name": "Keffi" },
+          { "name": "Lafia" },
+          { "name": "Kokona" },
+          { "name": "Nasarawa Egon" },
+          { "name": "Nasarawa" },
+          { "name": "Obi" },
+          { "name": "Toto" },
+          { "name": "Wamba" }
+        ]
+      },
+      {
+        "name": "Niger",
+        "lgas": [
+          { "name": "Agaie" },
+          { "name": "Agwara" },
+          { "name": "Bida" },
+          { "name": "Borgu" },
+          { "name": "Bosso" },
+          { "name": "Chanchaga" },
+          { "name": "Edati" },
+          { "name": "Gbako" },
+          { "name": "Gurara" },
+          { "name": "Katcha" },
+          { "name": "Kontagora" },
+          { "name": "Lapai" },
+          { "name": "Lavun" },
+          { "name": "Mariga" },
+          { "name": "Magama" },
+          { "name": "Mokwa" },
+          { "name": "Mashegu" },
+          { "name": "Moya" },
+          { "name": "Paikoro" },
+          { "name": "Rafi" },
+          { "name": "Rijau" },
+          { "name": "Shiroro" },
+          { "name": "Suleja" },
+          { "name": "Tafa" },
+          { "name": "Wushishi" }
+        ]
+      },
+      {
+        "name": "Abia",
+        "lgas": [
+          { "name": "Aba North" },
+          { "name": "Arochukwu" },
+          { "name": "Aba South" },
+          { "name": "Bende" },
+          { "name": "Isiala Ngwa North" },
+          { "name": "Ikwuano" },
+          { "name": "Isiala Ngwa South" },
+          { "name": "Isuikwuato" },
+          { "name": "Obi Ngwa" },
+          { "name": "Ohafia" },
+          { "name": "Osisioma" },
+          { "name": "Ugwunagbo" },
+          { "name": "Ukwa East" },
+          { "name": "Ukwa West" },
+          { "name": "Umuahia North" },
+          { "name": "Umuahia South" },
+          { "name": "Umu Nneochi" }
+        ]
+      }
+    ]
+  }
+]

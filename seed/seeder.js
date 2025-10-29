@@ -22,12 +22,14 @@ const importData = async () => {
 
     const locationData = JSON.parse(fs.readFileSync(path.join(__dirname, 'locations.json'), 'utf-8'));
 
-    const country = await Country.create({ name: locationData.name, iso2: locationData.iso2 });
+    for (const countryData of locationData) {
+      const country = await Country.create({ name: countryData.name, iso2: countryData.iso2 });
 
-    for (const state of locationData.states) {
-      const createdState = await State.create({ name: state.name, country: country._id });
-      for (const lga of state.lgas) {
-        await LocalGovernment.create({ name: lga.name, state: createdState._id });
+      for (const state of countryData.states) {
+        const createdState = await State.create({ name: state.name, country: country._id });
+        for (const lga of state.lgas) {
+          await LocalGovernment.create({ name: lga.name, state: createdState._id });
+        }
       }
     }
 
