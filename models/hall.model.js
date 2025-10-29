@@ -5,6 +5,9 @@ const hallSchema = new mongoose.Schema(
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     staff: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     name: { type: String, required: true, trim: true, index: true },
+    country: { type: mongoose.Schema.Types.ObjectId, ref: 'Country', required: true },
+    state: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },
+    localGovernment: { type: mongoose.Schema.Types.ObjectId, ref: 'LocalGovernment', required: true },
     location: { type: String, required: true },
     geoLocation: {
       type: {

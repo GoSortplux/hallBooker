@@ -65,7 +65,7 @@ const toggleOnlineBooking = asyncHandler(async (req, res) => {
 
 
 const createHall = asyncHandler(async (req, res) => {
-    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize } = req.body;
+    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
@@ -85,7 +85,7 @@ const createHall = asyncHandler(async (req, res) => {
         address: geocodedData[0].formattedAddress,
     };
 
-    const hall = await Hall.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize });
+    const hall = await Hall.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment });
 
     try {
         await sendEmail({
@@ -101,12 +101,12 @@ const createHall = asyncHandler(async (req, res) => {
 });
 
 const getAllHalls = asyncHandler(async (req, res) => {
-    const halls = await Hall.find({}).populate('owner', 'fullName');
+    const halls = await Hall.find({}).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment');
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 
 const getHallById = asyncHandler(async (req, res) => {
-    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber');
+    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment');
     if (!hall) throw new ApiError(404, "Hall not found");
 
     if (!hall.isOnlineBookingEnabled) {
@@ -158,7 +158,7 @@ const getHallById = asyncHandler(async (req, res) => {
 });
 
 const updateHall = asyncHandler(async (req, res) => {
-    const { location, allowRecurringBookings, recurringBookingDiscount, ...otherDetails } = req.body;
+    const { location, allowRecurringBookings, recurringBookingDiscount, country, state, localGovernment, ...otherDetails } = req.body;
 
     const hall = await Hall.findById(req.params.id);
     if (!hall) {
@@ -181,6 +181,10 @@ const updateHall = asyncHandler(async (req, res) => {
 
     // Handle other details
     Object.assign(hall, otherDetails);
+
+    if (country) hall.country = country;
+    if (state) hall.state = state;
+    if (localGovernment) hall.localGovernment = localGovernment;
 
     // Handle recurring bookings settings
     if (allowRecurringBookings !== undefined) {

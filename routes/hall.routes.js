@@ -56,6 +56,12 @@ const router = Router();
  *           type: string
  *         name:
  *           type: string
+ *         country:
+ *           type: string
+ *         state:
+ *           type: string
+ *         localGovernment:
+ *           type: string
  *         description:
  *           type: string
  *         media:
@@ -126,9 +132,15 @@ const router = Router();
  *           format: uri
  *     HallInput:
  *       type: object
- *       required: [name, description, capacity, openingHour, closingHour, location, pricing]
+ *       required: [name, description, capacity, openingHour, closingHour, location, pricing, country, state, localGovernment]
  *       properties:
  *         name:
+ *           type: string
+ *         country:
+ *           type: string
+ *         state:
+ *           type: string
+ *         localGovernment:
  *           type: string
  *         description:
  *           type: string
