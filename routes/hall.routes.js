@@ -316,6 +316,31 @@ router.route('/').get(getAllHalls);
  *       404:
  *         description: Hall not found
  */
+/**
+ * @swagger
+ * /halls/by-owner:
+ *   get:
+ *     summary: Get all halls owned by the current user (owner/staff)
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of the user's halls
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Hall'
+ */
+router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), getHallsByOwner);
+
 router.route('/:id').get(getHallById);
 
 /**
@@ -343,31 +368,6 @@ router.route('/:id').get(getHallById);
 router.route('/:id/book-demo').post(bookDemo);
 
 router.use(verifyJWT);
-
-/**
- * @swagger
- * /halls/by-owner:
- *   get:
- *     summary: Get all halls owned by the current user (owner/staff)
- *     tags: [Halls]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: A list of the user's halls
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Hall'
- */
-router.route('/by-owner').get(authorizeRoles('hall-owner', 'staff'), getHallsByOwner);
 
 /**
  * @swagger
