@@ -25,12 +25,15 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
 });
 
 export const authorizeRoles = (...roles) => {
-  return (req, _, next) => {
-    if (!roles.includes(req.user.role)) {
-      throw new ApiError(403, `Role: ${req.user.role} is not authorized to access this resource`);
-    }
-    next();
-  };
+	return (req, _, next) => {
+		const userRoles = req.user.role;
+		const hasRole = userRoles.some((role) => roles.includes(role));
+
+		if (!hasRole) {
+			throw new ApiError(403, `Role: ${userRoles.join(', ')} is not authorized to access this resource`);
+		}
+		next();
+	};
 };
 
 import { Hall } from '../models/hall.model.js';
@@ -47,7 +50,7 @@ export const authorizeHallAccess = asyncHandler(async (req, _, next) => {
   const { id: hallId } = req.params;
   const user = req.user;
 
-  if (user.role === 'super-admin') {
+  if (user.role.includes('super-admin')) {
     return next();
   }
 
