@@ -120,6 +120,45 @@ const router = Router();
  *           type: array
  *           items:
  *             type: string
+ *     HallUpdateInput:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *         country:
+ *           type: string
+ *         state:
+ *           type: string
+ *         localGovernment:
+ *           type: string
+ *         description:
+ *           type: string
+ *         capacity:
+ *           type: number
+ *         openingHour:
+ *           type: string
+ *           example: "09:00"
+ *         closingHour:
+ *           type: string
+ *           example: "23:00"
+ *         location:
+ *           type: string
+ *         pricing:
+ *           type: object
+ *         facilities:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Facility'
+ *         carParkCapacity:
+ *           type: number
+ *           example: 50
+ *         hallSize:
+ *           type: string
+ *           example: "100 sqm"
+ *         rules:
+ *           type: array
+ *           items:
+ *             type: string
  *         availability:
  *           type: string
  *         blockedDates:
@@ -404,8 +443,8 @@ router.route('/')
 /**
  * @swagger
  * /halls/{id}:
- *   put:
- *     summary: Update a hall
+ *   patch:
+ *     summary: Update a hall (partial updates)
  *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
@@ -420,7 +459,7 @@ router.route('/')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/HallInput'
+ *             $ref: '#/components/schemas/HallUpdateInput'
  *     responses:
  *       200:
  *         description: Hall updated successfully
@@ -457,7 +496,7 @@ router.route('/')
  *         description: Hall not found
  */
 router.route('/:id')
-    .put(authorizeHallAccess, checkActiveLicense, updateHall)
+    .patch(authorizeHallAccess, checkActiveLicense, updateHall)
     .delete(authorizeHallAccess, checkActiveLicense, deleteHall);
 
 /**

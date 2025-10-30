@@ -178,14 +178,20 @@ const getHallById = asyncHandler(async (req, res) => {
 });
 
 const updateHall = asyncHandler(async (req, res) => {
-    const { location, allowRecurringBookings, recurringBookingDiscount, country, state, localGovernment, ...otherDetails } = req.body;
+    const { id } = req.params;
+    const { location, allowRecurringBookings, recurringBookingDiscount, ...otherDetails } = req.body;
 
-    const hall = await Hall.findById(req.params.id);
+    // Prevent owner field from being updated
+    if (otherDetails.owner) {
+        throw new ApiError(400, "Cannot update the owner of a hall.");
+    }
+
+    const hall = await Hall.findById(id);
     if (!hall) {
         throw new ApiError(404, "Hall not found.");
     }
 
-    // Handle location update
+    // Handle location update separately
     if (location) {
         const geocodedData = await geocoder.geocode(location);
         if (!geocodedData.length) {
@@ -199,13 +205,6 @@ const updateHall = asyncHandler(async (req, res) => {
         };
     }
 
-    // Handle other details
-    Object.assign(hall, otherDetails);
-
-    if (country) hall.country = country;
-    if (state) hall.state = state;
-    if (localGovernment) hall.localGovernment = localGovernment;
-
     // Handle recurring bookings settings
     if (allowRecurringBookings !== undefined) {
         if (typeof allowRecurringBookings !== 'boolean') {
@@ -214,6 +213,7 @@ const updateHall = asyncHandler(async (req, res) => {
         hall.allowRecurringBookings = allowRecurringBookings;
     }
 
+    // Handle partial updates to recurringBookingDiscount
     if (recurringBookingDiscount) {
         if (typeof recurringBookingDiscount !== 'object' || recurringBookingDiscount === null) {
             throw new ApiError(400, 'recurringBookingDiscount must be an object.');
@@ -233,7 +233,10 @@ const updateHall = asyncHandler(async (req, res) => {
         }
     }
 
-    const updatedHall = await hall.save({ runValidators: true });
+    // Apply other updates
+    Object.assign(hall, otherDetails);
+
+    const updatedHall = await hall.save({ validateBeforeSave: true });
 
     return res.status(200).json(new ApiResponse(200, updatedHall, "Hall updated successfully"));
 });
