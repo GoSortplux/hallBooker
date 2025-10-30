@@ -3,6 +3,7 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { Hall } from '../models/hall.model.js';
+import { Notification } from '../models/notification.model.js';
 import mongoose from 'mongoose';
 import {
     createSubAccount as createMonnifySubAccount,
@@ -211,6 +212,11 @@ const addStaff = asyncHandler(async (req, res) => {
 
 	const io = req.app.get('io');
 	const emailHtml = generateStaffAdditionEmail(staff.fullName, req.user.fullName, halls);
+	const notificationMessage = `You have been added as a staff member by ${req.user.fullName}.`;
+	await Notification.create({
+		recipient: staff._id,
+		message: notificationMessage,
+	});
 	await sendEmail({
 		io,
 		email: staff.email,
@@ -218,7 +224,7 @@ const addStaff = asyncHandler(async (req, res) => {
 		html: emailHtml,
 		notification: {
 			recipient: staff._id.toString(),
-			message: `You have been added as a staff member by ${req.user.fullName}.`,
+			message: notificationMessage,
 		},
 	});
 
@@ -260,6 +266,11 @@ const removeStaff = asyncHandler(async (req, res) => {
 
 	const io = req.app.get('io');
 	const emailHtml = generateStaffRemovalEmail(staff.fullName, req.user.fullName);
+	const notificationMessage = `You have been removed as a staff member by ${req.user.fullName}.`;
+	await Notification.create({
+		recipient: staff._id,
+		message: notificationMessage,
+	});
 	await sendEmail({
 		io,
 		email: staff.email,
@@ -267,7 +278,7 @@ const removeStaff = asyncHandler(async (req, res) => {
 		html: emailHtml,
 		notification: {
 			recipient: staff._id.toString(),
-			message: `You have been removed as a staff member by ${req.user.fullName}.`,
+			message: notificationMessage,
 		},
 	});
 
