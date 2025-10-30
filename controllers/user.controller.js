@@ -3,7 +3,7 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { Hall } from '../models/hall.model.js';
-import { Notification } from '../models/notification.model.js';
+import Notification from '../models/notification.model.js';
 import mongoose from 'mongoose';
 import {
     createSubAccount as createMonnifySubAccount,
