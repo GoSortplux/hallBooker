@@ -154,7 +154,7 @@ const router = Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/bank-account')
-    .patch(verifyJWT, authorizeRoles('owner', 'user'), updateUserBankAccount);
+    .patch(verifyJWT, authorizeRoles('hall-owner', 'user'), updateUserBankAccount);
 
 /**
  * @swagger
@@ -185,7 +185,7 @@ router.route('/bank-account')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/add-staff')
-    .post(verifyJWT, authorizeRoles('owner'), addStaff);
+    .post(verifyJWT, authorizeRoles('hall-owner'), addStaff);
 
 /**
  * @swagger
@@ -249,7 +249,7 @@ router.route('/my-staff')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/remove-staff/:staffId')
-    .delete(verifyJWT, authorizeRoles('owner'), removeStaff);
+    .delete(verifyJWT, authorizeRoles('hall-owner'), removeStaff);
 
 /**
  * @swagger
