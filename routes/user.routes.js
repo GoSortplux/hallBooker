@@ -107,7 +107,6 @@ const router = Router();
  *       required:
  *         - fullName
  *         - email
- *         - password
  *       properties:
  *         fullName:
  *           type: string
