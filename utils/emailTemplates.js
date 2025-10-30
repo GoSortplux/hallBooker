@@ -539,15 +539,33 @@ export {
   generateHallOwnerCreationEmailForUser,
   generatePromotionToHallOwnerEmailForUser,
   generateHallOwnerRejectionEmailForUser,
-  generateStaffAdditionEmail
+  generateStaffAdditionEmail,
+  generateStaffRemovalEmail
 };
 
-const generateStaffAdditionEmail = (staffName, ownerName) => {
+const generateStaffRemovalEmail = (staffName, ownerName) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">You have been removed as a staff member.</h2>
+      <p>Hi ${staffName},</p>
+      <p>You have been removed as a staff member by ${ownerName}.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateStaffAdditionEmail = (staffName, ownerName, halls) => {
+  const hallsHtml = halls.map(hall => `<li><strong>${hall.name}</strong> at ${hall.location}</li>`).join('');
+
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">You have been added as a staff member!</h2>
       <p>Hi ${staffName},</p>
-      <p>You have been added as a staff member by ${ownerName}. You can now assist in managing their halls.</p>
+      <p>You have been added as a staff member by ${ownerName}. You have been assigned to the following halls:</p>
+      <ul>
+        ${hallsHtml}
+      </ul>
       <p>Log in to your dashboard to see the halls you have been assigned to.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
       <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>

@@ -18,7 +18,8 @@ import {
     generateHallOwnerRejectionEmailForUser,
     generateHallOwnerCreationEmailForUser,
     generatePromotionToHallOwnerEmailForUser,
-    generateStaffAdditionEmail
+    generateStaffAdditionEmail,
+    generateStaffRemovalEmail
 } from '../utils/emailTemplates.js';
 
 const reviewHallOwnerApplication = asyncHandler(async (req, res) => {
@@ -202,12 +203,14 @@ const addStaff = asyncHandler(async (req, res) => {
 		await staff.save();
 	}
 
+	let halls = [];
 	if (hallIds && hallIds.length > 0) {
 		await Hall.updateMany({ _id: { $in: hallIds }, owner: ownerId }, { $addToSet: { staff: staff._id } });
+		halls = await Hall.find({ _id: { $in: hallIds } }).select('name location');
 	}
 
 	const io = req.app.get('io');
-	const emailHtml = generateStaffAdditionEmail(staff.fullName, req.user.fullName);
+	const emailHtml = generateStaffAdditionEmail(staff.fullName, req.user.fullName, halls);
 	await sendEmail({
 		io,
 		email: staff.email,
@@ -254,6 +257,19 @@ const removeStaff = asyncHandler(async (req, res) => {
 	}
 
 	await staff.save({ validateBeforeSave: false });
+
+	const io = req.app.get('io');
+	const emailHtml = generateStaffRemovalEmail(staff.fullName, req.user.fullName);
+	await sendEmail({
+		io,
+		email: staff.email,
+		subject: 'You have been removed as a staff member',
+		html: emailHtml,
+		notification: {
+			recipient: staff._id.toString(),
+			message: `You have been removed as a staff member by ${req.user.fullName}.`,
+		},
+	});
 
 	res.status(200).json(new ApiResponse(200, {}, 'Staff removed successfully'));
 });
