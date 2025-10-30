@@ -18,6 +18,7 @@ import {
     generateHallOwnerRejectionEmailForUser,
     generateHallOwnerCreationEmailForUser,
     generatePromotionToHallOwnerEmailForUser,
+    generateStaffAdditionEmail
 } from '../utils/emailTemplates.js';
 
 const reviewHallOwnerApplication = asyncHandler(async (req, res) => {
@@ -171,59 +172,90 @@ const updateUserBankAccount = asyncHandler(async (req, res) => {
 });
 
 const addStaff = asyncHandler(async (req, res) => {
-  const { fullName, email, phone, password, hallIds } = req.body;
-  const ownerId = req.user._id;
+	const { fullName, email, phone, password, hallIds } = req.body;
+	const ownerId = req.user._id;
 
-  const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
-  if (existingUser) {
-    throw new ApiError(409, 'User with this email or phone already exists');
-  }
+	let staff = await User.findOne({ $or: [{ email }, { phone }] });
 
-  const staff = new User({
-    fullName,
-    email,
-    phone,
-    password,
-    role: 'staff',
-    owner: ownerId,
-  });
+	if (staff) {
+		// Existing user
+		if (!staff.role.includes('staff')) {
+			staff.role.push('staff');
+		}
+		if (!staff.owners.includes(ownerId)) {
+			staff.owners.push(ownerId);
+		}
+		await staff.save({ validateBeforeSave: false });
+	} else {
+		// New user
+		if (!password) {
+			throw new ApiError(400, 'Password is required for new staff members.');
+		}
+		staff = new User({
+			fullName,
+			email,
+			phone,
+			password,
+			role: ['staff'],
+			owners: [ownerId],
+		});
+		await staff.save();
+	}
 
-  const createdStaff = await staff.save();
+	if (hallIds && hallIds.length > 0) {
+		await Hall.updateMany({ _id: { $in: hallIds }, owner: ownerId }, { $addToSet: { staff: staff._id } });
+	}
 
-  if (hallIds && hallIds.length > 0) {
-    await Hall.updateMany(
-      { _id: { $in: hallIds }, owner: ownerId },
-      { $addToSet: { staff: createdStaff._id } }
-    );
-  }
+	const io = req.app.get('io');
+	const emailHtml = generateStaffAdditionEmail(staff.fullName, req.user.fullName);
+	await sendEmail({
+		io,
+		email: staff.email,
+		subject: 'You have been added as a staff member!',
+		html: emailHtml,
+		notification: {
+			recipient: staff._id.toString(),
+			message: `You have been added as a staff member by ${req.user.fullName}.`,
+		},
+	});
 
-  res.status(201).json(new ApiResponse(201, createdStaff, 'Staff created successfully'));
+	res.status(201).json(new ApiResponse(201, staff, 'Staff added successfully'));
 });
 
 const getMyStaff = asyncHandler(async (req, res) => {
-  const ownerId = req.user._id;
-  const staff = await User.find({ owner: ownerId });
-  res.status(200).json(new ApiResponse(200, staff, 'Staff fetched successfully'));
+	const ownerId = req.user._id;
+	const staff = await User.find({ owners: ownerId });
+	res.status(200).json(new ApiResponse(200, staff, 'Staff fetched successfully'));
 });
 
 const removeStaff = asyncHandler(async (req, res) => {
-  const { staffId } = req.params;
-  const ownerId = req.user._id;
+	const { staffId } = req.params;
+	const ownerId = req.user._id;
 
-  if (!mongoose.Types.ObjectId.isValid(staffId)) {
-    throw new ApiError(400, 'Invalid staff ID');
-  }
+	if (!mongoose.Types.ObjectId.isValid(staffId)) {
+		throw new ApiError(400, 'Invalid staff ID');
+	}
 
-  const staff = await User.findOne({ _id: staffId, owner: ownerId });
-  if (!staff) {
-    throw new ApiError(404, 'Staff not found');
-  }
+	const staff = await User.findById(staffId);
+	if (!staff) {
+		throw new ApiError(404, 'Staff not found');
+	}
 
-  await Hall.updateMany({ owner: ownerId }, { $pull: { staff: staffId } });
+	// Remove ownerId from owners array
+	staff.owners = staff.owners.filter((owner) => !owner.equals(ownerId));
 
-  await User.findByIdAndDelete(staffId);
+	await Hall.updateMany({ owner: ownerId }, { $pull: { staff: staffId } });
 
-  res.status(200).json(new ApiResponse(200, {}, 'Staff removed successfully'));
+	if (staff.owners.length === 0) {
+		staff.role = staff.role.filter((r) => r !== 'staff');
+		if (staff.role.length === 0) {
+			staff.role.push('user');
+		}
+	}
+
+	await staff.save({ validateBeforeSave: false });
+
+	res.status(200).json(new ApiResponse(200, {}, 'Staff removed successfully'));
 });
 
 const applyHallOwner = asyncHandler(async (req, res) => {

@@ -11,9 +11,9 @@ const userSchema = new mongoose.Schema(
     whatsappNumber: { type: String },
     password: { type: String, required: [true, 'Password is required'], select: false },
     role: {
-      type: String,
+      type: [String],
       enum: ['user', 'hall-owner', 'staff', 'super-admin'],
-      default: 'user',
+      default: ['user'],
     },
     status: {
       type: String,
@@ -40,10 +40,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    owner: {
+    owners: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-    },
+    }],
     refreshToken: { type: String },
     passwordResetToken: String,
     passwordResetExpires: Date,
