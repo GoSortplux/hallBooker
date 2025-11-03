@@ -193,6 +193,11 @@ const router = Router();
  *           type: string
  *         pricing:
  *           type: object
+ *           properties:
+ *             dailyRate:
+ *               type: number
+ *             hourlyRate:
+ *               type: number
  *         facilities:
  *           type: array
  *           items:
