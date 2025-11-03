@@ -72,7 +72,7 @@ const createHall = asyncHandler(async (req, res) => {
     if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
     // Validate pricing
-    if (!pricing || (typeof pricing !== 'object') || (!pricing.perDay && !pricing.perHour)) {
+    if (!pricing || (typeof pricing !== 'object') || (!pricing.dailyRate && !pricing.hourlyRate)) {
         throw new ApiError(400, 'Pricing information is required. Please provide at least a daily or hourly rate.');
     }
     
