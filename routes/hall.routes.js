@@ -145,6 +145,11 @@ const router = Router();
  *           type: string
  *         pricing:
  *           type: object
+ *           properties:
+ *             perHour:
+ *               type: number
+ *             perDay:
+ *               type: number
  *         facilities:
  *           type: array
  *           items:
