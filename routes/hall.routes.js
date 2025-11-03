@@ -95,17 +95,10 @@ const router = Router();
  *         pricing:
  *           type: object
  *           properties:
- *             perHour:
+ *             dailyRate:
  *               type: number
- *             perDay:
+ *             hourlyRate:
  *               type: number
- *             perDayPlusHour:
- *                type: object
- *                properties:
- *                  dayRate:
- *                    type: number
- *                  hourRate:
- *                    type: number
  *         facilities:
  *           type: array
  *           items:
@@ -146,9 +139,9 @@ const router = Router();
  *         pricing:
  *           type: object
  *           properties:
- *             perHour:
+ *             dailyRate:
  *               type: number
- *             perDay:
+ *             hourlyRate:
  *               type: number
  *         facilities:
  *           type: array
