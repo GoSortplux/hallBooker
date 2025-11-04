@@ -82,12 +82,8 @@ const hallSchema = new mongoose.Schema(
   }
 );
 
-hallSchema.virtual('directionUrl').get(function () {
-  if (this.geoLocation && this.geoLocation.coordinates) {
-    const [lng, lat] = this.geoLocation.coordinates;
-    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
-  }
-  return null;
-});
+    directionUrl: {
+      type: String,
+    },
 
 export const Hall = mongoose.model('Hall', hallSchema);
