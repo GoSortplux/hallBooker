@@ -519,7 +519,7 @@ router.route('/:id')
  *               $ref: '#/components/schemas/CloudinarySignatureSuccess'
  */
 router.route('/media/generate-signature')
-    .post(authorizeRoles('owner', 'staff', 'super-admin'), generateCloudinarySignature);
+    .post(authorizeRoles('hall-owner', 'staff', 'super-admin'), generateCloudinarySignature);
 
 /**
  * @swagger
