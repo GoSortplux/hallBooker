@@ -74,6 +74,9 @@ const hallSchema = new mongoose.Schema(
     isOnlineBookingEnabled: { type: Boolean, default: true },
     onlineBookingEnableTime: { type: Date },
     onlineBookingDisableTime: { type: Date },
+    directionUrl: {
+      type: String,
+    },
   },
   {
     timestamps: true,
@@ -81,9 +84,5 @@ const hallSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
-
-    directionUrl: {
-      type: String,
-    },
 
 export const Hall = mongoose.model('Hall', hallSchema);
