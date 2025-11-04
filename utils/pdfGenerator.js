@@ -48,6 +48,8 @@ const generatePdfReceipt = (booking) => {
       ? startDate.toLocaleDateString('en-US', dateOptions)
       : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
 
+    const directionUrl = booking.hall.directionUrl;
+
     const tableBody = [
         ['Hall', booking.hall.name],
         ['Location', booking.hall.location],
@@ -60,11 +62,26 @@ const generatePdfReceipt = (booking) => {
         [{ content: 'Total Price', styles: { fontStyle: 'bold' } }, { content: `NGN ${booking.totalPrice.toLocaleString()}`, styles: { fontStyle: 'bold' } }],
     ];
 
+    if (directionUrl) {
+        tableBody.splice(2, 0, ['Directions', 'Get Directions']);
+    }
+
     autoTable(doc, {
         startY: 92,
         body: tableBody,
         theme: 'grid',
         headStyles: { fillColor: [22, 160, 133] },
+        didDrawCell: function (data) {
+            if (
+                data.cell.section === 'body' &&
+                data.column.index === 1 &&
+                data.row.cells[0].text[0] === 'Directions'
+            ) {
+                doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                    url: directionUrl,
+                });
+            }
+        },
         didDrawPage: function (data) {
             // Footer
             doc.setFontSize(10);

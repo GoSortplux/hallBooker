@@ -87,7 +87,9 @@ const createHall = asyncHandler(async (req, res) => {
         address: geocodedData[0].formattedAddress,
     };
 
-    const hall = await Hall.create({ name, location, geoLocation, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment });
+    const directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
+
+    const hall = await Hall.create({ name, location, geoLocation, directionUrl, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment });
 
     try {
         const io = req.app.get('io');
@@ -203,6 +205,7 @@ const updateHall = asyncHandler(async (req, res) => {
             coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
             address: geocodedData[0].formattedAddress,
         };
+        hall.directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
     }
 
     // Handle recurring bookings settings
