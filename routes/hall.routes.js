@@ -159,30 +159,39 @@ const router = Router();
  *             type: string
  *         availability:
  *           type: string
+ *           example: "available"
  *         blockedDates:
  *           type: array
  *           items:
  *             type: string
  *             format: date
+ *           example: ["2024-12-25"]
  *         directionUrl:
  *           type: string
  *           format: uri
+ *           example: "https://www.google.com/maps/dir/?api=1&destination=40.730610,-73.935242"
  *     HallInput:
  *       type: object
  *       required: [name, description, capacity, openingHour, closingHour, location, pricing, country, state, localGovernment]
  *       properties:
  *         name:
  *           type: string
+ *           example: "The Grand Ballroom"
  *         country:
  *           type: string
+ *           example: "60d0fe4f5311236168a109cb"
  *         state:
  *           type: string
+ *           example: "60d0fe4f5311236168a109cc"
  *         localGovernment:
  *           type: string
+ *           example: "60d0fe4f5311236168a109cd"
  *         description:
  *           type: string
+ *           example: "A beautiful and spacious hall for all your events."
  *         capacity:
  *           type: number
+ *           example: 200
  *         openingHour:
  *           type: string
  *           example: "09:00"
@@ -191,13 +200,16 @@ const router = Router();
  *           example: "23:00"
  *         location:
  *           type: string
+ *           example: "123 Main St, New York, NY"
  *         pricing:
  *           type: object
  *           properties:
  *             dailyRate:
  *               type: number
+ *               example: 1500
  *             hourlyRate:
  *               type: number
+ *               example: 200
  *         facilities:
  *           type: array
  *           items:
@@ -212,87 +224,57 @@ const router = Router();
  *           type: array
  *           items:
  *             type: string
+ *           example: ["No smoking", "No pets"]
  *     HallMediaInput:
  *       type: object
- *       required: [media]
+ *       required: [imageUrl]
  *       properties:
- *         media:
- *           type: array
- *           items:
- *             type: string
- *             format: uri
- *           description: An array of media URLs to add to the hall
+ *         imageUrl:
+ *           type: string
+ *           format: uri
+ *           description: "URL of the image to add. Only one image can be added at a time."
+ *           example: "https://example.com/image.jpg"
+ *         videoUrl:
+ *           type: string
+ *           format: uri
+ *           description: "URL of the video to add. Can be added alongside an image."
+ *           example: "https://example.com/video.mp4"
  *     ReservationInput:
  *       type: object
- *       required: [pattern]
+ *       required: [reservationPattern]
  *       properties:
- *         pattern:
+ *         reservationPattern:
  *           type: string
- *           enum: [date-range, full-week, full-month, days-of-week]
+ *           enum: [date-range, full-week, full-month, specific-days]
+ *           example: "date-range"
  *         startDate:
  *           type: string
  *           format: date
+ *           example: "2024-08-01"
  *         endDate:
  *           type: string
  *           format: date
+ *           example: "2024-08-05"
+ *         year:
+ *           type: number
+ *           example: 2024
+ *         month:
+ *           type: number
+ *           example: 8
+ *         week:
+ *           type: number
+ *           example: 1
  *         days:
  *           type: array
  *           items:
  *             type: number
- *           description: An array of numbers representing days of the week (0=Sun, 1=Mon,...)
- *     CloudinarySignatureSuccess:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         data:
- *           type: object
- *           properties:
- *             signature:
- *               type: string
- *             timestamp:
- *               type: number
- *             api_key:
- *               type: string
+ *           description: "An array of numbers representing days of the week (0=Sun, 1=Mon,...)"
+ *           example: [1, 3, 5]
  */
 
 /**
  * @swagger
- * /halls/recommendations:
- *   get:
- *     summary: Get recommended halls based on user's location
- *     tags: [Halls]
- *     parameters:
- *       - in: query
- *         name: longitude
- *         schema:
- *           type: number
- *         required: true
- *       - in: query
- *         name: latitude
- *         schema:
- *           type: number
- *         required: true
- *     responses:
- *       200:
- *         description: A list of recommended halls
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Hall'
- */
-router.route('/recommendations').get(getRecommendedHalls);
-
-/**
- * @swagger
- * /halls:
+ * /api/v1/halls:
  *   get:
  *     summary: Get all halls with optional filtering
  *     tags: [Halls]
@@ -316,104 +298,11 @@ router.route('/recommendations').get(getRecommendedHalls);
  *           type: number
  *     responses:
  *       200:
- *         description: A list of halls
+ *         description: A list of halls.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Hall'
- */
-router.route('/').get(getAllHalls);
-
-/**
- * @swagger
- * /halls/{id}:
- *   get:
- *     summary: Get a hall by ID
- *     tags: [Halls]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *     responses:
- *       200:
- *         description: Hall details
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Hall'
- *       404:
- *         description: Hall not found
- */
-/**
- * @swagger
- * /halls/by-owner:
- *   get:
- *     summary: Get all halls owned by the current user (owner/staff)
- *     tags: [Halls]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: A list of the user's halls
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Hall'
- */
-router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), getHallsByOwner);
-
-router.route('/:id').get(getHallById);
-
-/**
- * @swagger
- * /halls/{id}/book-demo:
- *   post:
- *     summary: Record a "Book a Demo" click for a hall
- *     tags: [Halls]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *     responses:
- *       200:
- *         description: Demo booking click recorded successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *       404:
- *         description: Hall not found
- */
-router.route('/:id/book-demo').post(bookDemo);
-
-router.use(verifyJWT);
-
-/**
- * @swagger
- * /halls:
+ *               $ref: '#/components/schemas/ApiResponse'
  *   post:
  *     summary: Create a new hall
  *     tags: [Halls]
@@ -431,21 +320,110 @@ router.use(verifyJWT);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Hall'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
  *         description: Bad request (e.g., geocoding failed, invalid data)
  */
 router.route('/')
-    .post(authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, createHall);
+    .get(getAllHalls)
+    .post(verifyJWT, authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, createHall);
 
 /**
  * @swagger
- * /halls/{id}:
+ * /api/v1/halls/recommendations:
+ *   get:
+ *     summary: Get recommended halls based on user's location
+ *     tags: [Halls]
+ *     parameters:
+ *       - in: query
+ *         name: longitude
+ *         schema:
+ *           type: number
+ *         required: true
+ *         example: -73.935242
+ *       - in: query
+ *         name: latitude
+ *         schema:
+ *           type: number
+ *         required: true
+ *         example: 40.730610
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: number
+ *         description: "Search radius in kilometers. Defaults to 10."
+ *         example: 5
+ *     responses:
+ *       200:
+ *         description: A list of recommended halls.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ */
+router.route('/recommendations').get(getRecommendedHalls);
+
+/**
+ * @swagger
+ * /api/v1/halls/by-owner:
+ *   get:
+ *     summary: Get all halls owned by the current user (owner/staff)
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of the user's halls.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ */
+router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), getHallsByOwner);
+
+/**
+ * @swagger
+ * /api/v1/halls/media/generate-signature:
+ *   post:
+ *     summary: Generate a Cloudinary signature for media upload
+ *     description: "Generates the necessary signature and timestamp for direct client-side uploads to Cloudinary, ensuring the request is authentic."
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Signature generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ */
+router.route('/media/generate-signature')
+    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), generateCloudinarySignature);
+
+
+/**
+ * @swagger
+ * /api/v1/halls/{id}:
+ *   get:
+ *     summary: Get a hall by ID
+ *     tags: [Halls]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
+ *     responses:
+ *       200:
+ *         description: Hall details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       404:
+ *         description: Hall not found
  *   patch:
  *     summary: Update a hall (partial updates)
  *     tags: [Halls]
@@ -457,6 +435,7 @@ router.route('/')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     requestBody:
  *       required: true
  *       content:
@@ -469,12 +448,7 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Hall'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Hall not found
  *   delete:
@@ -488,42 +462,51 @@ router.route('/')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     responses:
  *       200:
  *         description: Hall deleted successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Hall not found
  */
 router.route('/:id')
-    .patch(authorizeHallAccess, checkActiveLicense, updateHall)
-    .delete(authorizeHallAccess, checkActiveLicense, deleteHall);
+    .get(getHallById)
+    .patch(verifyJWT, authorizeHallAccess, checkActiveLicense, updateHall)
+    .delete(verifyJWT, authorizeHallAccess, checkActiveLicense, deleteHall);
 
 /**
  * @swagger
- * /halls/media/generate-signature:
+ * /api/v1/halls/{id}/book-demo:
  *   post:
- *     summary: Generate a Cloudinary signature for media upload
+ *     summary: Record a "Book a Demo" click and get owner contact
+ *     description: "Tracks an analytics event for a demo booking request and returns the hall owner's contact details."
  *     tags: [Halls]
- *     security:
- *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     responses:
  *       200:
- *         description: Signature generated successfully
+ *         description: Demo booking click recorded and owner contact details returned.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/CloudinarySignatureSuccess'
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       404:
+ *         description: Hall not found
  */
-router.route('/media/generate-signature')
-    .post(authorizeRoles('hall-owner', 'staff', 'super-admin'), generateCloudinarySignature);
+router.route('/:id/book-demo').post(bookDemo);
 
 /**
  * @swagger
- * /halls/{id}/media:
+ * /api/v1/halls/{id}/media:
  *   post:
  *     summary: Add media to a hall
  *     tags: [Halls]
@@ -535,6 +518,7 @@ router.route('/media/generate-signature')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     requestBody:
  *       required: true
  *       content:
@@ -543,7 +527,11 @@ router.route('/media/generate-signature')
  *             $ref: '#/components/schemas/HallMediaInput'
  *     responses:
  *       200:
- *         description: Media added successfully
+ *         description: Media added successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
  *         description: Bad request (e.g., max number of images reached)
  *   delete:
@@ -557,6 +545,7 @@ router.route('/media/generate-signature')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     requestBody:
  *       required: true
  *       content:
@@ -568,21 +557,22 @@ router.route('/media/generate-signature')
  *               mediaUrl:
  *                 type: string
  *                 format: uri
+ *                 example: "https://example.com/image_to_delete.jpg"
  *     responses:
  *       200:
- *         description: Media deleted successfully
+ *         description: Media deleted successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/ApiResponse'
  */
 router.route('/:id/media')
-    .post(authorizeHallAccess, checkActiveLicense, addHallMedia)
-    .delete(authorizeHallAccess, checkActiveLicense, deleteHallMedia);
+    .post(verifyJWT, authorizeHallAccess, checkActiveLicense, addHallMedia)
+    .delete(verifyJWT, authorizeHallAccess, checkActiveLicense, deleteHallMedia);
 
 /**
  * @swagger
- * /halls/{id}/reservations:
+ * /api/v1/halls/{id}/reservations:
  *   post:
  *     summary: Create a reservation (block dates) for a hall
  *     tags: [Halls]
@@ -594,6 +584,7 @@ router.route('/:id/media')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     requestBody:
  *       required: true
  *       content:
@@ -606,17 +597,17 @@ router.route('/:id/media')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
  *         description: Bad request (e.g., invalid pattern)
  */
 router.route('/:id/reservations')
-    .post(authorizeHallAccess, checkActiveLicense, createReservation);
+    .post(verifyJWT, authorizeHallAccess, checkActiveLicense, createReservation);
 
 /**
  * @swagger
- * /halls/{id}/toggle-online-booking:
- *   put:
+ * /api/v1/halls/{id}/toggle-online-booking:
+ *   patch:
  *     summary: Toggle the online booking status for a hall
  *     tags: [Halls]
  *     security:
@@ -627,19 +618,20 @@ router.route('/:id/reservations')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     responses:
  *       200:
  *         description: Online booking status updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
  *         description: Bad request (e.g., trying to toggle too soon)
  *       404:
  *         description: Hall not found
  */
 router.route('/:id/toggle-online-booking')
-    .put(authorizeHallAccess, checkActiveLicense, toggleOnlineBooking);
+    .patch(verifyJWT, authorizeHallAccess, checkActiveLicense, toggleOnlineBooking);
 
 export default router;

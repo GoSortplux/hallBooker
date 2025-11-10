@@ -41,27 +41,30 @@ const router = Router();
  *
  *     LicenseTierInput:
  *       type: object
- *       required: [name, price, durationInDays, features, maxHalls]
+ *       required: [name, price, durationInDays, maxHalls]
  *       properties:
  *         name:
  *           type: string
+ *           example: "Premium"
  *         price:
  *           type: number
+ *           example: 500
  *         durationInDays:
  *           type: number
+ *           example: 30
  *         features:
  *           type: array
  *           items:
  *             type: string
+ *           example: ["Feature A", "Feature B"]
  *         maxHalls:
  *           type: number
+ *           example: 10
  */
-
-router.use(verifyJWT, authorizeRoles('super-admin'));
 
 /**
  * @swagger
- * /license-tiers:
+ * /api/v1/license-tiers:
  *   post:
  *     summary: Create a new license tier (Super Admin only)
  *     tags: [License Tiers]
@@ -75,51 +78,46 @@ router.use(verifyJWT, authorizeRoles('super-admin'));
  *             $ref: '#/components/schemas/LicenseTierInput'
  *     responses:
  *       201:
- *         description: License tier created successfully
+ *         description: License tier created successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/LicenseTier'
+ *               $ref: '#/components/schemas/ApiResponse'
  *   get:
- *     summary: Get all license tiers (Super Admin only)
+ *     summary: Get all license tiers
  *     tags: [License Tiers]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of license tiers
+ *         description: A list of license tiers.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/LicenseTier'
+ *               $ref: '#/components/schemas/ApiResponse'
  */
 router.route('/')
-  .post(createLicenseTier)
+  .post(verifyJWT, authorizeRoles('super-admin'), createLicenseTier)
   .get(getAllLicenseTiers);
 
 /**
  * @swagger
- * /license-tiers/{id}:
+ * /api/v1/license-tiers/{id}:
  *   get:
- *     summary: Get a license tier by ID (Super Admin only)
+ *     summary: Get a license tier by ID
  *     tags: [License Tiers]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ce"
  *     responses:
  *       200:
- *         description: The license tier object
+ *         description: The license tier object.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/LicenseTier'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: License tier not found
  *   patch:
@@ -133,6 +131,7 @@ router.route('/')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ce"
  *     requestBody:
  *       required: true
  *       content:
@@ -141,11 +140,11 @@ router.route('/')
  *             $ref: '#/components/schemas/LicenseTierInput'
  *     responses:
  *       200:
- *         description: License tier updated successfully
+ *         description: License tier updated successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/LicenseTier'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: License tier not found
  *   delete:
@@ -159,15 +158,20 @@ router.route('/')
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ce"
  *     responses:
  *       200:
- *         description: License tier deleted successfully
+ *         description: License tier deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: License tier not found
  */
 router.route('/:id')
   .get(getLicenseTierById)
-  .patch(updateLicenseTier)
-  .delete(deleteLicenseTier);
+  .patch(verifyJWT, authorizeRoles('super-admin'), updateLicenseTier)
+  .delete(verifyJWT, authorizeRoles('super-admin'), deleteLicenseTier);
 
 export default router;

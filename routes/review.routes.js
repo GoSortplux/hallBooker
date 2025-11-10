@@ -44,13 +44,15 @@ const router = Router();
  *           type: number
  *           minimum: 1
  *           maximum: 5
+ *           example: 5
  *         comment:
  *           type: string
+ *           example: "This was a great hall for our event!"
  */
 
 /**
  * @swagger
- * /reviews/hall/{hallId}:
+ * /api/v1/reviews/hall/{hallId}:
  *   get:
  *     summary: Get all reviews for a specific hall
  *     tags: [Reviews]
@@ -60,17 +62,17 @@ const router = Router();
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     responses:
  *       200:
- *         description: A list of reviews for the hall
+ *         description: A list of reviews for the hall.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Review'
+ *               $ref: '#/components/schemas/ApiResponse'
  *   post:
  *     summary: Create a new review for a hall
+ *     description: "Users can only review a hall they have a completed and paid booking for. Users cannot review the same hall twice."
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
@@ -80,6 +82,7 @@ const router = Router();
  *         schema:
  *           type: string
  *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
  *     requestBody:
  *       required: true
  *       content:
@@ -88,13 +91,13 @@ const router = Router();
  *             $ref: '#/components/schemas/ReviewInput'
  *     responses:
  *       201:
- *         description: Review created successfully
+ *         description: Review created successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Review'
- *       400:
- *         description: You have already reviewed this hall
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       403:
+ *         description: You are not eligible to review this hall.
  */
 router.route('/hall/:hallId')
     .get(getReviewsForHall)
@@ -102,9 +105,10 @@ router.route('/hall/:hallId')
 
 /**
  * @swagger
- * /reviews/{id}:
+ * /api/v1/reviews/{id}:
  *   patch:
  *     summary: Update a review
+ *     description: "Users can only update their own reviews."
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
@@ -114,7 +118,8 @@ router.route('/hall/:hallId')
  *         schema:
  *           type: string
  *         required: true
- *         description: The ID of the review to update
+ *         description: The ID of the review to update.
+ *         example: "60d0fe4f5311236168a109d0"
  *     requestBody:
  *       required: true
  *       content:
@@ -123,15 +128,18 @@ router.route('/hall/:hallId')
  *             $ref: '#/components/schemas/ReviewInput'
  *     responses:
  *       200:
- *         description: Review updated successfully
+ *         description: Review updated successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Review'
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       403:
+ *         description: You are not authorized to update this review.
  *       404:
- *         description: Review not found
+ *         description: Review not found.
  *   delete:
  *     summary: Delete a review
+ *     description: "Users can delete their own reviews. Super-admins can delete any review."
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
@@ -141,12 +149,19 @@ router.route('/hall/:hallId')
  *         schema:
  *           type: string
  *         required: true
- *         description: The ID of the review to delete
+ *         description: The ID of the review to delete.
+ *         example: "60d0fe4f5311236168a109d0"
  *     responses:
  *       200:
- *         description: Review deleted successfully
+ *         description: Review deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       403:
+ *         description: You are not authorized to delete this review.
  *       404:
- *         description: Review not found
+ *         description: Review not found.
  */
 router.route('/:id')
     .patch(verifyJWT, authorizeRoles('user'), updateReview)

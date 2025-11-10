@@ -159,7 +159,7 @@ router.use(verifyJWT);
 
 /**
  * @swagger
- * /bookings/recurring:
+ * /api/v1/bookings/recurring:
  *   post:
  *     summary: Create a recurring booking
  *     tags: [Bookings]
@@ -177,22 +177,15 @@ router.use(verifyJWT);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
+ *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
 router.route('/recurring').post(createRecurringBooking);
 
 /**
  * @swagger
- * /bookings:
+ * /api/v1/bookings:
  *   post:
  *     summary: Create a new booking
  *     tags: [Bookings]
@@ -210,23 +203,18 @@ router.route('/recurring').post(createRecurringBooking);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
+ *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
 router.route('/')
     .post(createBooking);
 
 /**
  * @swagger
- * /bookings/walk-in:
+ * /api/v1/bookings/walk-in:
  *   post:
- *     summary: Create a walk-in booking (Staff/Owner/Admin only)
+ *     summary: Create a walk-in booking (Staff/Hall Owner/Admin only)
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -242,21 +230,16 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
+ *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
 router.route('/walk-in')
-    .post(authorizeRoles('staff', 'owner', 'super-admin'), walkInBooking);
+    .post(authorizeRoles('staff', 'hall-owner', 'super-admin'), walkInBooking);
 
 /**
  * @swagger
- * /bookings/my-bookings:
+ * /api/v1/bookings/my-bookings:
  *   get:
  *     summary: Get all bookings for the current user
  *     tags: [Bookings]
@@ -268,21 +251,14 @@ router.route('/walk-in')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  */
 router.route('/my-bookings')
     .get(getMyBookings);
     
 /**
  * @swagger
- * /bookings/search/{bookingId}:
+ * /api/v1/bookings/search/{bookingId}:
  *   get:
  *     summary: Get a booking by its custom booking ID
  *     tags: [Bookings]
@@ -294,27 +270,23 @@ router.route('/my-bookings')
  *         schema:
  *           type: string
  *         required: true
+ *         description: The custom-generated ID of the booking (e.g., 'BK123456').
  *     responses:
  *       200:
  *         description: Booking details.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Booking not found.
  */
 router.route('/search/:bookingId')
-    .get(authorizeRoles('user', 'owner', 'super-admin'), getBookingByBookingId);
+    .get(authorizeRoles('user', 'hall-owner', 'super-admin'), getBookingByBookingId);
 
 /**
  * @swagger
- * /bookings/{id}:
+ * /api/v1/bookings/{id}:
  *   get:
  *     summary: Get a booking by its database ID
  *     tags: [Bookings]
@@ -325,6 +297,7 @@ router.route('/search/:bookingId')
  *         name: id
  *         schema:
  *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
  *         required: true
  *     responses:
  *       200:
@@ -332,12 +305,7 @@ router.route('/search/:bookingId')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Booking not found.
  *   patch:
@@ -350,6 +318,7 @@ router.route('/search/:bookingId')
  *         name: id
  *         schema:
  *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
  *         required: true
  *     requestBody:
  *       required: true
@@ -363,15 +332,18 @@ router.route('/search/:bookingId')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Booking'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Booking not found.
- *   put:
+ */
+router.route('/:id')
+    .get(authorizeRoles('user', 'hall-owner', 'super-admin'), getBookingById)
+    .patch(authorizeRoles('user'), updateBookingDetails);
+
+/**
+ * @swagger
+ * /api/v1/bookings/{id}/cancel:
+ *   patch:
  *     summary: Cancel a booking
  *     tags: [Bookings]
  *     security:
@@ -381,6 +353,7 @@ router.route('/search/:bookingId')
  *         name: id
  *         schema:
  *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
  *         required: true
  *     responses:
  *       200:
@@ -388,18 +361,12 @@ router.route('/search/:bookingId')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Booking'
+.
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Booking not found.
  */
-router.route('/:id')
-    .get(authorizeRoles('user', 'owner', 'super-admin'), getBookingById)
-    .patch(authorizeRoles('user'), updateBookingDetails)
-    .put(authorizeRoles('user', 'super-admin'), cancelBooking);
+router.route('/:id/cancel')
+    .patch(authorizeRoles('user', 'super-admin'), cancelBooking);
 
 export default router;

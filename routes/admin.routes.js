@@ -17,7 +17,7 @@ const router = Router();
 
 /**
  * @swagger
- * /pending-hallowner-request:
+ * /api/v1/admin:
  *   get:
  *     summary: Retrieve a list of pending hall owner applications
  *     description: Fetches a list of users who have applied for the 'hall-owner' role and are awaiting approval. This endpoint is restricted to super-admins.
@@ -77,4 +77,80 @@ router
     .route('/:userId/reject')
     .patch(verifyJWT, authorizeRoles('super-admin'), rejectHallOwnerApplication)
 
+/**
+ * @swagger
+ * /api/v1/admin/{userId}/approve:
+ *   patch:
+ *     summary: Approve a hall owner application
+ *     description: Approves a pending application for a user to become a 'hall-owner'. This action changes the user's status to 'approved'. Restricted to super-admins.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose application is being approved.
+ *     responses:
+ *       200:
+ *         description: Application approved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Hall owner application approved successfully"
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User does not have the required 'super-admin' role.
+ *       404:
+ *         description: User not found.
+ *
+ * /api/v1/admin/{userId}/reject:
+ *   patch:
+ *     summary: Reject a hall owner application
+ *     description: Rejects a pending application for a user to become a 'hall-owner'. This action changes the user's status to 'rejected'. Restricted to super-admins.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose application is being rejected.
+ *     responses:
+ *       200:
+ *         description: Application rejected successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Hall owner application rejected successfully"
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User does not have the required 'super-admin' role.
+ *       404:
+ *         description: User not found.
+ */
 export default router;
