@@ -6,8 +6,7 @@ import {
   updateFacility,
   deleteFacility,
 } from '../controllers/facility.controller.js';
-import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { authorizeRoles } from '../middlewares/role.middleware.js';
+import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
