@@ -167,16 +167,6 @@ export default router;
  *         name:
  *           type: string
  *           example: "Projector"
- *         chargeable:
- *           type: boolean
- *           example: true
- *         chargeMethod:
- *           type: string
- *           enum: [free, flat, per_hour]
- *           example: "flat"
- *         cost:
- *           type: number
- *           example: 50
  *
  *     FacilityInput:
  *       type: object
@@ -184,16 +174,6 @@ export default router;
  *         name:
  *           type: string
  *           example: "Air Conditioning"
- *         chargeable:
- *           type: boolean
- *           example: false
- *         chargeMethod:
- *           type: string
- *           enum: [free, flat, per_hour]
- *           example: "free"
- *         cost:
- *           type: number
- *           example: 0
  *
  *     ApiResponse:
  *       type: object

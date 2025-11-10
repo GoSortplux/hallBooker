@@ -8,7 +8,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 // @route   POST /api/v1/facilities
 // @access  Private/Super-Admin
 const createFacility = asyncHandler(async (req, res) => {
-  const { name, chargeable, chargeMethod, cost } = req.body;
+  const { name } = req.body;
 
   if (!name) {
     throw new ApiError(400, 'Facility name is required');
@@ -21,9 +21,6 @@ const createFacility = asyncHandler(async (req, res) => {
 
   const facility = await Facility.create({
     name,
-    chargeable,
-    chargeMethod,
-    cost,
   });
 
   return res
@@ -60,7 +57,7 @@ const getFacilityById = asyncHandler(async (req, res) => {
 // @route   PATCH /api/v1/facilities/:id
 // @access  Private/Super-Admin
 const updateFacility = asyncHandler(async (req, res) => {
-  const { name, chargeable, chargeMethod, cost } = req.body;
+  const { name } = req.body;
 
   const facility = await Facility.findById(req.params.id);
 
@@ -75,11 +72,6 @@ const updateFacility = asyncHandler(async (req, res) => {
     }
     facility.name = name;
   }
-
-  if (chargeable !== undefined) facility.chargeable = chargeable;
-  if (chargeMethod) facility.chargeMethod = chargeMethod;
-  if (cost !== undefined) facility.cost = cost;
-
 
   const updatedFacility = await facility.save();
 

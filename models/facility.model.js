@@ -8,19 +8,6 @@ const facilitySchema = new mongoose.Schema(
       trim: true,
       unique: true,
     },
-    chargeable: {
-      type: Boolean,
-      default: false,
-    },
-    chargeMethod: {
-      type: String,
-      enum: ['free', 'flat', 'per_hour'],
-      default: 'free',
-    },
-    cost: {
-      type: Number,
-      default: 0,
-    },
   },
   {
     timestamps: true,
