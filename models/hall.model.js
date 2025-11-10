@@ -36,7 +36,11 @@ const hallSchema = new mongoose.Schema(
     },
     facilities: [
       {
-        name: { type: String, required: true },
+        facility: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Facility',
+          required: true,
+        },
         available: { type: Boolean, default: true },
         chargeable: { type: Boolean, default: false },
         chargeMethod: {

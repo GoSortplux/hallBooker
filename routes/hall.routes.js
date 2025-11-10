@@ -33,9 +33,10 @@ const router = Router();
  *     Facility:
  *       type: object
  *       properties:
- *         name:
+ *         facility:
  *           type: string
- *           example: "Backup generator"
+ *           description: "The ID of the facility from the master list."
+ *           example: "60c72b2f9b1d8c001f8e4c6a"
  *         available:
  *           type: boolean
  *           example: true
@@ -102,7 +103,24 @@ const router = Router();
  *         facilities:
  *           type: array
  *           items:
- *             $ref: '#/components/schemas/Facility'
+ *             type: object
+ *             properties:
+ *               facility:
+ *                 type: string
+ *                 example: "60c72b2f9b1d8c001f8e4c6a"
+ *               available:
+ *                 type: boolean
+ *                 example: true
+ *               chargeable:
+ *                 type: boolean
+ *                 example: false
+ *               chargeMethod:
+ *                 type: string
+ *                 enum: [free, flat, per_hour]
+ *                 example: "free"
+ *               cost:
+ *                 type: number
+ *                 example: 0
  *         carParkCapacity:
  *           type: number
  *           example: 50
