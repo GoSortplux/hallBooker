@@ -22,7 +22,28 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d0fe4f5311236168a109cb"
+ *                       name:
+ *                         type: string
+ *                         example: "Nigeria"
+ *                       iso2:
+ *                         type: string
+ *                         example: "NG"
+ *                 message:
+ *                   type: string
+ *                   example: "Countries fetched successfully"
  */
 router.get('/countries', getCountries);
 
@@ -46,7 +67,25 @@ router.get('/countries', getCountries);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d0fe4f5311236168a109cc"
+ *                       name:
+ *                         type: string
+ *                         example: "Lagos"
+ *                 message:
+ *                   type: string
+ *                   example: "States fetched successfully"
  */
 router.get('/states/:countryId', getStates);
 
@@ -70,7 +109,25 @@ router.get('/states/:countryId', getStates);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d0fe4f5311236168a109cd"
+ *                       name:
+ *                         type: string
+ *                         example: "Ikeja"
+ *                 message:
+ *                   type: string
+ *                   example: "Local Governments fetched successfully"
  */
 router.get('/lgas/:stateId', getLocalGovernments);
 

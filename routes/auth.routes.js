@@ -61,6 +61,10 @@ const router = Router();
  *     responses:
  *       201:
  *         description: User registered successfully. An email has been sent to verify your account.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
  *         description: Bad request, e.g., missing fields.
  *       409:
@@ -155,9 +159,13 @@ router.post('/login', loginUser);
  *                 example: "john.doe@example.com"
  *     responses:
  *       200:
- *         description: Password reset email sent successfully
+ *         description: Password reset email sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
- *         description: User not found
+ *         description: User not found.
  */
 router.post('/forgot-password', forgotPassword);
 
@@ -189,9 +197,13 @@ router.post('/forgot-password', forgotPassword);
  *                 example: "newStrongPassword123"
  *     responses:
  *       200:
- *         description: Password has been reset successfully
+ *         description: Password has been reset successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Invalid or expired token
+ *         description: Invalid or expired token.
  */
 router.patch('/reset-password/:token', resetPassword);
 
@@ -218,7 +230,11 @@ router.patch('/reset-password/:token', resetPassword);
  *                 example: "123456"
  *     responses:
  *       200:
- *         description: Email verified successfully
+ *         description: Email verified successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
  *         description: Invalid or expired token, or email already verified.
  *       404:
@@ -236,9 +252,13 @@ router.post('/verify-email', verifyJWT, verifyEmail);
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Verification email sent successfully
+ *         description: Verification email sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Email is already verified
+ *         description: Email is already verified.
  */
 router.post('/resend-verify-email', verifyJWT, resendVerificationEmail);
 

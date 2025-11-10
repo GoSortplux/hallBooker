@@ -177,7 +177,18 @@ router.use(verifyJWT);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Recurring booking created successfully"
  *       400:
  *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
@@ -203,7 +214,16 @@ router.route('/recurring').post(createRecurringBooking);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking created successfully"
  *       400:
  *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
@@ -230,7 +250,16 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Walk-in booking created successfully"
  *       400:
  *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
@@ -251,7 +280,18 @@ router.route('/walk-in')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Bookings retrieved successfully"
  */
 router.route('/my-bookings')
     .get(getMyBookings);
@@ -277,7 +317,16 @@ router.route('/my-bookings')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking retrieved successfully"
  *       404:
  *         description: Booking not found.
  */
@@ -305,7 +354,16 @@ router.route('/search/:bookingId')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking retrieved successfully"
  *       404:
  *         description: Booking not found.
  *   patch:
@@ -332,7 +390,16 @@ router.route('/search/:bookingId')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking updated successfully"
  *       404:
  *         description: Booking not found.
  */
@@ -361,7 +428,16 @@ router.route('/:id')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking cancelled successfully"
  *       404:
  *         description: Booking not found.
  */

@@ -82,17 +82,39 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/LicenseTier'
+ *                 message:
+ *                   type: string
+ *                   example: "License tier created successfully"
  *   get:
- *     summary: Get all license tiers
+ *     summary: Get all license tiers (Super Admin only)
  *     tags: [License Tiers]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: A list of license tiers.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/LicenseTier'
+ *                 message:
+ *                   type: string
+ *                   example: "License tiers fetched successfully"
  */
 router.use(verifyJWT, authorizeRoles('super-admin'));
 
@@ -121,7 +143,16 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/LicenseTier'
+ *                 message:
+ *                   type: string
+ *                   example: "License tier fetched successfully"
  *       404:
  *         description: License tier not found
  *   patch:
@@ -148,7 +179,16 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/LicenseTier'
+ *                 message:
+ *                   type: string
+ *                   example: "License tier updated successfully"
  *       404:
  *         description: License tier not found
  *   delete:
@@ -169,7 +209,16 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "License tier deleted successfully"
  *       404:
  *         description: License tier not found
  */

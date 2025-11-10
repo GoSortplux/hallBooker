@@ -69,7 +69,18 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Review'
+ *                 message:
+ *                   type: string
+ *                   example: "Reviews fetched successfully"
  *   post:
  *     summary: Create a new review for a hall
  *     description: "Users can only review a hall they have a completed and paid booking for. Users cannot review the same hall twice."
@@ -95,7 +106,16 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Review'
+ *                 message:
+ *                   type: string
+ *                   example: "Review created successfully"
  *       403:
  *         description: You are not eligible to review this hall.
  */
@@ -132,7 +152,16 @@ router.route('/hall/:hallId')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Review'
+ *                 message:
+ *                   type: string
+ *                   example: "Review updated successfully"
  *       403:
  *         description: You are not authorized to update this review.
  *       404:
@@ -157,7 +186,16 @@ router.route('/hall/:hallId')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Review deleted successfully"
  *       403:
  *         description: You are not authorized to delete this review.
  *       404:

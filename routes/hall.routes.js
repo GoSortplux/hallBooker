@@ -302,7 +302,18 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Halls fetched successfully"
  *   post:
  *     summary: Create a new hall
  *     tags: [Halls]
@@ -320,7 +331,16 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Hall created successfully"
  *       400:
  *         description: Bad request (e.g., geocoding failed, invalid data)
  */
@@ -359,7 +379,18 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Recommended halls fetched successfully"
  */
 router.route('/recommendations').get(getRecommendedHalls);
 
@@ -377,7 +408,18 @@ router.route('/recommendations').get(getRecommendedHalls);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Halls fetched successfully"
  */
 router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), getHallsByOwner);
 
@@ -396,7 +438,23 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     signature:
+ *                       type: string
+ *                     timestamp:
+ *                       type: integer
+ *                     api_key:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *                   example: "Signature generated successfully"
  */
 router.route('/media/generate-signature')
     .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), generateCloudinarySignature);
@@ -421,7 +479,16 @@ router.route('/media/generate-signature')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Hall details fetched successfully"
  *       404:
  *         description: Hall not found
  *   patch:
@@ -448,7 +515,16 @@ router.route('/media/generate-signature')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Hall updated successfully"
  *       404:
  *         description: Hall not found
  *   delete:
@@ -469,7 +545,16 @@ router.route('/media/generate-signature')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Hall deleted successfully"
  *       404:
  *         description: Hall not found
  */
@@ -498,7 +583,21 @@ router.route('/:id')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     phone:
+ *                       type: string
+ *                     whatsappNumber:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *                   example: "Owner contact details fetched successfully"
  *       404:
  *         description: Hall not found
  */
@@ -531,7 +630,16 @@ router.route('/:id/book-demo').post(bookDemo);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Media added successfully"
  *       400:
  *         description: Bad request (e.g., max number of images reached)
  *   delete:
@@ -564,7 +672,16 @@ router.route('/:id/book-demo').post(bookDemo);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Media deleted successfully"
  */
 router.route('/:id/media')
     .post(verifyJWT, authorizeHallAccess, checkActiveLicense, addHallMedia)
@@ -597,7 +714,16 @@ router.route('/:id/media')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Reservation created successfully"
  *       400:
  *         description: Bad request (e.g., invalid pattern)
  */
@@ -625,7 +751,16 @@ router.route('/:id/reservations')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Hall'
+ *                 message:
+ *                   type: string
+ *                   example: "Online booking status updated successfully"
  *       400:
  *         description: Bad request (e.g., trying to toggle too soon)
  *       404:

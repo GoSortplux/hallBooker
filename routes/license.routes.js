@@ -74,13 +74,31 @@ router.use(verifyJWT);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/License'
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription purchased successfully"
  *       200:
  *         description: Payment initialized successfully for a paid tier.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Payment initialized successfully"
  */
 router.route('/')
     .post(authorizeRoles('hall-owner'), purchaseSubscription);
@@ -99,7 +117,16 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/LicenseTier'
+ *                 message:
+ *                   type: string
+ *                   example: "Recommended tier fetched successfully"
  */
 router.route('/recommend')
     .get(authorizeRoles('hall-owner'), getRecommendedTier);
@@ -124,7 +151,16 @@ router.route('/recommend')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription upgrade payment initialized successfully"
  */
 router.route('/upgrade')
     .post(authorizeRoles('hall-owner'), upgradeSubscription);
@@ -143,7 +179,16 @@ router.route('/upgrade')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/License'
+ *                 message:
+ *                   type: string
+ *                   example: "Current subscription fetched successfully"
  *       404:
  *         description: No active subscription found.
  */
@@ -164,7 +209,18 @@ router.route('/my-subscription')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/License'
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription history fetched successfully"
  */
 router.route('/my-history')
     .get(authorizeRoles('hall-owner'), getMySubscriptionHistory);
@@ -190,7 +246,18 @@ router.route('/my-history')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/License'
+ *                 message:
+ *                   type: string
+ *                   example: "User subscription history fetched successfully"
  */
 router.route('/user/:userId/history')
     .get(authorizeRoles('super-admin'), getSubscriptionHistoryForUser);
