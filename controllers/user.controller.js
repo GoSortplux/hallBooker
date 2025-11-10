@@ -343,6 +343,14 @@ const applyHallOwner = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, {}, "Your application to become a hall owner has been submitted successfully."));
 });
 
+const getMe = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+    res.status(200).json(new ApiResponse(200, user, "User fetched successfully."));
+});
+
 export { 
     getAllUsers, 
     getUserById, 
@@ -356,7 +364,8 @@ export {
     createHallOwner,
     approveHallOwner,
     promoteToHallOwner,
-    reviewHallOwnerApplication
+    reviewHallOwnerApplication,
+    getMe
 };
 
 const createHallOwner = asyncHandler(async (req, res) => {
