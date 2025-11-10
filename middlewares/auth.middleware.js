@@ -18,6 +18,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     }
 
     req.user = user;
+    req.user.activeRole = decodedToken.activeRole;
     next();
   } catch (error) {
     throw new ApiError(401, error?.message || 'Invalid access token');
@@ -26,11 +27,8 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
 
 export const authorizeRoles = (...roles) => {
 	return (req, _, next) => {
-		const userRoles = req.user.role;
-		const hasRole = userRoles.some((role) => roles.includes(role));
-
-		if (!hasRole) {
-			throw new ApiError(403, `Role: ${userRoles.join(', ')} is not authorized to access this resource`);
+		if (!req.user.activeRole || !roles.includes(req.user.activeRole)) {
+			throw new ApiError(403, `Role: ${req.user.activeRole} is not authorized to access this resource`);
 		}
 		next();
 	};

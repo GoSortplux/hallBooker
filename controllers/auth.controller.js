@@ -134,15 +134,19 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
   if (!email || !password) throw new ApiError(400, 'Email and password are required');
 
   const user = await User.findOne({ email }).select('+password');
   if (!user || !(await user.isPasswordCorrect(password))) {
     throw new ApiError(401, 'Invalid email or password');
   }
+
+  if (role && !user.role.includes(role)) {
+    throw new ApiError(403, `You do not have the role: ${role}`);
+  }
   
-  const accessToken = user.generateAccessToken();
+  const accessToken = user.generateAccessToken(role);
   const loggedInUser = await User.findById(user._id);
   const options = { httpOnly: true, secure: process.env.NODE_ENV === 'production' };
 
@@ -210,11 +214,33 @@ const resetPassword = asyncHandler(async (req, res) => {
        .json(new ApiResponse(200, {}, 'Password reset successful.'));
 });
 
+const switchRole = asyncHandler(async (req, res) => {
+  const { role } = req.body;
+  if (!role) {
+    throw new ApiError(400, 'Role is required');
+  }
+
+  const user = await User.findById(req.user._id);
+
+  if (!user.role.includes(role)) {
+    throw new ApiError(403, `You do not have the role: ${role}`);
+  }
+
+  const accessToken = user.generateAccessToken(role);
+  const options = { httpOnly: true, secure: process.env.NODE_ENV === 'production' };
+
+  return res
+    .status(200)
+    .cookie('accessToken', accessToken, options)
+    .json(new ApiResponse(200, { accessToken }, 'Role switched successfully'));
+});
+
 export { 
   registerUser, 
   loginUser, 
   forgotPassword, 
   resetPassword,
   verifyEmail,
-  resendVerificationEmail
+  resendVerificationEmail,
+  switchRole
 };

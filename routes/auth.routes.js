@@ -5,7 +5,8 @@ import {
     forgotPassword, 
     resetPassword,
     verifyEmail,
-    resendVerificationEmail
+    resendVerificationEmail,
+    switchRole
 } from '../controllers/auth.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 
@@ -96,6 +97,10 @@ router.post('/register', registerUser);
  *                 type: string
  *                 format: password
  *                 example: "password123"
+ *               role:
+ *                 type: string
+ *                 description: "Optional role to log in with. If not provided, the first role in the user's role array will be used."
+ *                 example: "hall-owner"
  *     responses:
  *       200:
  *         description: User logged in successfully
@@ -261,5 +266,53 @@ router.post('/verify-email', verifyJWT, verifyEmail);
  *         description: Email is already verified.
  */
 router.post('/resend-verify-email', verifyJWT, resendVerificationEmail);
+
+/**
+ * @swagger
+ * /api/v1/auth/switch-role:
+ *   post:
+ *     summary: Switch user's active role
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 description: "The role to switch to."
+ *                 example: "hall-owner"
+ *     responses:
+ *       200:
+ *         description: Role switched successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 message:
+ *                   type: string
+ *                   example: "Role switched successfully"
+ *       400:
+ *         description: Role is required.
+ *       403:
+ *         description: User does not have the requested role.
+ */
+router.post('/switch-role', verifyJWT, switchRole);
 
 export default router;
