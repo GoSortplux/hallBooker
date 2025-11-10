@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Hall } from '../models/hall.model.js';
+import { Facility } from '../models/facility.model.js';
 import { User } from '../models/user.model.js';
 import { Analytics } from '../models/analytics.model.js';
 import { createNotification } from '../services/notification.service.js';
@@ -75,6 +76,15 @@ const createHall = asyncHandler(async (req, res) => {
     if (!pricing || (typeof pricing !== 'object') || (!pricing.dailyRate && !pricing.hourlyRate)) {
         throw new ApiError(400, 'Pricing information is required. Please provide at least a daily or hourly rate.');
     }
+
+    // Validate facilities
+    if (facilities && facilities.length > 0) {
+        const facilityIds = facilities.map(f => f.facility);
+        const foundFacilities = await Facility.find({ '_id': { $in: facilityIds } });
+        if (foundFacilities.length !== facilityIds.length) {
+            throw new ApiError(400, 'One or more facilities are invalid.');
+        }
+    }
     
     const geocodedData = await geocoder.geocode(location);
     if (!geocodedData.length) {
@@ -123,12 +133,12 @@ const createHall = asyncHandler(async (req, res) => {
 });
 
 const getAllHalls = asyncHandler(async (req, res) => {
-    const halls = await Hall.find({}).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment');
+    const halls = await Hall.find({}).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 
 const getHallById = asyncHandler(async (req, res) => {
-    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment');
+    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
     if (!hall) throw new ApiError(404, "Hall not found");
 
     if (!hall.isOnlineBookingEnabled) {
@@ -181,11 +191,20 @@ const getHallById = asyncHandler(async (req, res) => {
 
 const updateHall = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { location, allowRecurringBookings, recurringBookingDiscount, ...otherDetails } = req.body;
+    const { location, allowRecurringBookings, recurringBookingDiscount, facilities, ...otherDetails } = req.body;
 
     // Prevent owner field from being updated
     if (otherDetails.owner) {
         throw new ApiError(400, "Cannot update the owner of a hall.");
+    }
+
+    // Validate facilities
+    if (facilities && facilities.length > 0) {
+        const facilityIds = facilities.map(f => f.facility);
+        const foundFacilities = await Facility.find({ '_id': { $in: facilityIds } });
+        if (foundFacilities.length !== facilityIds.length) {
+            throw new ApiError(400, 'One or more facilities are invalid.');
+        }
     }
 
     const hall = await Hall.findById(id);
