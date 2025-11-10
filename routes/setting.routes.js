@@ -19,8 +19,8 @@ const router = express.Router();
 
 /**
  * @swagger
- * /settings/commission-rate:
- *   post:
+ * /api/v1/settings/commission-rate:
+ *   patch:
  *     summary: Set the commission rate for online bookings
  *     tags: [Settings]
  *     security:
@@ -35,10 +35,15 @@ const router = express.Router();
  *             properties:
  *               rate:
  *                 type: number
- *                 description: The commission rate in percentage (e.g., 10 for 10%)
+ *                 description: "The commission rate in percentage (e.g., 10 for 10%)."
+ *                 example: 10
  *     responses:
  *       200:
- *         description: Commission rate updated successfully
+ *         description: Commission rate updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *   get:
  *     summary: Get the current commission rate
  *     tags: [Settings]
@@ -46,22 +51,22 @@ const router = express.Router();
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: The current commission rate
+ *         description: The current commission rate.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 rate:
- *                   type: number
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       404:
+ *         description: Commission rate has not been set yet.
  */
-router.post('/commission-rate', verifyJWT, authorizeRoles('super-admin'), setCommissionRate);
-router.get('/commission-rate', verifyJWT, authorizeRoles('super-admin'), getCommissionRate);
+router.route('/commission-rate')
+    .get(verifyJWT, authorizeRoles('super-admin'), getCommissionRate)
+    .patch(verifyJWT, authorizeRoles('super-admin'), setCommissionRate);
 
 /**
  * @swagger
- * /settings/pending-booking-deletion-time:
- *   put:
+ * /api/v1/settings/pending-booking-deletion-time:
+ *   patch:
  *     summary: Set the time in minutes to wait before deleting a pending booking
  *     tags: [Settings]
  *     security:
@@ -76,17 +81,22 @@ router.get('/commission-rate', verifyJWT, authorizeRoles('super-admin'), getComm
  *             properties:
  *               time:
  *                 type: number
- *                 description: The time in minutes
+ *                 description: "The time in minutes."
+ *                 example: 30
  *     responses:
  *       200:
- *         description: Pending booking deletion time updated successfully
+ *         description: Pending booking deletion time updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  */
-router.put('/pending-booking-deletion-time', verifyJWT, authorizeRoles('super-admin'), setPendingBookingDeletionTime);
+router.patch('/pending-booking-deletion-time', verifyJWT, authorizeRoles('super-admin'), setPendingBookingDeletionTime);
 
 /**
  * @swagger
- * /settings/online-booking-reactivation-time:
- *   put:
+ * /api/v1/settings/online-booking-reactivation-time:
+ *   patch:
  *     summary: Set the time in minutes to wait before a hall owner can re-enable online booking
  *     tags: [Settings]
  *     security:
@@ -101,17 +111,22 @@ router.put('/pending-booking-deletion-time', verifyJWT, authorizeRoles('super-ad
  *             properties:
  *               time:
  *                 type: number
- *                 description: The time in minutes
+ *                 description: "The time in minutes."
+ *                 example: 1440
  *     responses:
  *       200:
- *         description: Online booking reactivation time updated successfully
+ *         description: Online booking reactivation time updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  */
-router.put('/online-booking-reactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingReactivationTime);
+router.patch('/online-booking-reactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingReactivationTime);
 
 /**
  * @swagger
- * /settings/online-booking-deactivation-time:
- *   put:
+ * /api/v1/settings/online-booking-deactivation-time:
+ *   patch:
  *     summary: Set the time in minutes a hall owner must wait after re-enabling online booking before they can disable it again
  *     tags: [Settings]
  *     security:
@@ -126,12 +141,17 @@ router.put('/online-booking-reactivation-time', verifyJWT, authorizeRoles('super
  *             properties:
  *               time:
  *                 type: number
- *                 description: The time in minutes
+ *                 description: "The time in minutes."
+ *                 example: 300
  *     responses:
  *       200:
- *         description: Online booking deactivation time updated successfully
+ *         description: Online booking deactivation time updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  */
-router.put('/online-booking-deactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingDeactivationTime);
+router.patch('/online-booking-deactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingDeactivationTime);
 
 
 export default router;

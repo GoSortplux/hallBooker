@@ -29,15 +29,17 @@ router.use(verifyJWT);
  *     responses:
  *       200:
  *         description: A list of notifications and the unread count.
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  */
 router.route('/').get(getNotifications);
 
 /**
  * @swagger
  * /api/v1/notifications/read-all:
- *   post:
+ *   patch:
  *     summary: Mark all notifications as read
  *     tags: [Notifications]
  *     security:
@@ -45,15 +47,17 @@ router.route('/').get(getNotifications);
  *     responses:
  *       200:
  *         description: All notifications marked as read.
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  */
-router.route('/read-all').post(markAllAsRead);
+router.route('/read-all').patch(markAllAsRead);
 
 /**
  * @swagger
  * /api/v1/notifications/{notificationId}/read:
- *   post:
+ *   patch:
  *     summary: Mark a single notification as read
  *     tags: [Notifications]
  *     security:
@@ -65,20 +69,23 @@ router.route('/read-all').post(markAllAsRead);
  *         schema:
  *           type: string
  *         description: The ID of the notification to mark as read.
+ *         example: "60d0fe4f5311236168a109cf"
  *     responses:
  *       200:
  *         description: The notification was marked as read.
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Notification not found.
  */
-router.route('/:notificationId/read').post(markAsRead);
+router.route('/:notificationId/read').patch(markAsRead);
 
 /**
  * @swagger
  * /api/v1/notifications/{notificationId}/unread:
- *   post:
+ *   patch:
  *     summary: Mark a single notification as unread
  *     tags: [Notifications]
  *     security:
@@ -90,14 +97,17 @@ router.route('/:notificationId/read').post(markAsRead);
  *         schema:
  *           type: string
  *         description: The ID of the notification to mark as unread.
+ *         example: "60d0fe4f5311236168a109cf"
  *     responses:
  *       200:
  *         description: The notification was marked as unread.
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Notification not found.
  */
-router.route('/:notificationId/unread').post(markAsUnread);
+router.route('/:notificationId/unread').patch(markAsUnread);
 
 export default router;
