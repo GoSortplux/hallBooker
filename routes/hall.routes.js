@@ -156,6 +156,7 @@ const router = Router();
  *           example: "23:00"
  *         location:
  *           type: string
+ *           description: "The full address of the hall. If a precise location cannot be found, a Google Maps search URL will be generated instead."
  *         pricing:
  *           type: object
  *           properties:
@@ -220,6 +221,7 @@ const router = Router();
  *           example: "23:00"
  *         location:
  *           type: string
+ *           description: "The full address of the hall. If a precise location cannot be found, a Google Maps search URL will be generated instead."
  *           example: "123 Main St, New York, NY"
  *         pricing:
  *           type: object
@@ -362,7 +364,7 @@ const router = Router();
  *                   type: string
  *                   example: "Hall created successfully"
  *       400:
- *         description: Bad request (e.g., geocoding failed, invalid data)
+ *         description: Bad request (e.g., invalid data)
  */
 router.route('/')
     .get(getAllHalls)

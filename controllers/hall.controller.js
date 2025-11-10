@@ -87,19 +87,21 @@ const createHall = asyncHandler(async (req, res) => {
     }
     
     const geocodedData = await geocoder.geocode(location);
-    if (!geocodedData.length) {
-        throw new ApiError(400, 'Could not geocode the provided location. Please provide a valid address.');
+
+    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment };
+
+    if (geocodedData.length > 0) {
+        hallData.geoLocation = {
+            type: 'Point',
+            coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
+            address: geocodedData[0].formattedAddress,
+        };
+        hallData.directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
+    } else {
+        hallData.directionUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
     }
 
-    const geoLocation = {
-        type: 'Point',
-        coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
-        address: geocodedData[0].formattedAddress,
-    };
-
-    const directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
-
-    const hall = await Hall.create({ name, location, geoLocation, directionUrl, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment });
+    const hall = await Hall.create(hallData);
 
     try {
         const io = req.app.get('io');
@@ -215,16 +217,18 @@ const updateHall = asyncHandler(async (req, res) => {
     // Handle location update separately
     if (location) {
         const geocodedData = await geocoder.geocode(location);
-        if (!geocodedData.length) {
-            throw new ApiError(400, 'Could not geocode the provided location. Please provide a valid address.');
-        }
         hall.location = location;
-        hall.geoLocation = {
-            type: 'Point',
-            coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
-            address: geocodedData[0].formattedAddress,
-        };
-        hall.directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
+        if (geocodedData.length > 0) {
+            hall.geoLocation = {
+                type: 'Point',
+                coordinates: [geocodedData[0].longitude, geocodedData[0].latitude],
+                address: geocodedData[0].formattedAddress,
+            };
+            hall.directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
+        } else {
+            hall.geoLocation = undefined;
+            hall.directionUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+        }
     }
 
     // Handle recurring bookings settings
