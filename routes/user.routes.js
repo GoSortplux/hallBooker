@@ -13,7 +13,8 @@ import {
     createHallOwner,
     approveHallOwner,
     promoteToHallOwner,
-    reviewHallOwnerApplication
+    reviewHallOwnerApplication,
+    getMe
 } from '../controllers/user.controller.js';
 
 const router = Router();
@@ -285,6 +286,29 @@ router.route('/remove-staff/:staffId')
 router.route('/apply-hall-owner')
     .post(verifyJWT, authorizeRoles('user'), applyHallOwner);
 
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Get the currently logged-in user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The user object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.route('/me').get(verifyJWT, getMe);
 // Admin routes
 router.use(verifyJWT, authorizeRoles('super-admin'));
 
