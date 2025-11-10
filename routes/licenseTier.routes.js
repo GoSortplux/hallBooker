@@ -94,16 +94,20 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ApiResponse'
  */
+router.use(verifyJWT, authorizeRoles('super-admin'));
+
 router.route('/')
-  .post(verifyJWT, authorizeRoles('super-admin'), createLicenseTier)
+  .post(createLicenseTier)
   .get(getAllLicenseTiers);
 
 /**
  * @swagger
  * /api/v1/license-tiers/{id}:
  *   get:
- *     summary: Get a license tier by ID
+ *     summary: Get a license tier by ID (Super Admin only)
  *     tags: [License Tiers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -171,7 +175,7 @@ router.route('/')
  */
 router.route('/:id')
   .get(getLicenseTierById)
-  .patch(verifyJWT, authorizeRoles('super-admin'), updateLicenseTier)
-  .delete(verifyJWT, authorizeRoles('super-admin'), deleteLicenseTier);
+  .patch(updateLicenseTier)
+  .delete(deleteLicenseTier);
 
 export default router;
