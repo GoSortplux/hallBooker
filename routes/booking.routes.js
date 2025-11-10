@@ -337,7 +337,7 @@ router.route('/search/:bookingId')
  *         description: Booking not found.
  */
 router.route('/:id')
-    .get(authorizeRoles('user', 'hall-owner', 'super-admin'), getBookingById)
+    .get(authorizeRoles('user', 'owner', 'super-admin'), getBookingById)
     .patch(authorizeRoles('user'), updateBookingDetails);
 
 /**
@@ -361,7 +361,6 @@ router.route('/:id')
  *         content:
  *           application/json:
  *             schema:
-.
  *               $ref: '#/components/schemas/ApiResponse'
  *       404:
  *         description: Booking not found.
