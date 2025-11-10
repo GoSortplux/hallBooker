@@ -106,6 +106,13 @@ router
  *                   example: 200
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     status:
+ *                       type: string
+ *                       example: "approved"
  *                 message:
  *                   type: string
  *                   example: "Hall owner application approved successfully"
@@ -143,6 +150,13 @@ router
  *                   example: 200
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     status:
+ *                       type: string
+ *                       example: "rejected"
  *                 message:
  *                   type: string
  *                   example: "Hall owner application rejected successfully"

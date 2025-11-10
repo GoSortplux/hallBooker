@@ -19,26 +19,14 @@ const router = Router();
  *       type: object
  *       required:
  *         - userId
- *         - bankCode
- *         - accountNumber
- *         - accountName
+ *         - percentageCharge
  *       properties:
  *         userId:
  *           type: string
- *           description: "The ID of the user (hall owner) to create the subaccount for."
- *           example: "60d0fe4f5311236168a109ca"
- *         bankCode:
- *           type: string
- *           description: "The 3-digit code for the bank."
- *           example: "058"
- *         accountNumber:
- *           type: string
- *           description: "The user's bank account number."
- *           example: "0123456789"
- *         accountName:
- *           type: string
- *           description: "The name associated with the bank account."
- *           example: "John Doe"
+ *           description: The ID of the user (hall owner) to create the subaccount for.
+ *         percentageCharge:
+ *           type: number
+ *           description: The percentage of the transaction to be paid to this subaccount.
  *
  *     Subaccount:
  *       type: object
@@ -73,7 +61,16 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Subaccount'
+ *                 message:
+ *                   type: string
+ *                   example: "Subaccount created successfully"
  *       400:
  *         description: Bad request (e.g., user already has a subaccount).
  *       404:

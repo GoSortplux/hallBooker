@@ -43,7 +43,16 @@ const router = express.Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Setting'
+ *                 message:
+ *                   type: string
+ *                   example: "Commission rate updated successfully"
  *   get:
  *     summary: Get the current commission rate
  *     tags: [Settings]
@@ -55,7 +64,16 @@ const router = express.Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Setting'
+ *                 message:
+ *                   type: string
+ *                   example: "Commission rate retrieved successfully"
  *       404:
  *         description: Commission rate has not been set yet.
  */
@@ -89,7 +107,16 @@ router.route('/commission-rate')
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Setting'
+ *                 message:
+ *                   type: string
+ *                   example: "Pending booking deletion time updated successfully"
  */
 router.patch('/pending-booking-deletion-time', verifyJWT, authorizeRoles('super-admin'), setPendingBookingDeletionTime);
 
@@ -119,7 +146,16 @@ router.patch('/pending-booking-deletion-time', verifyJWT, authorizeRoles('super-
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Setting'
+ *                 message:
+ *                   type: string
+ *                   example: "Online booking reactivation time updated successfully"
  */
 router.patch('/online-booking-reactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingReactivationTime);
 
@@ -149,7 +185,16 @@ router.patch('/online-booking-reactivation-time', verifyJWT, authorizeRoles('sup
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Setting'
+ *                 message:
+ *                   type: string
+ *                   example: "Online booking deactivation time updated successfully"
  */
 router.patch('/online-booking-deactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingDeactivationTime);
 

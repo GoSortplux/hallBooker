@@ -32,7 +32,24 @@ router.use(verifyJWT);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Notification'
+ *                     unreadCount:
+ *                       type: integer
+ *                       example: 5
+ *                 message:
+ *                   type: string
+ *                   example: "Notifications retrieved successfully"
  */
 router.route('/').get(getNotifications);
 
@@ -50,7 +67,16 @@ router.route('/').get(getNotifications);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "All notifications marked as read"
  */
 router.route('/read-all').patch(markAllAsRead);
 
@@ -76,7 +102,16 @@ router.route('/read-all').patch(markAllAsRead);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Notification'
+ *                 message:
+ *                   type: string
+ *                   example: "Notification marked as read"
  *       404:
  *         description: Notification not found.
  */
@@ -104,7 +139,16 @@ router.route('/:notificationId/read').patch(markAsRead);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Notification'
+ *                 message:
+ *                   type: string
+ *                   example: "Notification marked as unread"
  *       404:
  *         description: Notification not found.
  */
