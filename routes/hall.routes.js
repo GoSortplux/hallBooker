@@ -50,6 +50,8 @@ const router = Router();
  *         cost:
  *           type: number
  *           example: 50
+ *       required:
+ *         - facility
  *     Hall:
  *       type: object
  *       properties:
