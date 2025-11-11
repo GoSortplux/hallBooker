@@ -75,7 +75,7 @@ router.route('/').get(getAllFacilities);
  *       '403':
  *         description: Forbidden
  */
-router.route('/').post(verifyJWT, authorizeRoles(['super-admin']), createFacility);
+router.route('/').post(verifyJWT, authorizeRoles('super-admin'), createFacility);
 
 /**
  * @swagger
@@ -148,9 +148,9 @@ router.route('/').post(verifyJWT, authorizeRoles(['super-admin']), createFacilit
  */
 router
   .route('/:id')
-  .get(verifyJWT, authorizeRoles(['super-admin']), getFacilityById)
-  .patch(verifyJWT, authorizeRoles(['super-admin']), updateFacility)
-  .delete(verifyJWT, authorizeRoles(['super-admin']), deleteFacility);
+  .get(verifyJWT, authorizeRoles('super-admin'), getFacilityById)
+  .patch(verifyJWT, authorizeRoles('super-admin'), updateFacility)
+  .delete(verifyJWT, authorizeRoles('super-admin'), deleteFacility);
 
 export default router;
 
