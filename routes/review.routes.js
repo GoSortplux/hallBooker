@@ -51,6 +51,50 @@ const router = Router();
 
 /**
  * @swagger
+ * /api/v1/reviews/hall/{hallId}/booking/{bookingId}:
+ *   post:
+ *     summary: Create a new review for a hall booking
+ *     description: "Users can only review a hall for a specific booking that is completed and paid. Users can only review a booking once."
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: hallId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
+ *       - in: path
+ *         name: bookingId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109cb"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ReviewInput'
+ *     responses:
+ *       201:
+ *         description: Review created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Review'
+ *                 message:
+ *                   type: string
+ *                   example: "Review created successfully"
+ *       403:
+ *         description: You are not eligible to review this hall for this booking.
  * /api/v1/reviews/hall/{hallId}:
  *   get:
  *     summary: Get all reviews for a specific hall
@@ -80,43 +124,6 @@ const router = Router();
  *                 message:
  *                   type: string
  *                   example: "Reviews fetched successfully"
- *   post:
- *     summary: Create a new review for a hall
- *     description: "Users can only review a hall they have a completed and paid booking for. Users cannot review the same hall twice."
- *     tags: [Reviews]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: hallId
- *         schema:
- *           type: string
- *         required: true
- *         example: "60d0fe4f5311236168a109ca"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ReviewInput'
- *     responses:
- *       201:
- *         description: Review created successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 statusCode:
- *                   type: integer
- *                   example: 201
- *                 data:
- *                   $ref: '#/components/schemas/Review'
- *                 message:
- *                   type: string
- *                   example: "Review created successfully"
- *       403:
- *         description: You are not eligible to review this hall.
  */
 router.route('/hall/:hallId/booking/:bookingId')
     .post(verifyJWT, createReview);
