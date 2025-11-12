@@ -92,4 +92,86 @@ const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, {}, 'Hall owner application rejected successfully'));
   });
 
-export { getHallOwnerApplications, approveHallOwnerApplication, rejectHallOwnerApplication };
+import Setting from '../models/setting.model.js';
+
+// Controller to add a new payment method
+const addPaymentMethod = asyncHandler(async (req, res) => {
+  const { paymentMethod } = req.body;
+  if (!paymentMethod) {
+    throw new ApiError(400, 'Payment method is required');
+  }
+
+  const updatedSettings = await Setting.findOneAndUpdate(
+    { key: 'paymentMethods' },
+    { $addToSet: { value: paymentMethod } },
+    { new: true, upsert: true }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedSettings.value, 'Payment method added successfully')
+  );
+});
+
+// Controller to remove a payment method
+const removePaymentMethod = asyncHandler(async (req, res) => {
+  const { paymentMethod } = req.body;
+  if (!paymentMethod) {
+    throw new ApiError(400, 'Payment method is required');
+  }
+
+  const updatedSettings = await Setting.findOneAndUpdate(
+    { key: 'paymentMethods' },
+    { $pull: { value: paymentMethod } },
+    { new: true }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedSettings.value, 'Payment method removed successfully')
+  );
+});
+
+// Controller to add a new payment status
+const addPaymentStatus = asyncHandler(async (req, res) => {
+  const { paymentStatus } = req.body;
+  if (!paymentStatus) {
+    throw new ApiError(400, 'Payment status is required');
+  }
+
+  const updatedSettings = await Setting.findOneAndUpdate(
+    { key: 'paymentStatuses' },
+    { $addToSet: { value: paymentStatus } },
+    { new: true, upsert: true }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedSettings.value, 'Payment status added successfully')
+  );
+});
+
+// Controller to remove a payment status
+const removePaymentStatus = asyncHandler(async (req, res) => {
+  const { paymentStatus } = req.body;
+  if (!paymentStatus) {
+    throw new ApiError(400, 'Payment status is required');
+  }
+
+  const updatedSettings = await Setting.findOneAndUpdate(
+    { key: 'paymentStatuses' },
+    { $pull: { value: paymentStatus } },
+    { new: true }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedSettings.value, 'Payment status removed successfully')
+  );
+});
+
+export {
+  getHallOwnerApplications,
+  approveHallOwnerApplication,
+  rejectHallOwnerApplication,
+  addPaymentMethod,
+  removePaymentMethod,
+  addPaymentStatus,
+  removePaymentStatus,
+};

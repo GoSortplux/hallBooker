@@ -3,6 +3,10 @@ import {
   getHallOwnerApplications,
   approveHallOwnerApplication,
   rejectHallOwnerApplication,
+  addPaymentMethod,
+  removePaymentMethod,
+  addPaymentStatus,
+  removePaymentStatus,
 } from '../controllers/admin.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -167,4 +171,13 @@ router
  *       404:
  *         description: User not found.
  */
+
+// Routes for managing payment methods
+router.route('/payment-methods').post(verifyJWT, authorizeRoles('super-admin'), addPaymentMethod);
+router.route('/payment-methods/remove').post(verifyJWT, authorizeRoles('super-admin'), removePaymentMethod);
+
+// Routes for managing payment statuses
+router.route('/payment-statuses').post(verifyJWT, authorizeRoles('super-admin'), addPaymentStatus);
+router.route('/payment-statuses/remove').post(verifyJWT, authorizeRoles('super-admin'), removePaymentStatus);
+
 export default router;
