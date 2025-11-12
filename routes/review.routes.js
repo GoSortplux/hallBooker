@@ -119,16 +119,19 @@ const router = Router();
  *       403:
  *         description: You are not eligible to review this hall.
  */
-router.route('/hall/:hallId')
-    .get(getReviewsForHall)
+router.route('/hall/:hallId/booking/:bookingId')
     .post(verifyJWT, createReview);
+
+router.route('/hall/:hallId')
+    .get(getReviewsForHall);
+
 
 /**
  * @swagger
  * /api/v1/reviews/{id}:
- *   patch:
- *     summary: Update a review
- *     description: "Users can only update their own reviews."
+ *   delete:
+ *     summary: Delete a review
+ *     description: "Only super-admins can delete any review."
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
@@ -202,7 +205,6 @@ router.route('/hall/:hallId')
  *         description: Review not found.
  */
 router.route('/:id')
-    .patch(verifyJWT, authorizeRoles('user'), updateReview)
-    .delete(verifyJWT, authorizeRoles('user', 'super-admin'), deleteReview);
+    .delete(verifyJWT, authorizeRoles('super-admin'), deleteReview);
 
 export default router;

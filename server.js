@@ -13,6 +13,7 @@ import { notFound, errorHandler } from './middlewares/error.middleware.js';
 import initializeCronJobs from './cron/licenseManager.js';
 import initializeBookingCronJobs from './cron/bookingManager.js';
 import initializeNotificationCronJobs from './cron/notificationManager.js';
+import { scheduleReviewNotifications } from './cron/reviewNotification.js';
 
 // Route Imports
 import authRoutes from './routes/auth.routes.js';
@@ -55,6 +56,7 @@ const port = process.env.PORT || 5000;
 initializeCronJobs(io);
 initializeBookingCronJobs(io);
 initializeNotificationCronJobs();
+scheduleReviewNotifications(io);
 
 // Middleware
 app.use(cors({

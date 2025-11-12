@@ -13,6 +13,12 @@ const reviewSchema = new mongoose.Schema(
       ref: 'Hall',
       required: true
     },
+    booking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking',
+      required: true,
+      unique: true,
+    },
     rating: {
       type: Number,
       required: true,
@@ -27,8 +33,6 @@ const reviewSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-reviewSchema.index({ hall: 1, user: 1 }, { unique: true });
 
 reviewSchema.statics.calculateAverageRating = async function (hallId) {
   const stats = await this.aggregate([
