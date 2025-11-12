@@ -3,10 +3,8 @@ import { Booking } from '../models/booking.model.js';
 import { User } from '../models/user.model.js';
 import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
-import { EmailService } from '../services/email.service.js';
+import sendEmail from '../services/email.service.js';
 import { reviewNotificationEmail } from '../utils/emailTemplates.js';
-
-const emailService = new EmailService();
 
 const scheduleReviewNotifications = (io) => {
   cron.schedule('0 * * * *', async () => {
@@ -34,7 +32,11 @@ const scheduleReviewNotifications = (io) => {
         );
 
         const emailBody = reviewNotificationEmail(user.fullName, hall.name, reviewLink);
-        await emailService.sendEmail(user.email, `Leave a review for ${hall.name}`, emailBody);
+        await sendEmail({
+          email: user.email,
+          subject: `Leave a review for ${hall.name}`,
+          html: emailBody,
+        });
 
         booking.reviewNotificationSent = true;
         await booking.save();
