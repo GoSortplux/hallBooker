@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
+import { Setting } from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
@@ -287,20 +288,24 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
   }
 
-  if (!paymentStatus || !['pending', 'paid'].includes(paymentStatus)) {
-    throw new ApiError(400, 'A valid paymentStatus ("pending" or "paid") is required.');
+  const paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
+  const validPaymentStatuses = paymentStatusesSetting ? paymentStatusesSetting.value : [];
+
+  if (!paymentStatus || !validPaymentStatuses.includes(paymentStatus)) {
+    throw new ApiError(400, `Invalid payment status provided. Must be one of: ${validPaymentStatuses.join(', ')}`);
   }
 
-  const validPaymentMethods = ['cash', 'pos', 'bank-transfer', 'online'];
+  const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+  const validPaymentMethods = paymentMethodsSetting ? paymentMethodsSetting.value : [];
   let finalPaymentMethod = paymentMethod;
 
   if (paymentStatus === 'paid') {
     if (!finalPaymentMethod || !validPaymentMethods.includes(finalPaymentMethod)) {
       throw new ApiError(400, `A valid payment method is required when payment status is 'paid'. Must be one of: ${validPaymentMethods.join(', ')}`);
     }
-  } else { // paymentStatus is 'pending'
+  } else {
     if (!finalPaymentMethod || !validPaymentMethods.includes(finalPaymentMethod)) {
-      finalPaymentMethod = 'online'; // Default for pending payments or correct invalid ones
+      finalPaymentMethod = 'online';
     }
   }
 

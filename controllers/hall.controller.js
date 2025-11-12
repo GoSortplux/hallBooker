@@ -85,7 +85,7 @@ const createHall = asyncHandler(async (req, res) => {
             throw new ApiError(400, 'One or more facilities are invalid.');
         }
     }
-    
+
     const geocodedData = await geocoder.geocode(location);
 
     const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment };
