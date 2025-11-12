@@ -533,6 +533,7 @@ export {
   generateHallCreationEmail,
   generateLicensePurchaseEmail,
   generatePendingBookingCancelledEmail,
+  generateReviewNotificationEmail,
   generateHallOwnerApplicationEmailForUser,
   generateHallOwnerApplicationEmailForAdmin,
   generateHallOwnerApprovalEmailForUser,
@@ -542,6 +543,23 @@ export {
   generateStaffAdditionEmail,
   generateStaffRemovalEmail
 };
+
+const generateReviewNotificationEmail = (userName, hallName, reviewLink) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Share Your Experience!</h2>
+        <p>Hi ${userName},</p>
+        <p>We hope you enjoyed your event at <strong>${hallName}</strong>. Your feedback is important to us and to the community.</p>
+        <p>Please take a moment to share your experience by leaving a review. Your review will help other users make informed decisions.</p>
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="${reviewLink}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Write a Review</a>
+        </div>
+        <p>Thank you for choosing HallBooker.</p>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
 
 const generateStaffRemovalEmail = (staffName, ownerName) => {
   return `
