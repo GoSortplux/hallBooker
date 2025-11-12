@@ -91,6 +91,8 @@ app.use('/api/v1/subaccounts', subAccountRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/locations', locationRoutes);
 app.use('/api/v1/facilities', facilityRoutes);
+app.use('/api/v1/admin', adminRoutes);
+
 
 // Fallback route to serve index.html
 app.get('*', (req, res) => {
