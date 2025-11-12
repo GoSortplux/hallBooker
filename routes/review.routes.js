@@ -3,7 +3,6 @@ import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 import {
     createReview,
     getReviewsForHall,
-    updateReview,
     deleteReview
 } from '../controllers/review.controller.js';
 
