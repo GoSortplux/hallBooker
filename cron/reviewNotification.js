@@ -4,7 +4,7 @@ import { User } from '../models/user.model.js';
 import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
 import sendEmail from '../services/email.service.js';
-import { reviewNotificationEmail } from '../utils/emailTemplates.js';
+import { generateReviewNotificationEmail } from '../utils/emailTemplates.js';
 
 const scheduleReviewNotifications = (io) => {
   cron.schedule('0 * * * *', async () => {
@@ -31,7 +31,7 @@ const scheduleReviewNotifications = (io) => {
           reviewLink
         );
 
-        const emailBody = reviewNotificationEmail(user.fullName, hall.name, reviewLink);
+        const emailBody = generateReviewNotificationEmail(user.fullName, hall.name, reviewLink);
         await sendEmail({
           email: user.email,
           subject: `Leave a review for ${hall.name}`,
