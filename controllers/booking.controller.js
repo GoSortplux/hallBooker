@@ -283,6 +283,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
 const walkInBooking = asyncHandler(async (req, res) => {
   const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilityNames } = req.body;
+  const io = req.app.get('io');
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
     throw new ApiError(400, 'Walk-in user details (fullName, phone) are required.');
@@ -387,61 +388,66 @@ const walkInBooking = asyncHandler(async (req, res) => {
     const newBookingArr = await Booking.create([bookingData], { session });
     const newBooking = newBookingArr[0];
 
-    const bookingForEmail = {
-      ...newBooking.toObject(),
-      user: {
-        fullName: walkInUserDetails.fullName,
-        email: walkInUserDetails.email,
-      },
-      hall: hall,
-    };
+    await session.commitTransaction();
 
-    if (walkInUserDetails.email) {
-      const pdfReceipt = generatePdfReceipt(bookingForEmail);
-      const emailSubject = paymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
-      const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
+    // Notifications are sent only after the transaction is successful
+    try {
+      const bookingForEmail = {
+        ...newBooking.toObject(),
+        user: {
+          fullName: walkInUserDetails.fullName,
+          email: walkInUserDetails.email,
+        },
+        hall: hall,
+      };
 
-      const io = req.app.get('io');
-      await sendEmail({
-        io,
-        email: walkInUserDetails.email,
-        subject: emailSubject,
-        html: emailHtml,
-        attachments: [{
-          filename: `receipt-${bookingForEmail.bookingId}.pdf`,
-          content: Buffer.from(pdfReceipt),
-          contentType: 'application/pdf'
-        }],
-        notification: {
-            recipient: hall.owner._id.toString(), // Or a generic system user?
-            message: `A walk-in booking for ${hall.name} has been confirmed.`,
-            link: `/bookings/${newBooking._id}`,
-          },
-      });
+      if (walkInUserDetails.email) {
+        const pdfReceipt = generatePdfReceipt(bookingForEmail);
+        const emailSubject = paymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
+        const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
+
+        await sendEmail({
+          io,
+          email: walkInUserDetails.email,
+          subject: emailSubject,
+          html: emailHtml,
+          attachments: [{
+            filename: `receipt-${bookingForEmail.bookingId}.pdf`,
+            content: Buffer.from(pdfReceipt),
+            contentType: 'application/pdf'
+          }],
+          notification: {
+              recipient: hall.owner._id.toString(),
+              message: `A walk-in booking for ${hall.name} has been confirmed.`,
+              link: `/bookings/${newBooking._id}`,
+            },
+        });
+      }
+
+      const admins = await User.find({ role: 'super-admin' });
+      const adminEmails = admins.map(admin => admin.email);
+      const notificationEmails = [hall.owner.email, ...adminEmails];
+
+      await Promise.all(notificationEmails.map(email => {
+          const userIsAdmin = admins.some(admin => admin.email === email);
+          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+          return sendEmail({
+              io,
+              email,
+              subject: 'New Walk-in Booking Notification',
+              html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
+              notification: {
+                  recipient: recipient.toString(),
+                  message: `A new walk-in booking has been made for hall: ${hall.name}.`,
+                  link: `/bookings/${newBooking._id}`,
+              },
+          });
+      }));
+    } catch (emailError) {
+      // Even if email fails, the booking was successful. Log the error but don't crash.
+      console.error('Email notification failed after successful booking:', emailError);
     }
 
-    const admins = await User.find({ role: 'super-admin' });
-    const adminEmails = admins.map(admin => admin.email);
-    const notificationEmails = [hall.owner.email, ...adminEmails];
-
-    await Promise.all(notificationEmails.map(email => {
-        const userIsAdmin = admins.some(admin => admin.email === email);
-        const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
-        sendEmail({
-            io,
-            email,
-            subject: 'New Walk-in Booking Notification',
-            html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
-            notification: {
-                recipient: recipient.toString(),
-                message: `A new walk-in booking has been made for hall: ${hall.name}.`,
-                link: `/bookings/${newBooking._id}`,
-            },
-        })
-    }));
-
-
-    await session.commitTransaction();
     res.status(201).json(new ApiResponse(201, newBooking, `Walk-in booking created with ${paymentStatus} status.`));
   } catch (error) {
     await session.abortTransaction();
