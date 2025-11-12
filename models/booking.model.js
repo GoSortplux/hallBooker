@@ -24,6 +24,10 @@ const bookingSchema = new mongoose.Schema(
         enum: ['confirmed', 'cancelled'],
         default: 'confirmed'
     },
+    reviewNotificationSent: {
+      type: Boolean,
+      default: false,
+    },
     bookingId: {
       type: String,
       required: true,

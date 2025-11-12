@@ -9,9 +9,10 @@ import { createNotification } from '../services/notification.service.js';
 
 const createReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
-  const hallId = req.params.hallId;
+  const { hallId, bookingId } = req.params;
 
   const booking = await Booking.findOne({
+    _id: bookingId,
     user: req.user._id,
     hall: hallId,
     paymentStatus: 'paid',
@@ -19,7 +20,10 @@ const createReview = asyncHandler(async (req, res) => {
   });
   if (!booking) throw new ApiError(403, "You can only review halls you have booked and attended.");
 
-  const review = await Review.create({ rating, comment, hall: hallId, user: req.user._id });
+  const existingReview = await Review.findOne({ booking: bookingId });
+  if (existingReview) throw new ApiError(400, "You have already submitted a review for this booking.");
+
+  const review = await Review.create({ rating, comment, hall: hallId, user: req.user._id, booking: bookingId });
 
   const hall = await Hall.findById(hallId);
   const io = req.app.get('io');
@@ -51,23 +55,11 @@ const getReviewsForHall = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, reviews, 'Reviews fetched successfully.'));
 });
 
-const updateReview = asyncHandler(async (req, res) => {
-    const { rating, comment } = req.body;
-    const review = await Review.findById(req.params.id);
-    if (!review) throw new ApiError(404, "Review not found.");
-    if (review.user.toString() !== req.user._id.toString()) throw new ApiError(403, "You are not authorized to update this review.");
-
-    review.rating = rating || review.rating;
-    review.comment = comment || review.comment;
-    await review.save();
-    res.status(200).json(new ApiResponse(200, review, "Review updated."));
-});
-
 const deleteReview = asyncHandler(async (req, res) => {
     const review = await Review.findById(req.params.id);
     if (!review) throw new ApiError(404, "Review not found.");
 
-    if (review.user.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
+    if (req.user.role !== 'super-admin') {
         throw new ApiError(403, "You are not authorized to delete this review.");
     }
     
@@ -78,6 +70,5 @@ const deleteReview = asyncHandler(async (req, res) => {
 export {
   createReview,
   getReviewsForHall,
-  updateReview,
   deleteReview
 };
