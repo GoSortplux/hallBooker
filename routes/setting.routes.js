@@ -4,7 +4,8 @@ import {
     getCommissionRate,
     setPendingBookingDeletionTime,
     setOnlineBookingReactivationTime,
-    setOnlineBookingDeactivationTime
+    setOnlineBookingDeactivationTime,
+    getBookingOptions
 } from '../controllers/setting.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -198,5 +199,10 @@ router.patch('/online-booking-reactivation-time', verifyJWT, authorizeRoles('sup
  */
 router.patch('/online-booking-deactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingDeactivationTime);
 
+router.route('/booking-options').get(
+  verifyJWT,
+  authorizeRoles('hall-owner', 'staff', 'super-admin'),
+  getBookingOptions
+);
 
 export default router;

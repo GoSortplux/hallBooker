@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Setting from './setting.model.js'; // Import the Setting model
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -10,14 +11,14 @@ const bookingSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ['cash', 'pos', 'bank-transfer', 'online'],
       required: true
+      // Enum is removed to allow for dynamic validation
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'failed'],
       default: 'pending',
       required: true,
+      // Enum is removed to allow for dynamic validation
     },
     status: {
         type: String,
@@ -66,5 +67,22 @@ const bookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Pre-save middleware for dynamic validation
+bookingSchema.pre('save', async function (next) {
+  if (this.isModified('paymentMethod') || this.isModified('paymentStatus')) {
+    const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+    const paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
+
+    if (paymentMethodsSetting && !paymentMethodsSetting.value.includes(this.paymentMethod)) {
+      return next(new Error(`Invalid payment method: ${this.paymentMethod}`));
+    }
+
+    if (paymentStatusesSetting && !paymentStatusesSetting.value.includes(this.paymentStatus)) {
+      return next(new Error(`Invalid payment status: ${this.paymentStatus}`));
+    }
+  }
+  next();
+});
 
 export const Booking = mongoose.model('Booking', bookingSchema);

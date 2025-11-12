@@ -57,14 +57,6 @@ const setPendingBookingDeletionTime = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, setting, 'Pending booking deletion time updated successfully'));
 });
 
-export {
-  setCommissionRate,
-  getCommissionRate,
-  setPendingBookingDeletionTime,
-  setOnlineBookingReactivationTime,
-  setOnlineBookingDeactivationTime,
-};
-
 const setOnlineBookingReactivationTime = asyncHandler(async (req, res) => {
     const { time } = req.body;
 
@@ -106,3 +98,38 @@ const setOnlineBookingDeactivationTime = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, setting, 'Online booking deactivation time updated successfully'));
 });
+
+const getBookingOptions = asyncHandler(async (req, res) => {
+    let paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+    let paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
+
+    if (!paymentMethodsSetting) {
+        paymentMethodsSetting = await Setting.create({
+            key: 'paymentMethods',
+            value: ['cash', 'pos', 'bank-transfer', 'online'],
+        });
+    }
+
+    if (!paymentStatusesSetting) {
+        paymentStatusesSetting = await Setting.create({
+            key: 'paymentStatuses',
+            value: ['pending', 'paid', 'failed'],
+        });
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            paymentMethods: paymentMethodsSetting.value,
+            paymentStatuses: paymentStatusesSetting.value,
+        })
+    );
+});
+
+export {
+  setCommissionRate,
+  getCommissionRate,
+  setPendingBookingDeletionTime,
+  setOnlineBookingReactivationTime,
+  setOnlineBookingDeactivationTime,
+  getBookingOptions,
+};
