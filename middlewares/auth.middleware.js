@@ -18,6 +18,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     }
 
     req.user = user;
+    req.user.activeRole = decodedToken.activeRole;
     next();
   } catch (error) {
     throw new ApiError(401, error?.message || 'Invalid access token');
@@ -25,15 +26,15 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
 });
 
 export const authorizeRoles = (...roles) => {
-  return (req, _, next) => {
-    if (!roles.includes(req.user.role)) {
-      throw new ApiError(403, `Role: ${req.user.role} is not authorized to access this resource`);
-    }
-    next();
-  };
+	return (req, _, next) => {
+		if (!req.user.activeRole || !roles.includes(req.user.activeRole)) {
+			throw new ApiError(403, `Role: ${req.user.activeRole} is not authorized to access this resource`);
+		}
+		next();
+	};
 };
 
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 import mongoose from 'mongoose';
 
 export const isEmailVerified = (req, _, next) => {
@@ -43,25 +44,25 @@ export const isEmailVerified = (req, _, next) => {
   next();
 };
 
-export const authorizeVenueAccess = asyncHandler(async (req, _, next) => {
-  const { id: venueId } = req.params;
+export const authorizeHallAccess = asyncHandler(async (req, _, next) => {
+  const { id: hallId } = req.params;
   const user = req.user;
 
-  if (user.role === 'super-admin') {
+  if (user.role.includes('super-admin')) {
     return next();
   }
 
-  if (!mongoose.Types.ObjectId.isValid(venueId)) {
-    throw new ApiError(400, 'Invalid venue ID');
+  if (!mongoose.Types.ObjectId.isValid(hallId)) {
+    throw new ApiError(400, 'Invalid hall ID');
   }
 
-  const venue = await Venue.findById(venueId);
-  if (!venue) {
-    throw new ApiError(404, 'Venue not found');
+  const hall = await Hall.findById(hallId);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found');
   }
 
-  const isOwner = venue.owner.toString() === user._id.toString();
-  const isStaff = venue.staff.some(staffId => staffId.toString() === user._id.toString());
+  const isOwner = hall.owner.toString() === user._id.toString();
+  const isStaff = hall.staff.some(staffId => staffId.toString() === user._id.toString());
 
   if (isOwner || isStaff) {
     return next();

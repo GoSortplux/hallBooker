@@ -13,44 +13,7 @@ const router = Router();
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     PaymentInitializationResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         message:
- *           type: string
- *         data:
- *           type: object
- *           properties:
- *             authorizationUrl:
- *               type: string
- *               format: uri
- *             accessCode:
- *               type: string
- *             reference:
- *               type: string
- *     PaymentVerificationResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         message:
- *           type: string
- *         data:
- *           type: object
- *           properties:
- *             status:
- *               type: string
- *             booking:
- *               $ref: '#/components/schemas/Booking'
- */
-
-/**
- * @swagger
- * /payments/initialize/{bookingId}:
+ * /api/v1/payments/initialize/{bookingId}:
  *   post:
  *     summary: Initialize a payment for a booking
  *     tags: [Payments]
@@ -62,14 +25,24 @@ const router = Router();
  *         schema:
  *           type: string
  *         required: true
- *         description: The database ID of the booking to pay for.
+ *         description: The custom booking ID (e.g., 'BK123456') to pay for.
+ *         example: "BK123456"
  *     responses:
  *       200:
  *         description: Payment initialized successfully. Returns payment gateway details.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/PaymentInitializationResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Transaction initialized successfully"
  *       404:
  *         description: Booking not found.
  */
@@ -77,54 +50,27 @@ router.route('/initialize/:bookingId').post(verifyJWT, makePayment);
 
 /**
  * @swagger
- * /payments/verify:
+ * /api/v1/payments/verify:
  *   get:
- *     summary: Verify a payment using a query parameter
+ *     summary: Verify a payment
  *     tags: [Payments]
- *     description: This endpoint is typically used for the payment gateway's redirect URL.
+ *     description: "Verifies a payment using a reference string. This endpoint is used as the redirect URL from the payment gateway and can also be called manually. The reference is passed as a query parameter."
  *     parameters:
  *       - in: query
  *         name: paymentReference
  *         schema:
  *           type: string
  *         required: true
- *         description: The payment reference from the payment gateway.
+ *         description: The unique payment reference for the transaction.
+ *         example: "your_payment_reference_here"
  *     responses:
- *       200:
- *         description: Payment verified successfully. The user is redirected to a success page.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PaymentVerificationResponse'
+ *       302:
+ *         description: Payment verified successfully. The user is redirected to a frontend URL (e.g., /bookings or /dashboard/subscription).
  *       400:
- *         description: Payment verification failed.
+ *         description: Payment verification failed or payment was not successful. Redirects to a failure page.
+ *       404:
+ *         description: No matching booking or pending subscription found for the reference.
  */
 router.route('/verify').get(verifyPayment);
-
-/**
- * @swagger
- * /payments/verify/{transactionReference}:
- *   get:
- *     summary: Verify a payment using a path parameter
- *     tags: [Payments]
- *     description: This endpoint can be used to manually re-verify a transaction status.
- *     parameters:
- *       - in: path
- *         name: transactionReference
- *         schema:
- *           type: string
- *         required: true
- *         description: The transaction reference to verify.
- *     responses:
- *       200:
- *         description: Payment status retrieved successfully.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PaymentVerificationResponse'
- *       400:
- *         description: Payment verification failed.
- */
-router.route('/verify/:transactionReference').get(verifyPayment);
 
 export default router;

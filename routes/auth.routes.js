@@ -5,7 +5,8 @@ import {
     forgotPassword, 
     resetPassword,
     verifyEmail,
-    resendVerificationEmail
+    resendVerificationEmail,
+    switchRole
 } from '../controllers/auth.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 
@@ -20,74 +21,7 @@ const router = Router();
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     User:
- *       type: object
- *       required:
- *         - fullName
- *         - email
- *         - password
- *         - role
- *       properties:
- *         _id:
- *           type: string
- *           description: The auto-generated id of the user
- *         fullName:
- *           type: string
- *           description: The full name of the user
- *         email:
- *           type: string
- *           description: The email of the user
- *         phone:
- *           type: string
- *           description: The phone number of the user
- *         whatsappNumber:
- *           type: string
- *           description: The WhatsApp number of the user
- *         role:
- *           type: string
- *           enum: [user, owner, admin, super-admin, staff]
- *           description: The role of the user
- *         isEmailVerified:
- *           type: boolean
- *           description: Whether the user's email is verified
- *         avatar:
- *           type: string
- *           description: URL to the user's avatar
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: The date the user was created
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           description: The date the user was last updated
- *     AuthSuccessResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         data:
- *           type: object
- *           properties:
- *             user:
- *               $ref: '#/components/schemas/User'
- *             accessToken:
- *               type: string
- *     ErrorResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *           example: false
- *         message:
- *           type: string
- */
-
-/**
- * @swagger
- * /auth/register:
+ * /api/v1/auth/register:
  *   post:
  *     summary: Register a new user
  *     tags: [Auth]
@@ -100,44 +34,48 @@ const router = Router();
  *             required:
  *               - fullName
  *               - email
+ *               - phone
  *               - password
  *               - role
  *             properties:
  *               fullName:
  *                 type: string
+ *                 example: "John Doe"
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
+ *               phone:
+ *                 type: string
+ *                 example: "+1234567890"
  *               password:
  *                 type: string
  *                 format: password
+ *                 example: "password123"
  *               role:
- *                 type: string
- *                 enum: [user, owner]
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 enum: ['user', 'hall-owner']
+ *                 description: "Role of the user. Only 'user' or 'hall-owner' can be chosen at registration."
+ *                 example: ['user']
  *     responses:
  *       201:
  *         description: User registered successfully. An email has been sent to verify your account.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Bad request, e.g., missing fields or user already exists
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Bad request, e.g., missing fields.
+ *       409:
+ *         description: User with the provided email or phone number already exists.
  */
 router.post('/register', registerUser);
 
 /**
  * @swagger
- * /auth/login:
+ * /api/v1/auth/login:
  *   post:
  *     summary: Log in a user
  *     tags: [Auth]
@@ -154,28 +92,60 @@ router.post('/register', registerUser);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               password:
  *                 type: string
  *                 format: password
+ *                 example: "password123"
+ *               role:
+ *                 type: string
+ *                 description: "Optional role to log in with. If not provided, the first role in the user's role array will be used."
+ *                 example: "hall-owner"
  *     responses:
  *       200:
  *         description: User logged in successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: "60d0fe4f5311236168a109ca"
+ *                         fullName:
+ *                           type: string
+ *                           example: "John Doe"
+ *                         email:
+ *                           type: string
+ *                           example: "john.doe@example.com"
+ *                         role:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["user"]
+ *                     accessToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 message:
+ *                   type: string
+ *                   example: "User logged In successfully"
  *       401:
- *         description: Unauthorized, e.g., invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Invalid email or password
  */
 router.post('/login', loginUser);
 
 /**
  * @swagger
- * /auth/forgot-password:
+ * /api/v1/auth/forgot-password:
  *   post:
  *     summary: Request a password reset
  *     tags: [Auth]
@@ -191,30 +161,22 @@ router.post('/login', loginUser);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *     responses:
  *       200:
- *         description: Password reset email sent successfully
+ *         description: Password reset email sent successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponse'
  *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: User not found.
  */
 router.post('/forgot-password', forgotPassword);
 
 /**
  * @swagger
- * /auth/reset-password/{token}:
+ * /api/v1/auth/reset-password/{token}:
  *   patch:
  *     summary: Reset user password
  *     tags: [Auth]
@@ -224,7 +186,7 @@ router.post('/forgot-password', forgotPassword);
  *         schema:
  *           type: string
  *         required: true
- *         description: The password reset token
+ *         description: The password reset token received via email.
  *     requestBody:
  *       required: true
  *       content:
@@ -237,30 +199,22 @@ router.post('/forgot-password', forgotPassword);
  *               password:
  *                 type: string
  *                 format: password
+ *                 example: "newStrongPassword123"
  *     responses:
  *       200:
- *         description: Password has been reset successfully
+ *         description: Password has been reset successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Invalid or expired token
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Invalid or expired token.
  */
 router.patch('/reset-password/:token', resetPassword);
 
 /**
  * @swagger
- * /auth/verify-email:
+ * /api/v1/auth/verify-email:
  *   post:
  *     summary: Verify user's email address
  *     tags: [Auth]
@@ -273,59 +227,92 @@ router.patch('/reset-password/:token', resetPassword);
  *           schema:
  *             type: object
  *             required:
- *               - otp
+ *               - token
  *             properties:
- *               otp:
+ *               token:
  *                 type: string
- *                 description: The OTP sent to the user's email
+ *                 description: The verification token (OTP) sent to the user's email.
+ *                 example: "123456"
  *     responses:
  *       200:
- *         description: Email verified successfully
+ *         description: Email verified successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Invalid or expired OTP
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Invalid or expired token, or email already verified.
+ *       404:
+ *         description: User not found.
  */
 router.post('/verify-email', verifyJWT, verifyEmail);
 
 /**
  * @swagger
- * /auth/resend-verify-email:
+ * /api/v1/auth/resend-verify-email:
  *   post:
- *     summary: Resend email verification OTP
+ *     summary: Resend email verification token
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Verification email sent successfully
+ *         description: Verification email sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: Email is already verified.
+ */
+router.post('/resend-verify-email', verifyJWT, resendVerificationEmail);
+
+/**
+ * @swagger
+ * /api/v1/auth/switch-role:
+ *   post:
+ *     summary: Switch user's active role
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 description: "The role to switch to."
+ *                 example: "hall-owner"
+ *     responses:
+ *       200:
+ *         description: Role switched successfully.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *                 message:
  *                   type: string
+ *                   example: "Role switched successfully"
  *       400:
- *         description: Email is already verified
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Role is required.
+ *       403:
+ *         description: User does not have the requested role.
  */
-router.post('/resend-verify-email', verifyJWT, resendVerificationEmail);
+router.post('/switch-role', verifyJWT, switchRole);
 
 export default router;

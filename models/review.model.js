@@ -1,17 +1,23 @@
 import mongoose from 'mongoose';
-import { Venue } from './venue.model.js';
+import { Hall } from './hall.model.js';
 
 const reviewSchema = new mongoose.Schema(
   {
-    user: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User', 
-      required: true 
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
-    venue: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Venue', 
-      required: true 
+    hall: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hall',
+      required: true
+    },
+    booking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking',
+      required: true,
+      unique: true,
     },
     rating: {
       type: Number,
@@ -28,14 +34,12 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-reviewSchema.index({ venue: 1, user: 1 }, { unique: true });
-
-reviewSchema.statics.calculateAverageRating = async function (venueId) {
+reviewSchema.statics.calculateAverageRating = async function (hallId) {
   const stats = await this.aggregate([
-    { $match: { venue: venueId } },
+    { $match: { hall: hallId } },
     {
       $group: {
-        _id: '$venue',
+        _id: '$hall',
         numRatings: { $sum: 1 },
         avgRating: { $avg: '$rating' },
       },
@@ -43,12 +47,12 @@ reviewSchema.statics.calculateAverageRating = async function (venueId) {
   ]);
 
   if (stats.length > 0) {
-    await Venue.findByIdAndUpdate(venueId, {
+    await Hall.findByIdAndUpdate(hallId, {
       averageRating: stats[0].avgRating.toFixed(1),
       numReviews: stats[0].numRatings,
     });
   } else {
-    await Venue.findByIdAndUpdate(venueId, {
+    await Hall.findByIdAndUpdate(hallId, {
       averageRating: 0,
       numReviews: 0,
     });
@@ -56,11 +60,11 @@ reviewSchema.statics.calculateAverageRating = async function (venueId) {
 };
 
 reviewSchema.post('save', function () {
-  this.constructor.calculateAverageRating(this.venue);
+  this.constructor.calculateAverageRating(this.hall);
 });
 
 reviewSchema.post('deleteOne', { document: true, query: false }, function () {
-    this.constructor.calculateAverageRating(this.venue);
+    this.constructor.calculateAverageRating(this.hall);
 });
 
 

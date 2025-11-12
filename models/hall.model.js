@@ -1,10 +1,13 @@
 import mongoose from 'mongoose';
 
-const venueSchema = new mongoose.Schema(
+const hallSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     staff: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     name: { type: String, required: true, trim: true, index: true },
+    country: { type: mongoose.Schema.Types.ObjectId, ref: 'Country', required: true },
+    state: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },
+    localGovernment: { type: mongoose.Schema.Types.ObjectId, ref: 'LocalGovernment', required: true },
     location: { type: String, required: true },
     geoLocation: {
       type: {
@@ -31,7 +34,25 @@ const venueSchema = new mongoose.Schema(
     videos: {
       type: [{ type: String }],
     },
-    facilities: { type: Map, of: String },
+    facilities: [
+      {
+        facility: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Facility',
+          required: true,
+        },
+        available: { type: Boolean, default: true },
+        chargeable: { type: Boolean, default: false },
+        chargeMethod: {
+          type: String,
+          enum: ['free', 'flat', 'per_hour'],
+          default: 'free',
+        },
+        cost: { type: Number, default: 0 },
+      },
+    ],
+    carParkCapacity: { type: Number },
+    hallSize: { type: String },
     pricing: {
       dailyRate: { type: Number },
       hourlyRate: { type: Number },
@@ -52,6 +73,14 @@ const venueSchema = new mongoose.Schema(
       percentage: { type: Number, default: 0 },
       minBookings: { type: Number, default: 0 },
     },
+    views: { type: Number, default: 0 },
+    demoBookings: { type: Number, default: 0 },
+    isOnlineBookingEnabled: { type: Boolean, default: true },
+    onlineBookingEnableTime: { type: Date },
+    onlineBookingDisableTime: { type: Date },
+    directionUrl: {
+      type: String,
+    },
   },
   {
     timestamps: true,
@@ -60,12 +89,4 @@ const venueSchema = new mongoose.Schema(
   }
 );
 
-venueSchema.virtual('directionUrl').get(function () {
-  if (this.geoLocation && this.geoLocation.coordinates) {
-    const [lng, lat] = this.geoLocation.coordinates;
-    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
-  }
-  return null;
-});
-
-export const Venue = mongoose.model('Venue', venueSchema);
+export const Hall = mongoose.model('Hall', hallSchema);

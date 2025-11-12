@@ -1,7 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
-import { Venue } from '../models/venue.model.js';
+import { Hall } from '../models/hall.model.js';
 
 export const checkActiveLicense = asyncHandler(async (req, res, next) => {
   if (req.user.role === 'super-admin') {
@@ -20,9 +20,9 @@ export const checkActiveLicense = asyncHandler(async (req, res, next) => {
       throw new ApiError(403, "Access Denied: Your subscription has expired.");
   }
 
-  const venueCount = await Venue.countDocuments({ owner: req.user._id });
+  const hallCount = await Hall.countDocuments({ owner: req.user._id });
 
-  if (subscription.tier && venueCount >= subscription.tier.maxHalls) {
+  if (subscription.tier && hallCount >= subscription.tier.maxHalls) {
     throw new ApiError(403, `You have reached the maximum number of halls (${subscription.tier.maxHalls}) for your current subscription plan.`);
   }
   

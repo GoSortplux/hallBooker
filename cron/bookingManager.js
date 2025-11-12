@@ -5,7 +5,7 @@ import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generatePendingBookingCancelledEmail } from '../utils/emailTemplates.js';
 
-const deletePendingBookings = async () => {
+const deletePendingBookings = async (io) => {
     console.log('Running pending bookings cleanup job...');
 
     try {
@@ -22,7 +22,7 @@ const deletePendingBookings = async () => {
             paymentStatus: 'pending',
             createdAt: { $lt: cutoffTime },
         }).populate({
-            path: 'venue',
+            path: 'hall',
             populate: {
                 path: 'owner staff',
                 select: 'email fullName',
@@ -48,14 +48,14 @@ const deletePendingBookings = async () => {
                     recipients.set(booking.walkInUserDetails.email, booking.walkInUserDetails.fullName);
                 }
 
-                // Add venue owner
-                if (booking.venue && booking.venue.owner && booking.venue.owner.email) {
-                    recipients.set(booking.venue.owner.email, booking.venue.owner.fullName);
+                // Add hall owner
+                if (booking.hall && booking.hall.owner && booking.hall.owner.email) {
+                    recipients.set(booking.hall.owner.email, booking.hall.owner.fullName);
                 }
 
-                // Add venue staff
-                if (booking.venue && booking.venue.staff) {
-                    booking.venue.staff.forEach(staffMember => {
+                // Add hall staff
+                if (booking.hall && booking.hall.staff) {
+                    booking.hall.staff.forEach(staffMember => {
                         if (staffMember && staffMember.email) {
                             recipients.set(staffMember.email, staffMember.fullName);
                         }
@@ -67,10 +67,28 @@ const deletePendingBookings = async () => {
 
                 // Send email to all unique recipients
                 for (const [email, name] of recipients.entries()) {
+                    let recipientId;
+                    if(booking.user && email === booking.user.email) {
+                        recipientId = booking.user._id;
+                    } else if (booking.hall.owner && email === booking.hall.owner.email) {
+                        recipientId = booking.hall.owner._id;
+                    } else {
+                        const admin = adminUsers.find(admin => admin.email === email);
+                        if (admin) {
+                            recipientId = admin._id;
+                        }
+                    }
+
                     await sendEmail({
+                        io,
                         email,
                         subject: `Booking Cancelled: ${booking.bookingId}`,
                         html: generatePendingBookingCancelledEmail(name, booking),
+                        notification: {
+                            recipient: recipientId.toString(),
+                            message: `Booking #${booking.bookingId} has been cancelled due to non-payment.`,
+                            link: `/bookings/${booking._id}`,
+                        },
                     });
                 }
 
@@ -89,9 +107,9 @@ const deletePendingBookings = async () => {
     }
 };
 
-const initializeBookingCronJobs = () => {
+const initializeBookingCronJobs = (io) => {
     // Schedule the cleanup task to run every minute
-    cron.schedule('* * * * *', deletePendingBookings, {
+    cron.schedule('* * * * *', () => deletePendingBookings(io), {
         timezone: "Africa/Lagos"
     });
 

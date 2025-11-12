@@ -34,14 +34,19 @@ const router = Router();
  *           description: The custom-generated ID for the booking.
  *         user:
  *           $ref: '#/components/schemas/User'
- *         venue:
- *           $ref: '#/components/schemas/Venue'
+ *         hall:
+ *           $ref: '#/components/schemas/Hall'
  *         startTime:
  *           type: string
  *           format: date-time
  *         endTime:
  *           type: string
  *           format: date-time
+ *         selectedFacilityNames:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: An array of names of the selected facilities.
  *         numberOfPeople:
  *           type: number
  *         eventType:
@@ -66,11 +71,11 @@ const router = Router();
  *
  *     BookingInput:
  *       type: object
- *       required: [venue, startTime, endTime]
+ *       required: [hall, startTime, endTime]
  *       properties:
- *         venue:
+ *         hall:
  *           type: string
- *           description: The ID of the venue to book.
+ *           description: The ID of the hall to book.
  *         startTime:
  *           type: string
  *           format: date-time
@@ -84,11 +89,11 @@ const router = Router();
  *
  *     RecurringBookingInput:
  *       type: object
- *       required: [venue, startDate, endDate, dayOfWeek, time]
+ *       required: [hall, startDate, endDate, dayOfWeek, time]
  *       properties:
- *         venue:
+ *         hall:
  *           type: string
- *           description: The ID of the venue to book.
+ *           description: The ID of the hall to book.
  *         startDate:
  *           type: string
  *           format: date
@@ -108,9 +113,9 @@ const router = Router();
  *
  *     WalkInBookingInput:
  *       type: object
- *       required: [venue, startTime, endTime, paymentMethod, walkInUserDetails]
+ *       required: [hall, startTime, endTime, paymentMethod, walkInUserDetails]
  *       properties:
- *         venue:
+ *         hall:
  *           type: string
  *         startTime:
  *           type: string
@@ -118,6 +123,11 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
+ *         selectedFacilityNames:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: An array of names of the selected facilities.
  *         paymentMethod:
  *           type: string
  *           enum: [cash, pos, transfer]
@@ -149,7 +159,7 @@ router.use(verifyJWT);
 
 /**
  * @swagger
- * /bookings/recurring:
+ * /api/v1/bookings/recurring:
  *   post:
  *     summary: Create a recurring booking
  *     tags: [Bookings]
@@ -169,20 +179,24 @@ router.use(verifyJWT);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
  *                 data:
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Recurring booking created successfully"
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
+ *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
 router.route('/recurring').post(createRecurringBooking);
 
 /**
  * @swagger
- * /bookings:
+ * /api/v1/bookings:
  *   post:
  *     summary: Create a new booking
  *     tags: [Bookings]
@@ -201,17 +215,26 @@ router.route('/recurring').post(createRecurringBooking);
  *           application/json:
  *             schema:
  *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking created successfully"
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
+ *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
 router.route('/')
     .post(createBooking);
 
 /**
  * @swagger
- * /bookings/walk-in:
+ * /api/v1/bookings/walk-in:
  *   post:
- *     summary: Create a walk-in booking (Staff/Owner/Admin only)
+ *     summary: Create a walk-in booking (Staff/Hall Owner/Admin only)
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -229,19 +252,23 @@ router.route('/')
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
  *                 data:
  *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Walk-in booking created successfully"
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked (either confirmed or pending payment).
+ *         description: Bad request. A conflict can occur if the time slot is already booked.
  */
 router.route('/walk-in')
-    .post(authorizeRoles('staff', 'owner', 'super-admin'), walkInBooking);
+    .post(authorizeRoles('staff', 'hall-owner', 'super-admin'), walkInBooking);
 
 /**
  * @swagger
- * /bookings/my-bookings:
+ * /api/v1/bookings/my-bookings:
  *   get:
  *     summary: Get all bookings for the current user
  *     tags: [Bookings]
@@ -255,19 +282,23 @@ router.route('/walk-in')
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
  *                 data:
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Bookings retrieved successfully"
  */
 router.route('/my-bookings')
     .get(getMyBookings);
     
 /**
  * @swagger
- * /bookings/search/{bookingId}:
+ * /api/v1/bookings/search/{bookingId}:
  *   get:
  *     summary: Get a booking by its custom booking ID
  *     tags: [Bookings]
@@ -279,6 +310,7 @@ router.route('/my-bookings')
  *         schema:
  *           type: string
  *         required: true
+ *         description: The custom-generated ID of the booking (e.g., 'BK123456').
  *     responses:
  *       200:
  *         description: Booking details.
@@ -287,19 +319,23 @@ router.route('/my-bookings')
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
  *                 data:
  *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking retrieved successfully"
  *       404:
  *         description: Booking not found.
  */
 router.route('/search/:bookingId')
-    .get(authorizeRoles('user', 'owner', 'super-admin'), getBookingByBookingId);
+    .get(authorizeRoles('user', 'hall-owner', 'super-admin'), getBookingByBookingId);
 
 /**
  * @swagger
- * /bookings/{id}:
+ * /api/v1/bookings/{id}:
  *   get:
  *     summary: Get a booking by its database ID
  *     tags: [Bookings]
@@ -310,10 +346,24 @@ router.route('/search/:bookingId')
  *         name: id
  *         schema:
  *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
  *         required: true
  *     responses:
  *       200:
  *         description: Booking details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking retrieved successfully"
  *       404:
  *         description: Booking not found.
  *   patch:
@@ -326,6 +376,7 @@ router.route('/search/:bookingId')
  *         name: id
  *         schema:
  *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
  *         required: true
  *     requestBody:
  *       required: true
@@ -336,9 +387,30 @@ router.route('/search/:bookingId')
  *     responses:
  *       200:
  *         description: Booking updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking updated successfully"
  *       404:
  *         description: Booking not found.
- *   put:
+ */
+router.route('/:id')
+    .get(authorizeRoles('user', 'owner', 'super-admin'), getBookingById)
+    .patch(authorizeRoles('user'), updateBookingDetails);
+
+/**
+ * @swagger
+ * /api/v1/bookings/{id}/cancel:
+ *   patch:
  *     summary: Cancel a booking
  *     tags: [Bookings]
  *     security:
@@ -348,16 +420,28 @@ router.route('/search/:bookingId')
  *         name: id
  *         schema:
  *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
  *         required: true
  *     responses:
  *       200:
  *         description: Booking cancelled successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Booking cancelled successfully"
  *       404:
  *         description: Booking not found.
  */
-router.route('/:id')
-    .get(authorizeRoles('user', 'owner', 'super-admin'), getBookingById)
-    .patch(authorizeRoles('user'), updateBookingDetails)
-    .put(authorizeRoles('user', 'super-admin'), cancelBooking);
+router.route('/:id/cancel')
+    .patch(authorizeRoles('user', 'super-admin'), cancelBooking);
 
 export default router;

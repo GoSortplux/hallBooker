@@ -8,12 +8,66 @@ import {
     updateUserBankAccount,
     addStaff,
     getMyStaff,
-    removeStaff
+    removeStaff,
+    applyHallOwner,
+    createHallOwner,
+    approveHallOwner,
+    promoteToHallOwner,
+    reviewHallOwnerApplication,
+    getMe
 } from '../controllers/user.controller.js';
 
 const router = Router();
 
 /**
+ * @swagger
+ * /users/review-application/{id}:
+ *   patch:
+ *     summary: Review a hall owner application (super-admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The user ID of the applicant
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [approve, reject]
+ *                 description: The action to take on the application
+ *               rejectionReason:
+ *                 type: string
+ *                 description: The reason for rejecting the application (required if action is 'reject')
+ *     responses:
+ *       200:
+ *         description: Application reviewed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
  * @swagger
  * tags:
  *   name: Users
@@ -54,16 +108,21 @@ const router = Router();
  *       required:
  *         - fullName
  *         - email
- *         - password
  *       properties:
  *         fullName:
  *           type: string
  *         email:
  *           type: string
  *           format: email
+ *         phone:
+ *           type: string
  *         password:
  *           type: string
  *           format: password
+ *         hallIds:
+ *           type: array
+ *           items:
+ *             type: string
  */
 
 /**
@@ -95,7 +154,7 @@ const router = Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/bank-account')
-    .patch(verifyJWT, authorizeRoles('owner', 'user'), updateUserBankAccount);
+    .patch(verifyJWT, authorizeRoles('hall-owner', 'user'), updateUserBankAccount);
 
 /**
  * @swagger
@@ -126,7 +185,7 @@ router.route('/bank-account')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/add-staff')
-    .post(verifyJWT, authorizeRoles('owner'), addStaff);
+    .post(verifyJWT, authorizeRoles('hall-owner'), addStaff);
 
 /**
  * @swagger
@@ -158,7 +217,7 @@ router.route('/add-staff')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/my-staff')
-    .get(verifyJWT, authorizeRoles('owner'), getMyStaff);
+    .get(verifyJWT, authorizeRoles('hall-owner'), getMyStaff);
 
 /**
  * @swagger
@@ -181,12 +240,7 @@ router.route('/my-staff')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: Staff not found
  *         content:
@@ -195,10 +249,72 @@ router.route('/my-staff')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/remove-staff/:staffId')
-    .delete(verifyJWT, authorizeRoles('owner'), removeStaff);
+    .delete(verifyJWT, authorizeRoles('hall-owner'), removeStaff);
 
+/**
+ * @swagger
+ * /users/apply-hall-owner:
+ *   post:
+ *     summary: Apply to become a hall owner
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hasReadTermsOfService:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Application submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.route('/apply-hall-owner')
+    .post(verifyJWT, authorizeRoles('user'), applyHallOwner);
+
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Get the currently logged-in user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The user object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.route('/me').get(verifyJWT, getMe);
 // Admin routes
 router.use(verifyJWT, authorizeRoles('super-admin'));
+
+router.route('/create-hall-owner').post(createHallOwner);
+router.route('/review-application/:id').patch(reviewHallOwnerApplication);
+router.route('/promote-to-hall-owner/:id').patch(promoteToHallOwner);
 
 /**
  * @swagger
@@ -303,12 +419,7 @@ router.route('/')
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: User not found
  *         content:

@@ -11,9 +11,22 @@ const userSchema = new mongoose.Schema(
     whatsappNumber: { type: String },
     password: { type: String, required: [true, 'Password is required'], select: false },
     role: {
+      type: [String],
+      enum: ['user', 'hall-owner', 'staff', 'super-admin'],
+      default: ['user'],
+    },
+    status: {
       type: String,
-      enum: ['user', 'venue-owner', 'staff', 'super-admin'],
-      default: 'user',
+      enum: ['not-applied', 'pending', 'approved', 'rejected'],
+      default: 'not-applied',
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+    },
+    hasReadTermsOfService: {
+      type: Boolean,
+      default: false,
     },
     bankName: {
       type: String,
@@ -27,10 +40,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    owner: {
+    owners: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-    },
+    }],
     refreshToken: { type: String },
     passwordResetToken: String,
     passwordResetExpires: Date,
@@ -54,9 +67,15 @@ userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-userSchema.methods.generateAccessToken = function () {
+userSchema.methods.generateAccessToken = function (activeRole) {
+  const payload = {
+    _id: this._id,
+    email: this.email,
+    role: this.role,
+    activeRole: activeRole || this.role[0],
+  };
   return jwt.sign(
-    { _id: this._id, email: this.email, role: this.role },
+    payload,
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );

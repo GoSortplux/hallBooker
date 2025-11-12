@@ -81,6 +81,23 @@ const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
 const generatePaymentConfirmationEmail = (booking) => {
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
 
+    let facilitiesHtml = '';
+    if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
+        const facilityRows = booking.selectedFacilities.map(f => `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${f.cost.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        facilitiesHtml = `
+            <tr style="background-color: #f2f2f2;">
+                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Facilities</th>
+            </tr>
+            ${facilityRows}
+        `;
+    }
+
     const startDate = new Date(booking.startTime);
     const endDate = new Date(booking.endTime);
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -119,16 +136,16 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Location:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.location}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Directions:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.venue.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.hall.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
@@ -150,6 +167,7 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
                 </tr>
+                ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
@@ -167,6 +185,23 @@ const generatePaymentConfirmationEmail = (booking) => {
 
 const generateBookingConfirmationEmail = (booking) => {
     const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+
+    let facilitiesHtml = '';
+    if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
+        const facilityRows = booking.selectedFacilities.map(f => `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${f.cost.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        facilitiesHtml = `
+            <tr style="background-color: #f2f2f2;">
+                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Facilities</th>
+            </tr>
+            ${facilityRows}
+        `;
+    }
 
     const startDate = new Date(booking.startTime);
     const endDate = new Date(booking.endTime);
@@ -205,16 +240,16 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Location:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.location}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.location}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Directions:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.venue.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.hall.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
@@ -236,6 +271,7 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
                 </tr>
+                ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
@@ -282,8 +318,8 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">New Booking Notification</h2>
-        <p>Hi ${booking.venue.owner.fullName},</p>
-        <p>You have a new booking for your venue, ${booking.venue.name}. Here are the details:</p>
+        <p>Hi ${booking.hall.owner.fullName},</p>
+        <p>You have a new booking for your hall, ${booking.hall.name}. Here are the details:</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <thead>
@@ -297,8 +333,8 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
@@ -348,18 +384,18 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
   `;
 }
 
-const generateVenueCreationEmail = (name, venueName, venueLocation) => {
+const generateHallCreationEmail = (name, hallName, hallLocation) => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #333;">New Venue Created!</h2>
+        <h2 style="color: #333;">New Hall Created!</h2>
         <p>Hi ${name},</p>
-        <p>Congratulations! Your new venue has been successfully created on HallBooker.</p>
-        <h3>Venue Details:</h3>
+        <p>Congratulations! Your new hall has been successfully created on HallBooker.</p>
+        <h3>Hall Details:</h3>
         <ul>
-            <li><strong>Name:</strong> ${venueName}</li>
-            <li><strong>Location:</strong> ${venueLocation}</li>
+            <li><strong>Name:</strong> ${hallName}</li>
+            <li><strong>Location:</strong> ${hallLocation}</li>
         </ul>
-        <p>You can now manage your venue from your dashboard.</p>
+        <p>You can now manage your hall from your dashboard.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
@@ -440,7 +476,7 @@ const generateSubscriptionExpiredEmail = (userName, tierName) => {
         <h2 style="color: #d9534f;">Your Subscription Has Expired</h2>
         <p>Hi ${userName},</p>
         <p>This is to notify you that your subscription for the <strong>${tierName}</strong> plan has expired.</p>
-        <p>As a result, your venues have been deactivated and are no longer visible for booking. To continue using our services and reactivate your venues, please log in to your dashboard and purchase a new subscription.</p>
+        <p>As a result, your halls have been deactivated and are no longer visible for booking. To continue using our services and reactivate your halls, please log in to your dashboard and purchase a new subscription.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
@@ -466,8 +502,8 @@ const generatePendingBookingCancelledEmail = (recipientName, booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Venue:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.venue.name}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
@@ -494,7 +530,150 @@ export {
   generatePaymentConfirmationEmail,
   generateBookingConfirmationEmail,
   generateNewBookingNotificationEmailForOwner,
-  generateVenueCreationEmail,
+  generateHallCreationEmail,
   generateLicensePurchaseEmail,
   generatePendingBookingCancelledEmail,
+  generateReviewNotificationEmail,
+  generateHallOwnerApplicationEmailForUser,
+  generateHallOwnerApplicationEmailForAdmin,
+  generateHallOwnerApprovalEmailForUser,
+  generateHallOwnerCreationEmailForUser,
+  generatePromotionToHallOwnerEmailForUser,
+  generateHallOwnerRejectionEmailForUser,
+  generateStaffAdditionEmail,
+  generateStaffRemovalEmail
+};
+
+const generateReviewNotificationEmail = (userName, hallName, reviewLink) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Share Your Experience!</h2>
+        <p>Hi ${userName},</p>
+        <p>We hope you enjoyed your event at <strong>${hallName}</strong>. Your feedback is important to us and to the community.</p>
+        <p>Please take a moment to share your experience by leaving a review. Your review will help other users make informed decisions.</p>
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="${reviewLink}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Write a Review</a>
+        </div>
+        <p>Thank you for choosing HallBooker.</p>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
+
+const generateStaffRemovalEmail = (staffName, ownerName) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">You have been removed as a staff member.</h2>
+      <p>Hi ${staffName},</p>
+      <p>You have been removed as a staff member by ${ownerName}.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateStaffAdditionEmail = (staffName, ownerName, halls) => {
+  const hallsHtml = halls.map(hall => `<li><strong>${hall.name}</strong> at ${hall.location}</li>`).join('');
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">You have been added as a staff member!</h2>
+      <p>Hi ${staffName},</p>
+      <p>You have been added as a staff member by ${ownerName}. You have been assigned to the following halls:</p>
+      <ul>
+        ${hallsHtml}
+      </ul>
+      <p>Log in to your dashboard to see the halls you have been assigned to.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerRejectionEmailForUser = (name, reason) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #d9534f;">Application Status Update</h2>
+      <p>Hi ${name},</p>
+      <p>Thank you for your interest in becoming a hall owner. After careful review, we regret to inform you that your application has been rejected.</p>
+      <p><strong>Reason for rejection:</strong></p>
+      <p style="padding: 10px; border-left: 4px solid #d9534f; background-color: #f9f9f9;">
+        ${reason}
+      </p>
+      <p>If you have any questions, please contact our support team.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerApplicationEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Application Received</h2>
+      <p>Hi ${name},</p>
+      <p>We have received your application to become a hall owner. Our team will review your application and get back to you shortly.</p>
+      <p>Thank you for your interest in HallBooker.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerApplicationEmailForAdmin = (userName, userEmail) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">New Hall Owner Application</h2>
+      <p>A new application to become a hall owner has been submitted.</p>
+      <h3>User Details:</h3>
+      <ul>
+        <li><strong>Name:</strong> ${userName}</li>
+        <li><strong>Email:</strong> ${userEmail}</li>
+      </ul>
+      <p>Please review the application in the admin dashboard.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerApprovalEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #4CAF50;">Application Approved!</h2>
+      <p>Hi ${name},</p>
+      <p>Congratulations! Your application to become a hall owner has been approved. You can now log in to your dashboard and start managing your halls.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateHallOwnerCreationEmailForUser = (name, password) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Welcome to HallBooker!</h2>
+      <p>Hi ${name},</p>
+      <p>A hall owner account has been created for you on HallBooker. You can log in with the following temporary password:</p>
+      <p style="font-size: 24px; font-weight: bold; color: #444; letter-spacing: 2px; border: 1px solid #ddd; padding: 10px; display: inline-block;">
+        ${password}
+      </p>
+      <p>We recommend changing your password after your first login.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generatePromotionToHallOwnerEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #4CAF50;">You have been promoted!</h2>
+      <p>Hi ${name},</p>
+      <p>Congratulations! You have been promoted to a hall owner. You can now log in to your dashboard and start managing your halls.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
 };

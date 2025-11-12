@@ -4,18 +4,18 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Venue Booking API",
+      title: "Hall Booking API",
       version: "1.0.0",
       description:
-        "API documentation for the Venue Booking application. This API allows users to find, book, and manage venues.",
+        "API documentation for the Hall Booking application. This API allows users to find, book, and manage halls.",
     },
     servers: [
       {
-        url: "http://localhost:8000",
+        url: "http://localhost:8000/api/v1",
         description: "Development server",
       },
       {
-        url: "https://hallbooker.onrender.com/",
+        url: "https://hallbooker.onrender.com/api/v1",
         description: "Production server",
       },
     ],
