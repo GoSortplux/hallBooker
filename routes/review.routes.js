@@ -130,47 +130,7 @@ router.route('/hall/:hallId')
  * /api/v1/reviews/{id}:
  *   delete:
  *     summary: Delete a review
- *     description: "Only super-admins can delete any review."
- *     tags: [Reviews]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: The ID of the review to update.
- *         example: "60d0fe4f5311236168a109d0"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ReviewInput'
- *     responses:
- *       200:
- *         description: Review updated successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 statusCode:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   $ref: '#/components/schemas/Review'
- *                 message:
- *                   type: string
- *                   example: "Review updated successfully"
- *       403:
- *         description: You are not authorized to update this review.
- *       404:
- *         description: Review not found.
- *   delete:
- *     summary: Delete a review
- *     description: "Users can delete their own reviews. Super-admins can delete any review."
+ *     description: "Super-admins can delete any review."
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
