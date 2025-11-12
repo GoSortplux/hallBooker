@@ -199,6 +199,47 @@ router.patch('/online-booking-reactivation-time', verifyJWT, authorizeRoles('sup
  */
 router.patch('/online-booking-deactivation-time', verifyJWT, authorizeRoles('super-admin'), setOnlineBookingDeactivationTime);
 
+/**
+ * @swagger
+ * /api/v1/settings/booking-options:
+ *   get:
+ *     summary: Get available booking options
+ *     description: Fetches the lists of available payment methods and payment statuses for creating or updating a booking. Accessible by hall owners, staff, and super-admins.
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved booking options.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     paymentMethods:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["cash", "pos", "bank-transfer", "online"]
+ *                     paymentStatuses:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["pending", "paid", "failed"]
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully retrieved booking options"
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User does not have the required role.
+ */
 router.route('/booking-options').get(
   verifyJWT,
   authorizeRoles('hall-owner', 'staff', 'super-admin'),
