@@ -5,7 +5,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
-import { Setting } from '../models/setting.model.js';
+import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
