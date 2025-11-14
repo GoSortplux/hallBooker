@@ -18,6 +18,7 @@ import {
 
 const router = Router();
 
+/**
  * @swagger
  * tags:
  *   name: Users
