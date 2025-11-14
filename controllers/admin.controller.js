@@ -3,6 +3,7 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { Booking } from '../models/booking.model.js';
+
 import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
 
@@ -192,6 +193,7 @@ const getBookingsForHall = asyncHandler(async (req, res) => {
   if (!hall) {
     throw new ApiError(404, 'Hall not found');
   }
+
 
   const {
     page = 1,
