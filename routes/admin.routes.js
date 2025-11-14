@@ -7,11 +7,102 @@ import {
   removePaymentMethod,
   addPaymentStatus,
   removePaymentStatus,
+  getAllBookings,
+  getBookingsForHall,
 } from '../controllers/admin.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Booking:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "60d0fe4f5311236168a109cb"
+ *         user:
+ *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
+ *         hall:
+ *           type: string
+ *           example: "60d0fe4f5311236168a109cc"
+ *         eventDetails:
+ *           type: string
+ *           example: "Wedding reception"
+ *         startTime:
+ *           type: string
+ *           format: date-time
+ *           example: "2024-12-25T18:00:00.000Z"
+ *         endTime:
+ *           type: string
+ *           format: date-time
+ *           example: "2024-12-25T23:00:00.000Z"
+ *         totalPrice:
+ *           type: number
+ *           example: 5000
+ *         paymentMethod:
+ *           type: string
+ *           example: "online"
+ *         paymentStatus:
+ *           type: string
+ *           example: "paid"
+ *         status:
+ *           type: string
+ *           example: "confirmed"
+ *         bookingId:
+ *           type: string
+ *           example: "BK12345678"
+ *         bookedBy:
+ *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
+ *         bookingType:
+ *           type: string
+ *           example: "online"
+ *         walkInUserDetails:
+ *           type: object
+ *           properties:
+ *             fullName:
+ *               type: string
+ *               example: "John Doe"
+ *             email:
+ *               type: string
+ *               example: "john.doe@example.com"
+ *             phone:
+ *               type: string
+ *               example: "+1234567890"
+ *         isRecurring:
+ *           type: boolean
+ *           example: false
+ *         recurringBookingId:
+ *           type: string
+ *           example: "RB12345678"
+ *         selectedFacilities:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Projector"
+ *               cost:
+ *                 type: number
+ *                 example: 100
+ *               chargeMethod:
+ *                 type: string
+ *                 example: "per_hour"
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2024-12-25T10:00:00.000Z"
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2024-12-25T10:00:00.000Z"
+ */
 /**
  * @swagger
  * tags:
@@ -365,5 +456,168 @@ router.route('/payment-statuses').post(verifyJWT, authorizeRoles('super-admin'),
  *         description: Forbidden - User does not have the required 'super-admin' role.
  */
 router.route('/payment-statuses/remove').post(verifyJWT, authorizeRoles('super-admin'), removePaymentStatus);
+
+/**
+ * @swagger
+ * /api/v1/admin/bookings:
+ *   get:
+ *     summary: Retrieve all bookings
+ *     description: Fetches a paginated list of all bookings across the platform. Restricted to super-admins.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: The page number to retrieve.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: The number of bookings to retrieve per page.
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: The field to sort by.
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: The sort order.
+ *       - in: query
+ *         name: hall
+ *         schema:
+ *           type: string
+ *         description: The ID of the hall to filter by.
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: The status to filter by.
+ *     responses:
+ *       200:
+ *         description: A list of bookings.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     bookings:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Booking'
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 1
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                 message:
+ *                   type: string
+ *                   example: "Bookings retrieved successfully"
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User does not have the required 'super-admin' role.
+ */
+router
+  .route('/bookings')
+  .get(verifyJWT, authorizeRoles('super-admin'), getAllBookings);
+
+/**
+ * @swagger
+ * /api/v1/admin/halls/{hallId}/bookings:
+ *   get:
+ *     summary: Retrieve bookings for a specific hall
+ *     description: Fetches a paginated list of all bookings for a specific hall. Restricted to super-admins.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: hallId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the hall.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: The page number to retrieve.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: The number of bookings to retrieve per page.
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: The field to sort by.
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: The sort order.
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: The status to filter by.
+ *     responses:
+ *       200:
+ *         description: A list of bookings for the specified hall.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     bookings:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Booking'
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 1
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                 message:
+ *                   type: string
+ *                   example: "Bookings for hall retrieved successfully"
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User does not have the required 'super-admin' role.
+ */
+router
+    .route('/halls/:hallId/bookings')
+    .get(verifyJWT, authorizeRoles('super-admin'), getBookingsForHall);
 
 export default router;
