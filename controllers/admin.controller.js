@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
+import { Booking } from '../models/booking.model.js';
 import { createNotification } from '../services/notification.service.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
@@ -179,4 +180,89 @@ export {
   removePaymentMethod,
   addPaymentStatus,
   removePaymentStatus,
+  getAllBookings,
+  getBookingsForHall,
 };
+
+const getBookingsForHall = asyncHandler(async (req, res) => {
+  const { hallId } = req.params;
+  const {
+    page = 1,
+    limit = 100,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    status,
+  } = req.query;
+
+  const query = { hall: hallId };
+  if (status) {
+    query.status = status;
+  }
+
+  const sort = {};
+  if (sortBy) {
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  }
+
+  const bookings = await Booking.find(query)
+    .sort(sort)
+    .skip((page - 1) * limit)
+    .limit(parseInt(limit));
+
+  const totalBookings = await Booking.countDocuments(query);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        bookings,
+        totalPages: Math.ceil(totalBookings / limit),
+        currentPage: parseInt(page),
+      },
+      'Bookings for hall retrieved successfully'
+    )
+  );
+});
+
+const getAllBookings = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 100,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    hall,
+    status,
+  } = req.query;
+
+  const query = {};
+  if (hall) {
+    query.hall = hall;
+  }
+  if (status) {
+    query.status = status;
+  }
+
+  const sort = {};
+  if (sortBy) {
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  }
+
+  const bookings = await Booking.find(query)
+    .sort(sort)
+    .skip((page - 1) * limit)
+    .limit(parseInt(limit));
+
+  const totalBookings = await Booking.countDocuments(query);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        bookings,
+        totalPages: Math.ceil(totalBookings / limit),
+        currentPage: parseInt(page),
+      },
+      'Bookings retrieved successfully'
+    )
+  );
+});
