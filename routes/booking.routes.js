@@ -71,7 +71,7 @@ const router = Router();
  *
  *     BookingInput:
  *       type: object
- *       required: [hall, startTime, endTime]
+ *       required: [hall, startTIdime, endTime]
  *       properties:
  *         hall:
  *           type: string
