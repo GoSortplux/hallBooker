@@ -3,6 +3,8 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { Booking } from '../models/booking.model.js';
+
+import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
@@ -186,6 +188,13 @@ export {
 
 const getBookingsForHall = asyncHandler(async (req, res) => {
   const { hallId } = req.params;
+
+  const hall = await Hall.findById(hallId);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found');
+  }
+
+
   const {
     page = 1,
     limit = 100,
