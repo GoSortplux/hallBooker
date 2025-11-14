@@ -5,8 +5,8 @@ import { User } from '../models/user.model.js';
 import { createNotification } from '../services/notification.service.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
-  const users = await User.find({ role: 'hall-owner', status: 'pending' }).select(
-    'fullName email phone status'
+  const users = await User.find({ 'hallOwnerApplication.status': 'pending' }).select(
+    'fullName email phone hallOwnerApplication'
   );
 
   if (!users || users.length === 0) {
@@ -33,7 +33,10 @@ const approveHallOwnerApplication = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'User not found');
   }
 
-  user.status = 'approved';
+  user.hallOwnerApplication.status = 'approved';
+  if (!user.role.includes('hall-owner')) {
+    user.role.push('hall-owner');
+  }
   await user.save();
 
   // Notify hall owner
@@ -60,6 +63,7 @@ const approveHallOwnerApplication = asyncHandler(async (req, res) => {
 
 const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
     const { userId } = req.params;
+    const { rejectionReason } = req.body;
     const io = req.app.get('io');
 
     const user = await User.findById(userId);
@@ -67,7 +71,8 @@ const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
       throw new ApiError(404, 'User not found');
     }
 
-    user.status = 'rejected';
+    user.hallOwnerApplication.status = 'rejected';
+    user.hallOwnerApplication.rejectionReason = rejectionReason;
     await user.save();
 
     // Notify hall owner

@@ -15,14 +15,16 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'hall-owner', 'staff', 'super-admin'],
       default: ['user'],
     },
-    status: {
-      type: String,
-      enum: ['not-applied', 'pending', 'approved', 'rejected'],
-      default: 'not-applied',
-    },
-    rejectionReason: {
-      type: String,
-      trim: true,
+    hallOwnerApplication: {
+      status: {
+        type: String,
+        enum: ['not-applied', 'pending', 'approved', 'rejected'],
+        default: 'not-applied',
+      },
+      rejectionReason: {
+        type: String,
+        trim: true,
+      },
     },
     hasReadTermsOfService: {
       type: Boolean,

@@ -23,69 +23,6 @@ import {
     generateStaffRemovalEmail
 } from '../utils/emailTemplates.js';
 
-const reviewHallOwnerApplication = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { action, rejectionReason } = req.body;
-
-    if (!['approve', 'reject'].includes(action)) {
-        throw new ApiError(400, 'Invalid action specified. Must be "approve" or "reject".');
-    }
-
-    const user = await User.findById(id);
-
-    if (!user) {
-        throw new ApiError(404, 'User not found');
-    }
-
-    if (user.status !== 'pending') {
-        throw new ApiError(400, 'This application is not pending review.');
-    }
-
-    if (action === 'approve') {
-        user.status = 'approved';
-        user.role = 'hall-owner';
-        user.rejectionReason = undefined;
-        await user.save({ validateBeforeSave: false });
-
-        const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName);
-        const io = req.app.get('io');
-        await sendEmail({
-            io,
-            email: user.email,
-            subject: 'Application Approved!',
-            html: userEmailHtml,
-            notification: {
-                recipient: user._id.toString(),
-                message: 'Your application to become a hall owner has been approved.',
-            },
-        });
-
-        res.status(200).json(new ApiResponse(200, {}, "User's application has been approved."));
-    } else if (action === 'reject') {
-        if (!rejectionReason) {
-            throw new ApiError(400, 'Rejection reason is required when rejecting an application.');
-        }
-        user.status = 'rejected';
-        user.rejectionReason = rejectionReason;
-        await user.save({ validateBeforeSave: false });
-
-        const userEmailHtml = generateHallOwnerRejectionEmailForUser(user.fullName, rejectionReason);
-        const io = req.app.get('io');
-        await sendEmail({
-            io,
-            email: user.email,
-            subject: 'Application Status Update',
-            html: userEmailHtml,
-            notification: {
-                recipient: user._id.toString(),
-                message: 'Your application to become a hall owner has been rejected.',
-            },
-        });
-
-        res.status(200).json(new ApiResponse(200, {}, "User's application has been rejected."));
-    }
-});
-
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({});
     res.status(200).json(new ApiResponse(200, users, "Users fetched successfully."));
@@ -295,19 +232,19 @@ const applyHallOwner = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const user = await User.findById(userId);
 
-    if (user.status === 'pending') {
+    if (user.hallOwnerApplication.status === 'pending') {
         throw new ApiError(400, 'You have already applied to be a hall owner. Your application is pending review.');
     }
 
-    if (user.status === 'approved') {
+    if (user.hallOwnerApplication.status === 'approved') {
         throw new ApiError(400, 'Your application has already been approved.');
     }
 
-    if (user.status === 'rejected') {
-        user.rejectionReason = undefined;
+    if (user.hallOwnerApplication.status === 'rejected') {
+        user.hallOwnerApplication.rejectionReason = undefined;
     }
 
-    user.status = 'pending';
+    user.hallOwnerApplication.status = 'pending';
     user.hasReadTermsOfService = true;
     await user.save({ validateBeforeSave: false });
 
@@ -364,7 +301,6 @@ export {
     createHallOwner,
     approveHallOwner,
     promoteToHallOwner,
-    reviewHallOwnerApplication,
     getMe
 };
 
