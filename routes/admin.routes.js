@@ -21,7 +21,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/v1/admin:
+ * /api/v1/admin/hall-owner-applications:
  *   get:
  *     summary: Retrieve a list of pending hall owner applications
  *     description: Fetches a list of users who have applied for the 'hall-owner' role and are awaiting approval. This endpoint is restricted to super-admins.
@@ -56,9 +56,12 @@ const router = Router();
  *                       phone:
  *                         type: string
  *                         example: "+1234567890"
- *                       status:
- *                         type: string
- *                         example: "pending"
+ *                       hallOwnerApplication:
+ *                         type: object
+ *                         properties:
+ *                           status:
+ *                             type: string
+ *                             example: "pending"
  *                 message:
  *                   type: string
  *                   example: "Pending hall owner applications retrieved successfully"
@@ -70,20 +73,12 @@ const router = Router();
  *         description: No pending hall owner applications found.
  */
 router
-  .route('/')
+  .route('/hall-owner-applications')
   .get(verifyJWT, authorizeRoles('super-admin'), getHallOwnerApplications);
-
-router
-  .route('/:userId/approve')
-  .patch(verifyJWT, authorizeRoles('super-admin'), approveHallOwnerApplication);
-
-router
-    .route('/:userId/reject')
-    .patch(verifyJWT, authorizeRoles('super-admin'), rejectHallOwnerApplication)
 
 /**
  * @swagger
- * /api/v1/admin/{userId}/approve:
+ * /api/v1/admin/hall-owner-applications/{userId}/approve:
  *   patch:
  *     summary: Approve a hall owner application
  *     description: Approves a pending application for a user to become a 'hall-owner'. This action changes the user's status to 'approved'. Restricted to super-admins.
@@ -110,13 +105,6 @@ router
  *                   example: 200
  *                 data:
  *                   type: object
- *                   properties:
- *                     _id:
- *                       type: string
- *                       example: "60d0fe4f5311236168a109ca"
- *                     status:
- *                       type: string
- *                       example: "approved"
  *                 message:
  *                   type: string
  *                   example: "Hall owner application approved successfully"
@@ -126,8 +114,14 @@ router
  *         description: Forbidden - User does not have the required 'super-admin' role.
  *       404:
  *         description: User not found.
- *
- * /api/v1/admin/{userId}/reject:
+ */
+router
+  .route('/hall-owner-applications/:userId/approve')
+  .patch(verifyJWT, authorizeRoles('super-admin'), approveHallOwnerApplication);
+
+/**
+ * @swagger
+ * /api/v1/admin/hall-owner-applications/{userId}/reject:
  *   patch:
  *     summary: Reject a hall owner application
  *     description: Rejects a pending application for a user to become a 'hall-owner'. This action changes the user's status to 'rejected'. Restricted to super-admins.
@@ -141,6 +135,18 @@ router
  *         schema:
  *           type: string
  *         description: The ID of the user whose application is being rejected.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rejectionReason
+ *             properties:
+ *               rejectionReason:
+ *                 type: string
+ *                 example: "Incomplete application."
  *     responses:
  *       200:
  *         description: Application rejected successfully.
@@ -154,13 +160,6 @@ router
  *                   example: 200
  *                 data:
  *                   type: object
- *                   properties:
- *                     _id:
- *                       type: string
- *                       example: "60d0fe4f5311236168a109ca"
- *                     status:
- *                       type: string
- *                       example: "rejected"
  *                 message:
  *                   type: string
  *                   example: "Hall owner application rejected successfully"
@@ -171,6 +170,9 @@ router
  *       404:
  *         description: User not found.
  */
+router
+    .route('/hall-owner-applications/:userId/reject')
+    .patch(verifyJWT, authorizeRoles('super-admin'), rejectHallOwnerApplication)
 
 /**
  * @swagger
