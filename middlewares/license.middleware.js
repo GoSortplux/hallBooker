@@ -4,7 +4,7 @@ import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { Hall } from '../models/hall.model.js';
 
 export const checkActiveLicense = asyncHandler(async (req, res, next) => {
-  if (req.user.role === 'super-admin') {
+  if (req.user.role.includes('super-admin')) {
     return next();
   }
 
