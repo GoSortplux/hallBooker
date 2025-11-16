@@ -89,8 +89,8 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const redirectUrl = `${baseUrl}/api/v1/payments/verify`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
 
     const paymentData = {
         amount: tier.price,
@@ -151,8 +151,8 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const redirectUrl = `${baseUrl}/api/v1/payments/verify`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
 
     const paymentData = {
         amount: newTier.price,

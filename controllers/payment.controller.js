@@ -41,9 +41,8 @@ const makePayment = asyncHandler(async (req, res) => {
         throw new ApiError(500, 'MONNIFY_CONTRACT_CODE is not defined in environment variables.');
     }
 
-    const redirectUrl = process.env.FRONTEND_URL
-        ? `${process.env.FRONTEND_URL}/bookings`
-        : `${req.protocol}://${req.get('host')}/api/v1/payments/verify`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
 
     const uniquePaymentReference = `${bookingId}_${Date.now()}`;
 
@@ -125,7 +124,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
         if (paymentStatus === 'PAID') {
             if (booking.paymentStatus === 'paid') {
                 console.log(`Payment for booking ${bookingIdFromRef} has already been processed.`);
-                return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
+                return res.status(200).json(new ApiResponse(200, { status: 'success', type: 'booking' }, 'Payment already processed.'));
             }
 
             booking.paymentStatus = 'paid';
@@ -169,11 +168,10 @@ const verifyPayment = asyncHandler(async (req, res) => {
                     },
                 });
             }
-
-            return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
+            return res.status(200).json(new ApiResponse(200, { status: 'success', type: 'booking' }, 'Payment successful.'));
         } else {
             // Handle other statuses for booking payment
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed?type=booking&status=${paymentStatus}`);
+            return res.status(200).json(new ApiResponse(200, { status: 'failed', type: 'booking', monnifyStatus: paymentStatus }, 'Payment failed.'));
         }
     }
 
@@ -237,7 +235,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
             } catch (emailError) {
                 console.error('Failed to send subscription confirmation emails:', emailError);
             }
-            return res.redirect(`${frontendUrl}/dashboard/subscription`);
+            return res.status(200).json(new ApiResponse(200, { status: 'success', type: 'subscription' }, 'Payment successful.'));
 
         case 'FAILED':
             subscription.status = 'failed';
@@ -259,7 +257,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                     notification: { recipient: admin._id.toString(), message: `Payment by ${subscription.owner.fullName} for ${subscription.tier.name} failed.` },
                 }).catch(e => console.error("Failed to send admin notification for failed payment:", e));
             }
-            return res.redirect(`${frontendUrl}/payment-failed?type=subscription`);
+            return res.status(200).json(new ApiResponse(200, { status: 'failed', type: 'subscription' }, 'Payment failed.'));
 
         case 'CANCELLED':
             subscription.status = 'cancelled';
@@ -281,15 +279,15 @@ const verifyPayment = asyncHandler(async (req, res) => {
                     notification: { recipient: admin._id.toString(), message: `Payment by ${subscription.owner.fullName} for ${subscription.tier.name} was cancelled.` },
                 }).catch(e => console.error("Failed to send admin notification for cancelled payment:", e));
             }
-            return res.redirect(`${frontendUrl}/payment-cancelled?type=subscription`);
+            return res.status(200).json(new ApiResponse(200, { status: 'cancelled', type: 'subscription' }, 'Payment cancelled.'));
 
         case 'PENDING':
              // Optionally notify user that payment is still pending
-            return res.redirect(`${frontendUrl}/payment-pending?type=subscription`);
+            return res.status(200).json(new ApiResponse(200, { status: 'pending', type: 'subscription' }, 'Payment is pending.'));
 
         default:
             // Handle any other statuses that Monnify might return
-            return res.redirect(`${frontendUrl}/payment-unknown?type=subscription&status=${paymentStatus}`);
+            return res.status(200).json(new ApiResponse(200, { status: 'unknown', type: 'subscription', monnifyStatus: paymentStatus }, 'Payment status is unknown.'));
     }
 });
 
