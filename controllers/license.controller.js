@@ -90,7 +90,7 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
     });
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const redirectUrl = `${baseUrl}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+    const redirectUrl = `${baseUrl}/payments/verify`;
 
     const paymentData = {
         amount: tier.price,
@@ -152,7 +152,7 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
     });
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const redirectUrl = `${baseUrl}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+    const redirectUrl = `${baseUrl}/payments/verify`;
 
     const paymentData = {
         amount: newTier.price,
