@@ -89,7 +89,7 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const redirectUrl = `${baseUrl}/api/v1/payments/verify`;
 
     const paymentData = {
@@ -151,7 +151,7 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const redirectUrl = `${baseUrl}/api/v1/payments/verify`;
 
     const paymentData = {
