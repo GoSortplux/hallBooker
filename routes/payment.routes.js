@@ -52,30 +52,31 @@ router.route('/initialize/:bookingId').post(verifyJWT, makePayment);
  * @swagger
  * /api/v1/payments/verify:
  *   get:
- *     summary: Verify a payment
+ *     summary: Verify a payment transaction
  *     tags: [Payments]
- *     description: "Verifies a payment using a reference string. This endpoint is used as the redirect URL from the payment gateway. Based on the payment status, the user is redirected to different frontend URLs."
+ *     description: >
+ *       Verifies the status of a transaction with the payment gateway.
+ *       This endpoint should be called by the frontend after the user is redirected back from the payment gateway.
+ *       It returns a JSON response with the final status, which the frontend can use to show an appropriate message or redirect the user.
  *     parameters:
  *       - in: query
  *         name: paymentReference
  *         schema:
  *           type: string
  *         required: true
- *         description: The unique payment reference for the transaction.
+ *         description: The payment reference returned by the payment gateway.
  *         example: "your_payment_reference_here"
  *     responses:
- *       302:
- *         description: >
- *           Redirects the user to a frontend URL based on the payment outcome.
- *           - **Successful Booking Payment:** Redirects to `/bookings`.
- *           - **Successful Subscription Payment:** Redirects to `/dashboard/subscription`.
- *           - **Failed Payment:** Redirects to `/payment-failed`.
- *           - **Cancelled Payment:** Redirects to `/payment-cancelled`.
- *           - **Pending Payment:** Redirects to `/payment-pending`.
+ *       200:
+ *         description: Payment status verified successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Payment reference is missing from the query.
+ *         description: Payment reference is missing.
  *       404:
- *         description: No matching booking or pending subscription found for the reference.
+ *         description: No matching transaction found for the reference.
  */
 router.route('/verify').get(verifyPayment);
 
