@@ -49,7 +49,7 @@ const router = Router();
  *           description: An array of names of the selected facilities.
  *         numberOfPeople:
  *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  *         status:
  *           type: string
