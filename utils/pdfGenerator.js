@@ -104,7 +104,7 @@ const generateSubscriptionPdfReceipt = (subscription) => {
     // Sub-header
     doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(`Transaction ID: ${subscription.transactionId}`, 105, 35, null, null, 'center');
+    doc.text(`Transaction Reference: ${subscription.transactionReference}`, 105, 35, null, null, 'center');
 
     // Billed To Section
     doc.setFontSize(14);
@@ -129,6 +129,9 @@ const generateSubscriptionPdfReceipt = (subscription) => {
         ['Purchase Date', purchaseDate.toLocaleDateString('en-US', dateOptions)],
         ['Expiry Date', expiryDate.toLocaleDateString('en-US', dateOptions)],
         ['Duration', `${subscription.tier.durationInDays} days`],
+        ['Payment Method', subscription.paymentMethod],
+        ['Payment Reference', subscription.paymentReference],
+        ['Transaction Reference', subscription.transactionReference],
         [{ content: 'Amount Paid', styles: { fontStyle: 'bold' } }, { content: `NGN ${subscription.price.toLocaleString()}`, styles: { fontStyle: 'bold' } }],
     ];
 

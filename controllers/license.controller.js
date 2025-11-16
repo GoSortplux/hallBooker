@@ -89,8 +89,8 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const redirectUrl = `${baseUrl}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
 
     const paymentData = {
         amount: tier.price,
@@ -101,7 +101,7 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         redirectUrl: redirectUrl,
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
     };
 
     const paymentResponse = await initializeTransaction(paymentData);
@@ -151,8 +151,8 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         purchaseDate: new Date(),
     });
 
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const redirectUrl = `${baseUrl}/payments/verify?paymentReference=${newSubscription._id.toString()}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
 
     const paymentData = {
         amount: newTier.price,
@@ -163,7 +163,7 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         redirectUrl: redirectUrl,
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
     };
 
     const paymentResponse = await initializeTransaction(paymentData);

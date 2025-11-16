@@ -18,6 +18,175 @@ import {
 import { generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
 
+async function processTransaction(transactionData, io) {
+    const { paymentStatus, paymentReference: refFromMonnify, transactionReference, paymentMethod } = transactionData;
+
+    // --- Subscription Payment ---
+    const subscription = await SubscriptionHistory.findById(refFromMonnify).populate('owner').populate('tier');
+
+    if (!subscription) {
+        console.log(`No matching subscription found for payment reference: ${refFromMonnify}`);
+        return;
+    }
+
+    if (subscription.status !== 'pending') {
+        console.log(`Subscription ${subscription._id} is not in 'pending' state. Current state: ${subscription.status}. No action taken.`);
+        return;
+    }
+
+    const admin = await User.findOne({ role: 'super-admin' });
+
+    switch (paymentStatus) {
+        case 'PAID':
+            subscription.status = 'active';
+            subscription.transactionReference = transactionReference;
+            subscription.paymentReference = refFromMonnify;
+            subscription.paymentMethod = paymentMethod;
+            if (subscription.tier.durationInDays) {
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + subscription.tier.durationInDays);
+                subscription.expiryDate = expiryDate;
+            }
+            await subscription.save();
+            await Hall.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
+
+            try {
+                const pdfBuffer = Buffer.from(generateSubscriptionPdfReceipt(subscription));
+                await sendEmail({
+                    io,
+                    email: subscription.owner.email,
+                    subject: 'Your Subscription Payment Receipt',
+                    html: generateSubscriptionPaymentEmail(subscription),
+                    attachments: [{ filename: `receipt-${subscription._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+                    notification: { recipient: subscription.owner._id.toString(), message: `Your payment for the ${subscription.tier.name} subscription has been confirmed.` },
+                });
+                await sendEmail({
+                    io,
+                    email: subscription.owner.email,
+                    subject: 'Your Subscription is Confirmed!',
+                    html: generateSubscriptionConfirmationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price, subscription.expiryDate),
+                    notification: { recipient: subscription.owner._id.toString(), message: `Your subscription for the ${subscription.tier.name} tier is now active.` },
+                });
+                if (admin) {
+                    await sendEmail({
+                        io,
+                        email: admin.email,
+                        subject: 'New Subscription Purchase',
+                        html: generateAdminLicenseNotificationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price),
+                        notification: { recipient: admin._id.toString(), message: `${subscription.owner.fullName} has subscribed to the ${subscription.tier.name} tier.` },
+                    });
+                }
+            } catch (emailError) {
+                console.error('Failed to send subscription confirmation emails:', emailError);
+            }
+            break;
+
+        case 'FAILED':
+            subscription.status = 'failed';
+            await subscription.save();
+            // Notify user and admin
+            sendEmail({
+                io,
+                email: subscription.owner.email,
+                subject: 'Subscription Payment Failed',
+                html: `<p>Hi ${subscription.owner.fullName}, your payment for the ${subscription.tier.name} subscription failed.</p>`,
+                notification: { recipient: subscription.owner._id.toString(), message: `Your payment for the ${subscription.tier.name} subscription failed.` },
+            }).catch(e => console.error("Failed to send user notification for failed payment:", e));
+            if (admin) {
+                sendEmail({
+                    io,
+                    email: admin.email,
+                    subject: 'Subscription Payment Failed',
+                    html: `<p>A payment by ${subscription.owner.fullName} for the ${subscription.tier.name} subscription has failed.</p>`,
+                    notification: { recipient: admin._id.toString(), message: `Payment by ${subscription.owner.fullName} for ${subscription.tier.name} failed.` },
+                }).catch(e => console.error("Failed to send admin notification for failed payment:", e));
+            }
+            break;
+
+        case 'CANCELLED':
+            subscription.status = 'cancelled';
+            await subscription.save();
+             // Notify user and admin
+            sendEmail({
+                io,
+                email: subscription.owner.email,
+                subject: 'Subscription Payment Cancelled',
+                html: `<p>Hi ${subscription.owner.fullName}, your payment for the ${subscription.tier.name} subscription was cancelled.</p>`,
+                notification: { recipient: subscription.owner._id.toString(), message: `Your payment for the ${subscription.tier.name} subscription was cancelled.` },
+            }).catch(e => console.error("Failed to send user notification for cancelled payment:", e));
+             if (admin) {
+                sendEmail({
+                    io,
+                    email: admin.email,
+                    subject: 'Subscription Payment Cancelled',
+                    html: `<p>A payment by ${subscription.owner.fullName} for the ${subscription.tier.name} subscription was cancelled.</p>`,
+                    notification: { recipient: admin._id.toString(), message: `Payment by ${subscription.owner.fullName} for ${subscription.tier.name} was cancelled.` },
+                }).catch(e => console.error("Failed to send admin notification for cancelled payment:", e));
+            }
+            break;
+    }
+}
+
+async function processBookingTransaction(bookingDetails, io) {
+    const { paymentStatus, paymentReference: refFromMonnify } = bookingDetails;
+    const bookingIdFromRef = refFromMonnify.split('_')[0];
+    const booking = await Booking.findOne({ bookingId: bookingIdFromRef });
+
+    if (!booking) {
+        console.log(`No matching booking found for payment reference: ${refFromMonnify}`);
+        return;
+    }
+
+    if (booking.paymentStatus === 'paid') {
+        console.log(`Payment for booking ${bookingIdFromRef} has already been processed.`);
+        return;
+    }
+
+    if (paymentStatus === 'PAID') {
+        booking.paymentStatus = 'paid';
+        await booking.save();
+
+        const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('hall');
+
+        if (!confirmedBooking) {
+            console.error("Failed to retrieve confirmed booking details after payment.");
+            return;
+        }
+
+        let emailToSend;
+        let userForEmail;
+
+        if (confirmedBooking.bookingType === 'walk-in') {
+            emailToSend = confirmedBooking.walkInUserDetails.email;
+            userForEmail = { fullName: confirmedBooking.walkInUserDetails.fullName };
+        } else {
+            emailToSend = confirmedBooking.user.email;
+            userForEmail = confirmedBooking.user;
+        }
+
+        if (emailToSend) {
+            const bookingForEmail = {
+                ...confirmedBooking.toObject(),
+                user: userForEmail,
+            };
+
+            const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
+            sendEmail({
+                io,
+                email: emailToSend,
+                subject: 'Payment Confirmation and Receipt',
+                html: generatePaymentConfirmationEmail(bookingForEmail),
+                attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+                notification: {
+                    recipient: confirmedBooking.user._id.toString(),
+                    message: `Your payment for booking #${confirmedBooking.bookingId} has been confirmed.`,
+                    link: `/bookings/${confirmedBooking._id}`,
+                },
+            }).catch(e => console.error("Failed to send booking confirmation email:", e));
+        }
+    }
+}
+
 const makePayment = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
     const booking = await Booking.findOne({ bookingId }).populate({
@@ -41,9 +210,8 @@ const makePayment = asyncHandler(async (req, res) => {
         throw new ApiError(500, 'MONNIFY_CONTRACT_CODE is not defined in environment variables.');
     }
 
-    const redirectUrl = process.env.FRONTEND_URL
-        ? `${process.env.FRONTEND_URL}/bookings`
-        : `${req.protocol}://${req.get('host')}/api/v1/payments/verify`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
 
     const uniquePaymentReference = `${bookingId}_${Date.now()}`;
 
@@ -105,144 +273,56 @@ const verifyPayment = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Payment reference is required');
     }
 
+    console.log("Verifying payment for reference:", paymentReference);
     const response = await verifyTransaction(paymentReference);
-    const paymentStatus = response.responseBody.paymentStatus;
+    console.log("Monnify verification response:", response);
 
-    if (paymentStatus !== 'PAID') {
-        // Redirect to a failure page or handle accordingly
-        return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
-    }
-
-    const { paymentReference: refFromMonnify, transactionReference } = response.responseBody;
+    const { paymentStatus, paymentReference: refFromMonnify, transactionReference, paymentMethod } = response.responseBody;
 
     // If the payment reference contains an underscore, it's a booking payment.
-    const bookingIdFromRef = refFromMonnify.includes('_') ? refFromMonnify.split('_')[0] : refFromMonnify;
+    const isBookingPayment = refFromMonnify.includes('_');
 
-
-    // Attempt to find a booking first
-    const booking = await Booking.findOne({ bookingId: bookingIdFromRef });
-    if (booking) {
-        if (booking.paymentStatus === 'paid') {
-            console.log(`Payment for booking ${bookingIdFromRef} has already been processed.`);
-            return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
-        }
-
-        booking.paymentStatus = 'paid';
-        await booking.save();
-
-        const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('hall');
-
-        if (!confirmedBooking) {
-            throw new ApiError(500, "Failed to retrieve confirmed booking details.");
-        }
-
-        let emailToSend;
-        let userForEmail;
-
-        if (confirmedBooking.bookingType === 'walk-in') {
-            emailToSend = confirmedBooking.walkInUserDetails.email;
-            userForEmail = { fullName: confirmedBooking.walkInUserDetails.fullName };
-        } else {
-            emailToSend = confirmedBooking.user.email;
-            userForEmail = confirmedBooking.user;
-        }
-
-        if (emailToSend) {
-            const bookingForEmail = {
-                ...confirmedBooking.toObject(),
-                user: userForEmail,
-            };
-
-            const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
-            const io = req.app.get('io');
-            await sendEmail({
-                io,
-                email: emailToSend,
-                subject: 'Payment Confirmation and Receipt',
-                html: generatePaymentConfirmationEmail(bookingForEmail),
-                attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
-                notification: {
-                    recipient: confirmedBooking.user._id.toString(),
-                    message: `Your payment for booking #${confirmedBooking.bookingId} has been confirmed.`,
-                    link: `/bookings/${confirmedBooking._id}`,
-                },
-            });
-        }
-
-        return res.redirect(`${process.env.FRONTEND_URL}/bookings`);
+    if (isBookingPayment) {
+        await processBookingTransaction(response.responseBody, req.app.get('io'));
     }
 
-    // If not a booking, try to find a subscription
-    const subscription = await SubscriptionHistory.findById(refFromMonnify).populate('owner').populate('tier');
-    if (subscription && subscription.status === 'pending') {
-        // 1. Update subscription details
-        subscription.status = 'active';
-        subscription.transactionId = transactionReference;
-        if (subscription.tier.durationInDays) {
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + subscription.tier.durationInDays);
-            subscription.expiryDate = expiryDate;
-        }
-
-        // 2. Save the updated subscription to the database FIRST
-        await subscription.save();
-
-        // 3. Activate the user's halls
-        await Hall.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
-
-        // 4. Send receipt and confirmation emails (now that the subscription is saved)
-        try {
-            const pdfBuffer = Buffer.from(generateSubscriptionPdfReceipt(subscription));
-            const io = req.app.get('io');
-            // Send detailed email with receipt
-            await sendEmail({
-                io,
-                email: subscription.owner.email,
-                subject: 'Your Subscription Payment Receipt',
-                html: generateSubscriptionPaymentEmail(subscription),
-                attachments: [{ filename: `receipt-${subscription._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
-                notification: {
-                    recipient: subscription.owner._id.toString(),
-                    message: `Your payment for the ${subscription.tier.name} subscription has been confirmed.`,
-                },
-            });
-
-            // Send simple confirmation email
-            await sendEmail({
-                io,
-                email: subscription.owner.email,
-                subject: 'Your Subscription is Confirmed!',
-                html: generateSubscriptionConfirmationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price, subscription.expiryDate),
-                notification: {
-                    recipient: subscription.owner._id.toString(),
-                    message: `Your subscription for the ${subscription.tier.name} tier is now active.`,
-                },
-            });
-
-            const admin = await User.findOne({ role: 'super-admin' });
-            if (admin) {
-                await sendEmail({
-                    io,
-                    email: admin.email,
-                    subject: 'New Subscription Purchase',
-                    html: generateAdminLicenseNotificationEmail(subscription.owner.fullName, subscription.tier.name, subscription.price),
-                    notification: {
-                        recipient: admin._id.toString(),
-                        message: `${subscription.owner.fullName} has subscribed to the ${subscription.tier.name} tier.`,
-                    },
-                });
-            }
-        } catch (emailError) {
-            // Log the email error, but don't crash the process. The payment was successful.
-            console.error('Failed to send subscription confirmation emails:', emailError);
-        }
-
-        // 5. Redirect user to their subscription dashboard
-        return res.redirect(`${process.env.FRONTEND_URL}/dashboard/subscription`);
+    // --- Subscription Payment ---
+    if (!isBookingPayment) {
+        await processTransaction(response.responseBody, req.app.get('io'));
     }
 
-    // If neither booking nor subscription is found, or subscription was not pending
-    throw new ApiError(404, 'No matching booking or pending subscription found for this payment reference.');
+    // Return a response to the frontend
+    const type = isBookingPayment ? 'booking' : 'subscription';
+    return res.status(200).json(new ApiResponse(200, { status: paymentStatus, type }, 'Verification complete.'));
 });
 
-export { makePayment, verifyPayment };
+const handleMonnifyWebhook = asyncHandler(async (req, res) => {
+    console.log("Received Monnify webhook:", req.body);
+    const { eventType, eventData } = req.body;
+
+    if (eventType !== 'SUCCESSFUL_TRANSACTION') {
+        return res.status(200).json(new ApiResponse(200, null, 'Webhook received, but not a successful transaction.'));
+    }
+
+    const { paymentReference } = eventData;
+
+    if (!paymentReference) {
+        throw new ApiError(400, 'Payment reference is required in webhook payload.');
+    }
+
+    // Reuse the same verification logic
+    const response = await verifyTransaction(paymentReference);
+    const transactionData = response.responseBody;
+
+    const isBookingPayment = transactionData.paymentReference.includes('_');
+
+    if (isBookingPayment) {
+        await processBookingTransaction(transactionData, req.app.get('io'));
+    } else {
+        await processTransaction(transactionData, req.app.get('io'));
+    }
+
+    res.status(200).json(new ApiResponse(200, null, 'Webhook processed successfully.'));
+});
+
+export { makePayment, verifyPayment, handleMonnifyWebhook };
