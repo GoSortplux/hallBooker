@@ -105,8 +105,11 @@ const verifyPayment = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Payment reference is required');
     }
 
+    console.log("Verifying payment for reference:", paymentReference);
     const response = await verifyTransaction(paymentReference);
-    const { paymentStatus, paymentReference: refFromMonnify, transactionReference } = response.responseBody;
+    console.log("Monnify verification response:", response);
+
+    const { paymentStatus, paymentReference: refFromMonnify, transactionReference, paymentMethod } = response.responseBody;
 
     // If the payment reference contains an underscore, it's a booking payment.
     const isBookingPayment = refFromMonnify.includes('_');
@@ -192,7 +195,9 @@ const verifyPayment = asyncHandler(async (req, res) => {
     switch (paymentStatus) {
         case 'PAID':
             subscription.status = 'active';
-            subscription.transactionId = transactionReference;
+            subscription.transactionReference = transactionReference;
+            subscription.paymentReference = refFromMonnify;
+            subscription.paymentMethod = paymentMethod;
             if (subscription.tier.durationInDays) {
                 const expiryDate = new Date();
                 expiryDate.setDate(expiryDate.getDate() + subscription.tier.durationInDays);
