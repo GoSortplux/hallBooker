@@ -108,7 +108,7 @@ const router = Router();
  *           example: "14:00"
  *         numberOfPeople:
  *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  *
  *     WalkInBookingInput:
@@ -143,7 +143,7 @@ const router = Router();
  *               type: string
  *         numberOfPeople:
  *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  *
  *     UpdateBookingDetailsInput:
