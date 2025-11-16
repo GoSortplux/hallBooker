@@ -54,7 +54,7 @@ router.route('/initialize/:bookingId').post(verifyJWT, makePayment);
  *   get:
  *     summary: Verify a payment
  *     tags: [Payments]
- *     description: "Verifies a payment using a reference string. This endpoint is used as the redirect URL from the payment gateway and can also be called manually. The reference is passed as a query parameter."
+ *     description: "Verifies a payment using a reference string. This endpoint is used as the redirect URL from the payment gateway. Based on the payment status, the user is redirected to different frontend URLs."
  *     parameters:
  *       - in: query
  *         name: paymentReference
@@ -65,9 +65,15 @@ router.route('/initialize/:bookingId').post(verifyJWT, makePayment);
  *         example: "your_payment_reference_here"
  *     responses:
  *       302:
- *         description: Payment verified successfully. The user is redirected to a frontend URL (e.g., /bookings or /dashboard/subscription).
+ *         description: >
+ *           Redirects the user to a frontend URL based on the payment outcome.
+ *           - **Successful Booking Payment:** Redirects to `/bookings`.
+ *           - **Successful Subscription Payment:** Redirects to `/dashboard/subscription`.
+ *           - **Failed Payment:** Redirects to `/payment-failed`.
+ *           - **Cancelled Payment:** Redirects to `/payment-cancelled`.
+ *           - **Pending Payment:** Redirects to `/payment-pending`.
  *       400:
- *         description: Payment verification failed or payment was not successful. Redirects to a failure page.
+ *         description: Payment reference is missing from the query.
  *       404:
  *         description: No matching booking or pending subscription found for the reference.
  */
