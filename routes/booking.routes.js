@@ -84,7 +84,7 @@ const router = Router();
  *           format: date-time
  *         numberOfPeople:
  *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  *
  *     RecurringBookingInput:
@@ -151,7 +151,7 @@ const router = Router();
  *       properties:
  *         numberOfPeople:
  *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  */
 
