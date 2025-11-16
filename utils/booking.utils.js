@@ -72,7 +72,8 @@ export const calculateBookingPriceAndValidate = (startTime, endTime, pricing, se
     });
   }
 
-  const totalPrice = hallPrice + facilitiesPrice;
+  let totalPrice = hallPrice + facilitiesPrice;
+  totalPrice = Math.round(totalPrice * 100) / 100;
 
   return { totalPrice, facilitiesWithCalculatedCosts };
 };
