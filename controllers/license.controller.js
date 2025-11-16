@@ -101,7 +101,7 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         redirectUrl: redirectUrl,
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "BANK_TRANSFER"],
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
     };
 
     const paymentResponse = await initializeTransaction(paymentData);
@@ -163,7 +163,7 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
         redirectUrl: redirectUrl,
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "BANK_TRANSFER"],
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
     };
 
     const paymentResponse = await initializeTransaction(paymentData);
