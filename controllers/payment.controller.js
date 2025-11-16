@@ -186,9 +186,11 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
     if (subscription.status !== 'pending') {
         console.log(`Subscription ${subscription._id} is not in 'pending' state. Current state: ${subscription.status}. No action taken.`);
-        return res.redirect(`${process.env.FRONTEND_URL}/dashboard/subscription`);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        return res.redirect(`${frontendUrl}/dashboard/subscription`);
     }
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const io = req.app.get('io');
     const admin = await User.findOne({ role: 'super-admin' });
 
@@ -235,7 +237,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
             } catch (emailError) {
                 console.error('Failed to send subscription confirmation emails:', emailError);
             }
-            return res.redirect(`${process.env.FRONTEND_URL}/dashboard/subscription`);
+            return res.redirect(`${frontendUrl}/dashboard/subscription`);
 
         case 'FAILED':
             subscription.status = 'failed';
@@ -257,7 +259,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                     notification: { recipient: admin._id.toString(), message: `Payment by ${subscription.owner.fullName} for ${subscription.tier.name} failed.` },
                 }).catch(e => console.error("Failed to send admin notification for failed payment:", e));
             }
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed?type=subscription`);
+            return res.redirect(`${frontendUrl}/payment-failed?type=subscription`);
 
         case 'CANCELLED':
             subscription.status = 'cancelled';
@@ -279,15 +281,15 @@ const verifyPayment = asyncHandler(async (req, res) => {
                     notification: { recipient: admin._id.toString(), message: `Payment by ${subscription.owner.fullName} for ${subscription.tier.name} was cancelled.` },
                 }).catch(e => console.error("Failed to send admin notification for cancelled payment:", e));
             }
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-cancelled?type=subscription`);
+            return res.redirect(`${frontendUrl}/payment-cancelled?type=subscription`);
 
         case 'PENDING':
              // Optionally notify user that payment is still pending
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-pending?type=subscription`);
+            return res.redirect(`${frontendUrl}/payment-pending?type=subscription`);
 
         default:
             // Handle any other statuses that Monnify might return
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-unknown?type=subscription&status=${paymentStatus}`);
+            return res.redirect(`${frontendUrl}/payment-unknown?type=subscription&status=${paymentStatus}`);
     }
 });
 
