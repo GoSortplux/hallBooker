@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { makePayment, verifyPayment } from '../controllers/payment.controller.js';
+import { makePayment, verifyPayment, handleMonnifyWebhook } from '../controllers/payment.controller.js';
 
 const router = Router();
 
@@ -79,5 +79,42 @@ router.route('/initialize/:bookingId').post(verifyJWT, makePayment);
  *         description: No matching transaction found for the reference.
  */
 router.route('/verify').get(verifyPayment);
+
+/**
+ * @swagger
+ * /api/v1/payments/webhook:
+ *   post:
+ *     summary: Handle Monnify webhook notifications
+ *     tags: [Payments]
+ *     description: >
+ *       Receives transaction completion notifications from Monnify.
+ *       This is a server-to-server endpoint and should be configured in your Monnify dashboard.
+ *       It ensures payment status is updated even if the user closes their browser.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               transactionReference:
+ *                 type: string
+ *               paymentReference:
+ *                 type: string
+ *               amountPaid:
+ *                 type: string
+ *               totalPayable:
+ *                 type: string
+ *               paymentStatus:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Webhook received and processed successfully.
+ *       400:
+ *         description: Invalid webhook payload.
+ *       401:
+ *         description: Invalid signature (if signature validation is implemented).
+ */
+router.route('/webhook').post(handleMonnifyWebhook);
 
 export default router;
