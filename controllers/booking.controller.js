@@ -19,7 +19,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
   const io = req.app.get('io');
 
   const authorizedRoles = ['super-admin', 'hall-owner', 'staff'];
-  if (!authorizedRoles.includes(req.user.role)) {
+  if (!authorizedRoles.includes(req.user.activeRole)) {
     throw new ApiError(403, 'You are not authorized to create a recurring booking.');
   }
 
@@ -349,7 +349,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
   if (!hall) throw new ApiError(404, 'Hall not found');
 
   const isHallOwner = hall.owner._id.toString() === req.user._id.toString();
-  const isSuperAdmin = req.user.role === 'super-admin';
+  const isSuperAdmin = req.user.activeRole === 'super-admin';
 
   if (!isHallOwner && !isSuperAdmin) {
     throw new ApiError(403, 'You are not authorized to create a walk-in booking for this hall.');
@@ -505,7 +505,7 @@ const getBookingById = asyncHandler(async (req, res) => {
     const booking = await Booking.findById(req.params.id).populate('user', 'fullName email').populate('hall', 'name location');
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (req.user.role === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
+    if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not authorized to view this booking.");
     }
     res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));
@@ -526,7 +526,7 @@ const cancelBooking = asyncHandler(async (req, res) => {
     const booking = await Booking.findById(req.params.id).populate('hall').populate('user');
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
+    if (booking.user.toString() !== req.user._id.toString() && req.user.activeRole !== 'super-admin') {
         throw new ApiError(403, "You are not authorized to cancel this booking.");
     }
     
@@ -572,7 +572,7 @@ const getBookingByBookingId = asyncHandler(async (req, res) => {
     const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('hall');
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (req.user.role === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
+    if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not authorized to view this booking.");
     }
     res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));
