@@ -541,8 +541,65 @@ export {
   generatePromotionToHallOwnerEmailForUser,
   generateHallOwnerRejectionEmailForUser,
   generateStaffAdditionEmail,
-  generateStaffRemovalEmail
+  generateStaffRemovalEmail,
+  generateRecurringBookingConfirmationEmail,
 };
+
+function generateRecurringBookingConfirmationEmail(customerName, bookings, hall) {
+    const totalAmount = bookings.reduce((acc, booking) => acc + booking.totalPrice, 0);
+    const firstBooking = bookings[0];
+    const lastBooking = bookings[bookings.length - 1];
+
+    const bookingDatesHtml = bookings.map(b => {
+        const date = new Date(b.startTime);
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        return `<li>${date.toLocaleDateString('en-US', dateOptions)} (${date.toLocaleTimeString('en-US', timeOptions)})</li>`;
+    }).join('');
+
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #0056b3; text-align: center;">Recurring Booking Confirmation</h2>
+        <p>Hi ${customerName},</p>
+        <p>Your recurring booking for <strong>${hall.name}</strong> has been successfully confirmed. Here is a summary of your booked dates:</p>
+
+        <h3>Booked Dates:</h3>
+        <ul>
+            ${bookingDatesHtml}
+        </ul>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Reservation Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${hall.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Bookings:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${bookings.length}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${firstBooking.paymentStatus}</td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${totalAmount.toLocaleString()}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>Thank you for choosing us for your recurring events!</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+    `;
+}
 
 const generateReviewNotificationEmail = (userName, hallName, reviewLink) => {
     return `

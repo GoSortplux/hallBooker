@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { makePayment, verifyPayment, handleMonnifyWebhook } from '../controllers/payment.controller.js';
+import { makePayment, makePaymentForRecurring, verifyPayment, handleMonnifyWebhook } from '../controllers/payment.controller.js';
 
 const router = Router();
 
@@ -10,6 +10,29 @@ const router = Router();
  *   name: Payments
  *   description: Payment processing
  */
+
+/**
+ * @swagger
+ * /api/v1/payments/initialize/recurring/{recurringBookingId}:
+ *   post:
+ *     summary: Initialize payment for a recurring booking series
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: recurringBookingId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The UUID for the recurring booking series.
+ *     responses:
+ *       200:
+ *         description: Payment initialized successfully.
+ *       404:
+ *         description: No bookings found for the provided recurring ID.
+ */
+router.route('/initialize/recurring/:recurringBookingId').post(verifyJWT, makePaymentForRecurring);
 
 /**
  * @swagger
