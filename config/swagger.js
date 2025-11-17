@@ -11,11 +11,11 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:8000/api/v1",
+        url: "http://localhost:8000",
         description: "Development server",
       },
       {
-        url: "https://hallbooker.onrender.com/api/v1",
+        url: "https://hallbooker.onrender.com",
         description: "Production server",
       },
     ],
