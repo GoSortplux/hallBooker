@@ -15,7 +15,35 @@ import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, recurrenceRule } = req.body;
+  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails } = req.body;
+  const io = req.app.get('io');
+
+  const authorizedRoles = ['super-admin', 'hall-owner', 'staff'];
+  if (!authorizedRoles.includes(req.user.role)) {
+    throw new ApiError(403, 'You are not authorized to create a recurring booking.');
+  }
+
+  if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
+    throw new ApiError(400, 'Customer details (fullName, phone) are required.');
+  }
+
+  const paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
+  const validPaymentStatuses = paymentStatusesSetting ? paymentStatusesSetting.value : [];
+  if (!paymentStatus || !validPaymentStatuses.includes(paymentStatus)) {
+    throw new ApiError(400, `Invalid payment status. Must be one of: ${validPaymentStatuses.join(', ')}`);
+  }
+
+  const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+  const validPaymentMethods = paymentMethodsSetting ? paymentMethodsSetting.value : [];
+  let finalPaymentMethod = paymentMethod;
+
+  if (paymentStatus === 'paid') {
+    if (!finalPaymentMethod || !validPaymentMethods.includes(finalPaymentMethod)) {
+      throw new ApiError(400, `A valid payment method is required when status is 'paid'. Must be one of: ${validPaymentMethods.join(', ')}`);
+    }
+  } else {
+    finalPaymentMethod = 'online';
+  }
 
   if (!recurrenceRule || typeof recurrenceRule !== 'object') {
     throw new ApiError(400, 'Recurrence rule is required and must be an object.');
@@ -112,15 +140,19 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
       const bookingData = {
         bookingId,
         hall: hallId,
-        user: req.user._id,
         startTime: bookingStart,
         endTime: bookingEnd,
         eventDetails,
         totalPrice: finalPricePerBooking,
-        paymentMethod: 'online',
-        paymentStatus: 'pending',
-        bookingType: 'online',
+        paymentMethod: finalPaymentMethod,
+        paymentStatus: paymentStatus,
+        bookingType: 'walk-in',
         bookedBy: req.user._id,
+        walkInUserDetails: {
+          fullName: walkInUserDetails.fullName,
+          email: walkInUserDetails.email,
+          phone: walkInUserDetails.phone,
+        },
         isRecurring: true,
         recurringBookingId,
       };
@@ -130,12 +162,15 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     const newBookings = await Booking.create(createdBookings, { session });
 
     await session.commitTransaction();
-    res.status(201).json(new ApiResponse(201, newBookings, 'Recurring booking created successfully!'));
+    session.endSession();
+
+    res.status(201).json(new ApiResponse(201, { bookings: newBookings, recurringBookingId }, 'Recurring booking created successfully!'));
+
   } catch (error) {
     await session.abortTransaction();
-    throw new ApiError(500, 'Could not complete the recurring booking process.');
-  } finally {
     session.endSession();
+    console.error("Recurring booking failed:", error);
+    throw new ApiError(500, 'Could not complete the recurring booking process.');
   }
 });
 

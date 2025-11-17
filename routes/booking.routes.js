@@ -146,6 +146,18 @@ const router = Router();
  *         eventDetails:
  *           type: string
  *
+ *     WalkInUserDetails:
+ *       type: object
+ *       required: [fullName, phone]
+ *       properties:
+ *         fullName:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         phone:
+ *           type: string
+ *
  *     UpdateBookingDetailsInput:
  *       type: object
  *       properties:
@@ -161,7 +173,11 @@ router.use(verifyJWT);
  * @swagger
  * /api/v1/bookings/recurring:
  *   post:
- *     summary: Create a recurring booking
+ *     summary: Create a recurring booking (for Staff, Hall Owners, or Admins)
+ *     description: |
+ *       This endpoint functions similarly to a walk-in booking but for multiple dates.
+ *       It allows authorized users to create a series of bookings based on a recurrence rule.
+ *       Payment can be handled offline (cash, pos, transfer) or a payment link can be generated for online payment.
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -170,10 +186,22 @@ router.use(verifyJWT);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/RecurringBookingInput'
+ *             allOf:
+ *               - $ref: '#/components/schemas/RecurringBookingInput'
+ *               - type: object
+ *                 properties:
+ *                   paymentMethod:
+ *                     type: string
+ *                     description: "The method of payment (e.g., 'cash', 'pos', 'online'). Required if status is 'paid'."
+ *                   paymentStatus:
+ *                     type: string
+ *                     enum: [pending, paid]
+ *                     description: "The current payment status."
+ *                   walkInUserDetails:
+ *                     $ref: '#/components/schemas/WalkInUserDetails'
  *     responses:
  *       201:
- *         description: Recurring booking created successfully
+ *         description: Recurring booking created successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -183,16 +211,24 @@ router.use(verifyJWT);
  *                   type: integer
  *                   example: 201
  *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Booking'
+ *                   type: object
+ *                   properties:
+ *                     bookings:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Booking'
+ *                     recurringBookingId:
+ *                       type: string
+ *                       description: A unique ID for the entire recurring series.
  *                 message:
  *                   type: string
- *                   example: "Recurring booking created successfully"
+ *                   example: "Recurring booking created successfully!"
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked.
+ *         description: Bad request, such as invalid recurrence rule or conflicting booking.
+ *       403:
+ *         description: Forbidden, user is not authorized.
  */
-router.route('/recurring').post(createRecurringBooking);
+router.route('/recurring').post(authorizeRoles('staff', 'hall-owner', 'super-admin'), createRecurringBooking);
 
 /**
  * @swagger
