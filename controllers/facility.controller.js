@@ -1,5 +1,6 @@
 import { Facility } from '../models/facility.model.js';
 import { Hall } from '../models/hall.model.js';
+import Setting from '../models/setting.model.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -28,14 +29,24 @@ const createFacility = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, facility, 'Facility created successfully'));
 });
 
-// @desc    Get all facilities
+// @desc    Get all facilities and charge methods
 // @route   GET /api/v1/facilities
 // @access  Public
 const getAllFacilities = asyncHandler(async (req, res) => {
   const facilities = await Facility.find({});
+  const chargeMethodsSetting = await Setting.findOne({ key: 'chargeMethods' });
+
+  // Use a default array if the setting is not found in the database
+  const chargeMethods = chargeMethodsSetting ? chargeMethodsSetting.value : ['free', 'flat', 'per_hour'];
+
+  const data = {
+    facilities,
+    chargeMethods,
+  };
+
   return res
     .status(200)
-    .json(new ApiResponse(200, facilities, 'Facilities retrieved successfully'));
+    .json(new ApiResponse(200, data, 'Facilities and charge methods retrieved successfully'));
 });
 
 // @desc    Get a single facility by ID
