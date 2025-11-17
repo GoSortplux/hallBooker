@@ -341,12 +341,25 @@ const deleteHallMedia = asyncHandler(async (req, res) => {
 
 const getHallsByOwner = asyncHandler(async (req, res) => {
     let query = {};
-    if (req.user.role === 'hall-owner') {
-        query = { owner: req.user._id };
-    } else if (req.user.role === 'staff') {
-        query = { staff: req.user._id };
+    const { activeRole, _id } = req.user;
+
+    if (activeRole === 'hall-owner') {
+        query = { owner: _id };
+    } else if (activeRole === 'staff') {
+        query = { staff: { $in: [_id] } };
+    } else {
+        // If the role is not one of the expected, return an empty array
+        // or handle as an error, depending on desired behavior.
+        return res.status(200).json(new ApiResponse(200, [], "No halls found for this role"));
     }
-    const halls = await Hall.find(query).populate('owner', 'fullName');
+
+    const halls = await Hall.find(query)
+        .populate('owner', 'fullName')
+        .populate('country')
+        .populate('state')
+        .populate('localGovernment')
+        .populate('facilities.facility');
+
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 

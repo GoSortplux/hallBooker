@@ -50,7 +50,7 @@ const approveHallOwnerApplication = asyncHandler(async (req, res) => {
   );
 
   // Notify admin
-  const admin = await User.findOne({ role: 'super-admin' });
+  const admin = await User.findOne({ role: { $in: ['super-admin'] } });
   if (admin) {
     createNotification(
       io,
@@ -86,7 +86,7 @@ const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
     );
 
     // Notify admin
-    const admin = await User.findOne({ role: 'super-admin' });
+    const admin = await User.findOne({ role: { $in: ['super-admin'] } });
     if (admin) {
       createNotification(
         io,
