@@ -45,7 +45,7 @@ const router = Router();
  *                       type: array
  *                       items:
  *                         type: string
- *                       example: ["free", "flat", "per_hour"]
+ *                       example: ["free", "flat", "per_hour", "per_day"]
  *                 message:
  *                   type: string
  *                   example: "Facilities and charge methods retrieved successfully"

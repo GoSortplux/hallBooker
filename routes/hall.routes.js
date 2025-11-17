@@ -46,7 +46,7 @@ const router = Router();
  *         chargeMethod:
  *           type: string
  *           description: "The method of charging for the facility. Valid options are dynamically fetched from settings."
- *           example: "per_hour"
+ *           example: "per_day"
  *         cost:
  *           type: number
  *           example: 50
