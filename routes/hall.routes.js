@@ -45,7 +45,7 @@ const router = Router();
  *           example: true
  *         chargeMethod:
  *           type: string
- *           enum: [free, flat, per_hour]
+ *           description: "The method of charging for the facility. Valid options are dynamically fetched from settings."
  *           example: "per_hour"
  *         cost:
  *           type: number
@@ -118,7 +118,6 @@ const router = Router();
  *                 example: false
  *               chargeMethod:
  *                 type: string
- *                 enum: [free, flat, per_hour]
  *                 example: "free"
  *               cost:
  *                 type: number
@@ -135,6 +134,7 @@ const router = Router();
  *             type: string
  *     HallUpdateInput:
  *       type: object
+ *       description: "Use one of the following methods to update facilities, not both. 1) To add or update a single facility, provide its details at the root level. 2) To replace all facilities, provide a complete array for the `facilities` field."
  *       properties:
  *         name:
  *           type: string
@@ -164,10 +164,6 @@ const router = Router();
  *               type: number
  *             hourlyRate:
  *               type: number
- *         facilities:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/Facility'
  *         carParkCapacity:
  *           type: number
  *           example: 50
@@ -191,6 +187,28 @@ const router = Router();
  *           type: string
  *           format: uri
  *           example: "https://www.google.com/maps/dir/?api=1&destination=40.730610,-73.935242"
+ *       oneOf:
+ *         - type: object
+ *           properties:
+ *             facility:
+ *               type: string
+ *               description: "ID of the single facility to add or update."
+ *               example: "60c72b2f9b1d8c001f8e4c6a"
+ *             available:
+ *               type: boolean
+ *             chargeable:
+ *               type: boolean
+ *             chargeMethod:
+ *               type: string
+ *             cost:
+ *               type: number
+ *         - type: object
+ *           properties:
+ *             facilities:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Facility'
+ *               description: "An array to completely replace all of the hall's facilities."
  *     HallInput:
  *       type: object
  *       required: [name, description, capacity, openingHour, closingHour, location, pricing, country, state, localGovernment]

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Setting from './setting.model.js';
 
 const hallSchema = new mongoose.Schema(
   {
@@ -45,8 +46,21 @@ const hallSchema = new mongoose.Schema(
         chargeable: { type: Boolean, default: false },
         chargeMethod: {
           type: String,
-          enum: ['free', 'flat', 'per_hour'],
           default: 'free',
+          validate: {
+            validator: async function (value) {
+              // Dynamically validate against the list stored in the Settings collection
+              const chargeMethodsSetting = await Setting.findOne({ key: 'chargeMethods' });
+              // If the setting is missing or the value is not an array, validation fails.
+              if (!chargeMethodsSetting || !Array.isArray(chargeMethodsSetting.value)) {
+                console.error("Critical: 'chargeMethods' setting is missing or malformed in the database.");
+                return false;
+              }
+              // Check if the provided value is in the array from the settings.
+              return chargeMethodsSetting.value.includes(value);
+            },
+            message: props => `${props.value} is not a valid charge method.`
+          }
         },
         cost: { type: Number, default: 0 },
       },
