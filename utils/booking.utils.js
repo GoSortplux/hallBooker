@@ -61,6 +61,9 @@ export const calculateBookingPriceAndValidate = (startTime, endTime, pricing, se
           calculatedCost = facility.cost;
         } else if (facility.chargeMethod === 'per_hour') {
           calculatedCost = facility.cost * bookingDurationHours;
+        } else if (facility.chargeMethod === 'per_day') {
+          const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
+          calculatedCost = facility.cost * bookingDurationDays;
         }
       }
       facilitiesPrice += calculatedCost;
