@@ -47,8 +47,6 @@ const router = Router();
  *           items:
  *             type: string
  *           description: An array of names of the selected facilities.
- *         numberOfPeople:
- *           type: number
  *         eventDetails:
  *           type: string
  *         status:
@@ -82,10 +80,13 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
- *         numberOfPeople:
- *           type: number
  *         eventDetails:
  *           type: string
+ *         selectedFacilityNames:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: An array of names of the selected facilities.
  *
  *     RecurringBookingInput:
  *       type: object
@@ -106,8 +107,6 @@ const router = Router();
  *         time:
  *           type: string
  *           example: "14:00"
- *         numberOfPeople:
- *           type: number
  *         eventDetails:
  *           type: string
  *
@@ -141,8 +140,6 @@ const router = Router();
  *               format: email
  *             phone:
  *               type: string
- *         numberOfPeople:
- *           type: number
  *         eventDetails:
  *           type: string
  *
@@ -158,13 +155,6 @@ const router = Router();
  *         phone:
  *           type: string
  *
- *     UpdateBookingDetailsInput:
- *       type: object
- *       properties:
- *         numberOfPeople:
- *           type: number
- *         eventDetails:
- *           type: string
  */
 
 router.use(verifyJWT);
@@ -244,6 +234,12 @@ router.route('/recurring').post(authorizeRoles('staff', 'hall-owner', 'super-adm
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/BookingInput'
+ *           example:
+ *             hallId: "60d0fe4f5311236168a109ca"
+ *             startTime: "2025-12-01T10:00:00.000Z"
+ *             endTime: "2025-12-01T14:00:00.000Z"
+ *             eventDetails: "Birthday Party"
+ *             selectedFacilityNames: ["Projector", "Sound System"]
  *     responses:
  *       201:
  *         description: Booking created successfully, returns payment initialization details.
@@ -403,7 +399,7 @@ router.route('/search/:bookingId')
  *       404:
  *         description: Booking not found.
  *   patch:
- *     summary: Update booking details (e.g., number of people)
+ *     summary: Update booking event details
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -419,7 +415,11 @@ router.route('/search/:bookingId')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateBookingDetailsInput'
+ *             type: object
+ *             properties:
+ *               eventDetails:
+ *                 type: string
+ *                 description: The new details for the event.
  *     responses:
  *       200:
  *         description: Booking updated successfully.
