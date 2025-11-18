@@ -30,8 +30,9 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
- *     Facility:
+ *     FacilityInput:
  *       type: object
+ *       description: "Defines a facility when a hall owner adds it to a hall."
  *       properties:
  *         facility:
  *           type: string
@@ -45,18 +46,18 @@ const router = Router();
  *           example: true
  *         chargeMethod:
  *           type: string
- *           description: "The method of charging for the facility. Valid options are dynamically fetched from settings."
- *           example: "per_day"
+ *           description: "The method of charging. Valid options are dynamically fetched from settings (e.g., 'flat', 'per_hour')."
+ *           example: "flat"
  *         cost:
  *           type: number
- *           example: 50
+ *           example: 5
  *         quantity:
  *           type: number
- *           description: "The total number of this facility item available."
- *           example: 100
+ *           description: "The total number of this item available (e.g., 150 chairs)."
+ *           example: 150
  *         chargePerUnit:
  *           type: boolean
- *           description: "If true, the facility is charged per unit requested. If false, it's a lump sum."
+ *           description: "If true, 'cost' is per unit. If false, 'cost' is a lump sum for any quantity."
  *           example: true
  *       required:
  *         - facility
@@ -130,12 +131,6 @@ const router = Router();
  *               cost:
  *                 type: number
  *                 example: 0
- *               quantity:
- *                 type: number
- *                 example: 1
- *               chargePerUnit:
- *                 type: boolean
- *                 example: false
  *         carParkCapacity:
  *           type: number
  *           example: 50
@@ -216,16 +211,12 @@ const router = Router();
  *               type: string
  *             cost:
  *               type: number
- *             quantity:
- *               type: number
- *             chargePerUnit:
- *               type: boolean
  *         - type: object
  *           properties:
  *             facilities:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Facility'
+ *                 $ref: '#/components/schemas/FacilityInput'
  *               description: "An array to completely replace all of the hall's facilities."
  *     HallInput:
  *       type: object
@@ -271,7 +262,7 @@ const router = Router();
  *         facilities:
  *           type: array
  *           items:
- *             $ref: '#/components/schemas/Facility'
+ *             $ref: '#/components/schemas/FacilityInput'
  *         carParkCapacity:
  *           type: number
  *           example: 50
