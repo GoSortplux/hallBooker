@@ -63,6 +63,8 @@ const hallSchema = new mongoose.Schema(
           }
         },
         cost: { type: Number, default: 0 },
+        quantity: { type: Number, default: 1 },
+        chargePerUnit: { type: Boolean, default: false },
       },
     ],
     carParkCapacity: { type: Number },

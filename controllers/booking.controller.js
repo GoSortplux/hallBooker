@@ -175,9 +175,9 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 });
 
 const createBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, selectedFacilityNames } = req.body;
+  const { hallId, startTime, endTime, eventDetails, selectedFacilities: selectedFacilitiesData } = req.body;
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
+  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
 
   if (!hall.pricing || (typeof hall.pricing !== 'object') || (!hall.pricing.hourlyRate && !hall.pricing.dailyRate)) {
@@ -206,9 +206,16 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Booking must be in the future.');
   }
 
-  // Use the helper function for validation and price calculation
-  const selectedFacilities = hall.facilities.filter(f => selectedFacilityNames?.includes(f.name));
-  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, selectedFacilities);
+  // Prepare facilities data for price calculation
+  const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
+    const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
+    if (!hallFacility) {
+      throw new ApiError(404, `Facility with ID ${sf.facilityId} not found in this hall.`);
+    }
+    return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
+  }) || [];
+
+  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, facilitiesToPrice);
 
   if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
     throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
@@ -317,7 +324,7 @@ const createBooking = asyncHandler(async (req, res) => {
 });
 
 const walkInBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilityNames } = req.body;
+  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilities: selectedFacilitiesData } = req.body;
   const io = req.app.get('io');
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
@@ -366,8 +373,15 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Booking must be in the future.');
   }
 
-  const selectedFacilities = hall.facilities.filter(f => selectedFacilityNames?.includes(f.name));
-  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, selectedFacilities);
+  const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
+    const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
+    if (!hallFacility) {
+      throw new ApiError(404, `Facility with ID ${sf.facilityId} not found in this hall.`);
+    }
+    return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
+  }) || [];
+
+  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, facilitiesToPrice);
 
   if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
     throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
