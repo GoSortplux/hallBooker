@@ -195,7 +195,7 @@ const updateHall = asyncHandler(async (req, res) => {
     const { id } = req.params;
     // Separate facility details from the rest of the body.
     // This allows for adding/updating a single facility via the PATCH endpoint.
-    const { facility: facilityId, available, chargeable, chargeMethod, cost, ...otherDetails } = req.body;
+    const { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit, ...otherDetails } = req.body;
     const { location, allowRecurringBookings, recurringBookingDiscount, facilities } = otherDetails;
 
     // Prevent owner field from being updated
@@ -215,7 +215,7 @@ const updateHall = asyncHandler(async (req, res) => {
             throw new ApiError(404, 'Facility with the provided ID does not exist.');
         }
 
-        const facilityData = { facility: facilityId, available, chargeable, chargeMethod, cost };
+        const facilityData = { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit };
         // Remove undefined properties so Mongoose defaults are not overridden with null
         Object.keys(facilityData).forEach(key => facilityData[key] === undefined && delete facilityData[key]);
 
