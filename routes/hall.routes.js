@@ -50,6 +50,14 @@ const router = Router();
  *         cost:
  *           type: number
  *           example: 50
+ *         quantity:
+ *           type: number
+ *           description: "The total number of this facility item available."
+ *           example: 100
+ *         chargePerUnit:
+ *           type: boolean
+ *           description: "If true, the facility is charged per unit requested. If false, it's a lump sum."
+ *           example: true
  *       required:
  *         - facility
  *     Hall:
@@ -122,6 +130,12 @@ const router = Router();
  *               cost:
  *                 type: number
  *                 example: 0
+ *               quantity:
+ *                 type: number
+ *                 example: 1
+ *               chargePerUnit:
+ *                 type: boolean
+ *                 example: false
  *         carParkCapacity:
  *           type: number
  *           example: 50
@@ -202,6 +216,10 @@ const router = Router();
  *               type: string
  *             cost:
  *               type: number
+ *             quantity:
+ *               type: number
+ *             chargePerUnit:
+ *               type: boolean
  *         - type: object
  *           properties:
  *             facilities:

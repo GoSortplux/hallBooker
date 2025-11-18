@@ -82,11 +82,17 @@ const router = Router();
  *           format: date-time
  *         eventDetails:
  *           type: string
- *         selectedFacilityNames:
+ *         selectedFacilities:
  *           type: array
  *           items:
- *             type: string
- *           description: An array of names of the selected facilities.
+ *             type: object
+ *             properties:
+ *               facilityId:
+ *                 type: string
+ *                 example: "60c72b2f9b1d8c001f8e4c6a"
+ *               quantity:
+ *                 type: number
+ *                 example: 50
  *
  *     RecurringBookingInput:
  *       type: object
@@ -122,11 +128,17 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
- *         selectedFacilityNames:
+ *         selectedFacilities:
  *           type: array
  *           items:
- *             type: string
- *           description: An array of names of the selected facilities.
+ *             type: object
+ *             properties:
+ *               facilityId:
+ *                 type: string
+ *                 example: "60c72b2b9b1d8c001f8e4c6a"
+ *               quantity:
+ *                 type: number
+ *                 example: 20
  *         paymentMethod:
  *           type: string
  *           enum: [cash, pos, transfer]
@@ -239,7 +251,7 @@ router.route('/recurring').post(authorizeRoles('staff', 'hall-owner', 'super-adm
  *             startTime: "2025-12-01T10:00:00.000Z"
  *             endTime: "2025-12-01T14:00:00.000Z"
  *             eventDetails: "Birthday Party"
- *             selectedFacilityNames: ["Projector", "Sound System"]
+ *             selectedFacilities: [{ "facilityId": "60c72b2f9b1d8c001f8e4c6a", "quantity": 100 }, { "facilityId": "60c72b2f9b1d8c001f8e4c6b", "quantity": 1 }]
  *     responses:
  *       201:
  *         description: Booking created successfully, returns payment initialization details.
