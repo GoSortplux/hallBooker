@@ -42,11 +42,24 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
- *         selectedFacilityNames:
+ *         selectedFacilities:
  *           type: array
  *           items:
- *             type: string
- *           description: An array of names of the selected facilities.
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Projector"
+ *               cost:
+ *                 type: number
+ *                 description: "The final calculated cost for this facility for the booking duration and quantity."
+ *                 example: 150
+ *               chargeMethod:
+ *                 type: string
+ *                 example: "flat"
+ *               quantity:
+ *                 type: number
+ *                 example: 1
  *         eventDetails:
  *           type: string
  *         status:
@@ -67,6 +80,20 @@ const router = Router();
  *         recurringBookingId:
  *           type: string
  *
+ *     BookingFacilityInput:
+ *       type: object
+ *       description: "Specifies a facility and the quantity requested by the user for a booking."
+ *       required: [facilityId, quantity]
+ *       properties:
+ *         facilityId:
+ *           type: string
+ *           description: "The ID of the facility."
+ *           example: "60c72b2f9b1d8c001f8e4c6a"
+ *         quantity:
+ *           type: number
+ *           description: "The number of units of the facility requested."
+ *           example: 50
+ *
  *     BookingInput:
  *       type: object
  *       required: [hall, startTIdime, endTime]
@@ -85,14 +112,7 @@ const router = Router();
  *         selectedFacilities:
  *           type: array
  *           items:
- *             type: object
- *             properties:
- *               facilityId:
- *                 type: string
- *                 example: "60c72b2f9b1d8c001f8e4c6a"
- *               quantity:
- *                 type: number
- *                 example: 50
+ *             $ref: '#/components/schemas/BookingFacilityInput'
  *
  *     RecurringBookingInput:
  *       type: object
@@ -131,14 +151,7 @@ const router = Router();
  *         selectedFacilities:
  *           type: array
  *           items:
- *             type: object
- *             properties:
- *               facilityId:
- *                 type: string
- *                 example: "60c72b2b9b1d8c001f8e4c6a"
- *               quantity:
- *                 type: number
- *                 example: 20
+ *             $ref: '#/components/schemas/BookingFacilityInput'
  *         paymentMethod:
  *           type: string
  *           enum: [cash, pos, transfer]
@@ -251,7 +264,11 @@ router.route('/recurring').post(authorizeRoles('staff', 'hall-owner', 'super-adm
  *             startTime: "2025-12-01T10:00:00.000Z"
  *             endTime: "2025-12-01T14:00:00.000Z"
  *             eventDetails: "Birthday Party"
- *             selectedFacilities: [{ "facilityId": "60c72b2f9b1d8c001f8e4c6a", "quantity": 100 }, { "facilityId": "60c72b2f9b1d8c001f8e4c6b", "quantity": 1 }]
+ *             selectedFacilities:
+ *               - facilityId: "60c72b2f9b1d8c001f8e4c6a"
+ *                 quantity: 100
+ *               - facilityId: "60c72b2f9b1d8c001f8e4c6b"
+ *                 quantity: 1
  *     responses:
  *       201:
  *         description: Booking created successfully, returns payment initialization details.
