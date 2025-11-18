@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles, authorizeHallAccess } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js';
+import { checkHallCreationLimit } from '../middlewares/subscription.middleware.js';
 import {
     toggleOnlineBooking,
     createHall,
@@ -395,7 +396,7 @@ const router = Router();
  */
 router.route('/')
     .get(getAllHalls)
-    .post(verifyJWT, authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, createHall);
+    .post(verifyJWT, authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, checkHallCreationLimit, createHall);
 
 /**
  * @swagger
