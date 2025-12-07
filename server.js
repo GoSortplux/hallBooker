@@ -31,6 +31,8 @@ import subAccountRoutes from './routes/subaccount.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import locationRoutes from './routes/location.routes.js';
 import facilityRoutes from './routes/facility.routes.js';
+import recommendationRoutes from './routes/recommendation.routes.js';
+
 
 // Load environment variables
 dotenv.config();
@@ -92,6 +94,8 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/locations', locationRoutes);
 app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1', recommendationRoutes);
+
 
 
 // Fallback route to serve index.html
