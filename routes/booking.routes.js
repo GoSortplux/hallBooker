@@ -47,6 +47,10 @@ const router = Router();
  *           items:
  *             type: object
  *             properties:
+ *               facility:
+ *                 type: string
+ *                 description: "The ID of the master facility."
+ *                 example: "60c72b2f9b1d8c001f8e4c6a"
  *               name:
  *                 type: string
  *                 example: "Projector"

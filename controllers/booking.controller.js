@@ -260,7 +260,10 @@ const createBooking = asyncHandler(async (req, res) => {
       paymentStatus: 'pending',
       bookingType: 'online',
       bookedBy: req.user._id,
-      selectedFacilities: facilitiesWithCalculatedCosts,
+      selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({
+        ...cf,
+        facility: selectedFacilitiesData[i].facilityId,
+      })),
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
@@ -431,7 +434,10 @@ const walkInBooking = asyncHandler(async (req, res) => {
         email: walkInUserDetails.email,
         phone: walkInUserDetails.phone,
       },
-      selectedFacilities: facilitiesWithCalculatedCosts,
+      selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({
+        ...cf,
+        facility: selectedFacilitiesData[i].facilityId,
+      })),
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
@@ -511,12 +517,12 @@ const walkInBooking = asyncHandler(async (req, res) => {
 });
 
 const getMyBookings = asyncHandler(async (req, res) => {
-    const bookings = await Booking.find({ user: req.user._id }).populate('hall', 'name location');
+    const bookings = await Booking.find({ user: req.user._id }).populate('hall', 'name location').populate('selectedFacilities.facility');
     res.status(200).json(new ApiResponse(200, bookings, "User bookings fetched successfully."));
 });
 
 const getBookingById = asyncHandler(async (req, res) => {
-    const booking = await Booking.findById(req.params.id).populate('user', 'fullName email').populate('hall', 'name location');
+    const booking = await Booking.findById(req.params.id).populate('user', 'fullName email').populate('hall', 'name location').populate('selectedFacilities.facility');
     if (!booking) throw new ApiError(404, "Booking not found");
 
     if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
@@ -583,7 +589,7 @@ const cancelBooking = asyncHandler(async (req, res) => {
 
 const getBookingByBookingId = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('hall');
+    const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('hall').populate('selectedFacilities.facility');
     if (!booking) throw new ApiError(404, "Booking not found");
 
     if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
