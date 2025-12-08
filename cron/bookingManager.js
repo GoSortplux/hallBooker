@@ -25,7 +25,7 @@ const deletePendingBookings = async (io) => {
             path: 'hall',
             populate: {
                 path: 'owner staff',
-                select: 'email fullName',
+                select: 'email fullName _id',
             },
         }).populate('user', 'email fullName');
 
@@ -44,8 +44,6 @@ const deletePendingBookings = async (io) => {
                 // Add user
                 if (booking.user && booking.user.email) {
                     recipients.set(booking.user.email, booking.user.fullName);
-                } else if (booking.walkInUserDetails && booking.walkInUserDetails.email) {
-                    recipients.set(booking.walkInUserDetails.email, booking.walkInUserDetails.fullName);
                 }
 
                 // Add hall owner
@@ -68,27 +66,37 @@ const deletePendingBookings = async (io) => {
                 // Send email to all unique recipients
                 for (const [email, name] of recipients.entries()) {
                     let recipientId;
-                    if(booking.user && email === booking.user.email) {
+                    if (booking.user && email === booking.user.email) {
                         recipientId = booking.user._id;
                     } else if (booking.hall.owner && email === booking.hall.owner.email) {
                         recipientId = booking.hall.owner._id;
                     } else {
-                        const admin = adminUsers.find(admin => admin.email === email);
-                        if (admin) {
-                            recipientId = admin._id;
+                        const staffMember = booking.hall.staff.find(staff => staff.email === email);
+                        if (staffMember) {
+                            recipientId = staffMember._id;
+                        } else {
+                            const admin = adminUsers.find(admin => admin.email === email);
+                            if (admin) {
+                                recipientId = admin._id;
+                            }
                         }
                     }
+
+                    // Only create a notification if a recipient ID was found
+                    const notificationPayload = recipientId
+                        ? {
+                            recipient: recipientId.toString(),
+                            message: `Booking #${booking.bookingId} has been cancelled due to non-payment.`,
+                            link: `/bookings/${booking._id}`,
+                          }
+                        : undefined;
 
                     await sendEmail({
                         io,
                         email,
                         subject: `Booking Cancelled: ${booking.bookingId}`,
                         html: generatePendingBookingCancelledEmail(name, booking),
-                        notification: {
-                            recipient: recipientId.toString(),
-                            message: `Booking #${booking.bookingId} has been cancelled due to non-payment.`,
-                            link: `/bookings/${booking._id}`,
-                        },
+                        notification: notificationPayload,
                     });
                 }
 

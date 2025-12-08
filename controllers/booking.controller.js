@@ -15,7 +15,35 @@ import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, recurrenceRule } = req.body;
+  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails } = req.body;
+  const io = req.app.get('io');
+
+  const authorizedRoles = ['super-admin', 'hall-owner', 'staff'];
+  if (!authorizedRoles.includes(req.user.activeRole)) {
+    throw new ApiError(403, 'You are not authorized to create a recurring booking.');
+  }
+
+  if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
+    throw new ApiError(400, 'Customer details (fullName, phone) are required.');
+  }
+
+  const paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
+  const validPaymentStatuses = paymentStatusesSetting ? paymentStatusesSetting.value : [];
+  if (!paymentStatus || !validPaymentStatuses.includes(paymentStatus)) {
+    throw new ApiError(400, `Invalid payment status. Must be one of: ${validPaymentStatuses.join(', ')}`);
+  }
+
+  const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+  const validPaymentMethods = paymentMethodsSetting ? paymentMethodsSetting.value : [];
+  let finalPaymentMethod = paymentMethod;
+
+  if (paymentStatus === 'paid') {
+    if (!finalPaymentMethod || !validPaymentMethods.includes(finalPaymentMethod)) {
+      throw new ApiError(400, `A valid payment method is required when status is 'paid'. Must be one of: ${validPaymentMethods.join(', ')}`);
+    }
+  } else {
+    finalPaymentMethod = 'online';
+  }
 
   if (!recurrenceRule || typeof recurrenceRule !== 'object') {
     throw new ApiError(400, 'Recurrence rule is required and must be an object.');
@@ -26,7 +54,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Invalid recurrence rule provided.');
   }
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
+  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
   if (!hall.allowRecurringBookings) throw new ApiError(400, 'This hall does not allow recurring bookings.');
 
@@ -112,15 +140,19 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
       const bookingData = {
         bookingId,
         hall: hallId,
-        user: req.user._id,
         startTime: bookingStart,
         endTime: bookingEnd,
         eventDetails,
         totalPrice: finalPricePerBooking,
-        paymentMethod: 'online',
-        paymentStatus: 'pending',
-        bookingType: 'online',
+        paymentMethod: finalPaymentMethod,
+        paymentStatus: paymentStatus,
+        bookingType: 'walk-in',
         bookedBy: req.user._id,
+        walkInUserDetails: {
+          fullName: walkInUserDetails.fullName,
+          email: walkInUserDetails.email,
+          phone: walkInUserDetails.phone,
+        },
         isRecurring: true,
         recurringBookingId,
       };
@@ -130,19 +162,22 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     const newBookings = await Booking.create(createdBookings, { session });
 
     await session.commitTransaction();
-    res.status(201).json(new ApiResponse(201, newBookings, 'Recurring booking created successfully!'));
+    session.endSession();
+
+    res.status(201).json(new ApiResponse(201, { bookings: newBookings, recurringBookingId }, 'Recurring booking created successfully!'));
+
   } catch (error) {
     await session.abortTransaction();
-    throw new ApiError(500, 'Could not complete the recurring booking process.');
-  } finally {
     session.endSession();
+    console.error("Recurring booking failed:", error);
+    throw new ApiError(500, 'Could not complete the recurring booking process.');
   }
 });
 
 const createBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, selectedFacilityNames } = req.body;
+  const { hallId, startTime, endTime, eventDetails, selectedFacilities: selectedFacilitiesData } = req.body;
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
+  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
 
   if (!hall.pricing || (typeof hall.pricing !== 'object') || (!hall.pricing.hourlyRate && !hall.pricing.dailyRate)) {
@@ -171,9 +206,16 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Booking must be in the future.');
   }
 
-  // Use the helper function for validation and price calculation
-  const selectedFacilities = hall.facilities.filter(f => selectedFacilityNames?.includes(f.name));
-  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, selectedFacilities);
+  // Prepare facilities data for price calculation
+  const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
+    const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
+    if (!hallFacility) {
+      throw new ApiError(404, `Facility with ID ${sf.facilityId} not found in this hall.`);
+    }
+    return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
+  }) || [];
+
+  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, facilitiesToPrice);
 
   if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
     throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
@@ -218,7 +260,10 @@ const createBooking = asyncHandler(async (req, res) => {
       paymentStatus: 'pending',
       bookingType: 'online',
       bookedBy: req.user._id,
-      selectedFacilities: facilitiesWithCalculatedCosts,
+      selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({
+        ...cf,
+        facility: selectedFacilitiesData[i].facilityId,
+      })),
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
@@ -282,7 +327,7 @@ const createBooking = asyncHandler(async (req, res) => {
 });
 
 const walkInBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilityNames } = req.body;
+  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilities: selectedFacilitiesData } = req.body;
   const io = req.app.get('io');
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
@@ -310,11 +355,11 @@ const walkInBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
+  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
 
   const isHallOwner = hall.owner._id.toString() === req.user._id.toString();
-  const isSuperAdmin = req.user.role === 'super-admin';
+  const isSuperAdmin = req.user.activeRole === 'super-admin';
 
   if (!isHallOwner && !isSuperAdmin) {
     throw new ApiError(403, 'You are not authorized to create a walk-in booking for this hall.');
@@ -331,8 +376,15 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Booking must be in the future.');
   }
 
-  const selectedFacilities = hall.facilities.filter(f => selectedFacilityNames?.includes(f.name));
-  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, selectedFacilities);
+  const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
+    const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
+    if (!hallFacility) {
+      throw new ApiError(404, `Facility with ID ${sf.facilityId} not found in this hall.`);
+    }
+    return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
+  }) || [];
+
+  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, facilitiesToPrice);
 
   if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
     throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
@@ -382,7 +434,10 @@ const walkInBooking = asyncHandler(async (req, res) => {
         email: walkInUserDetails.email,
         phone: walkInUserDetails.phone,
       },
-      selectedFacilities: facilitiesWithCalculatedCosts,
+      selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({
+        ...cf,
+        facility: selectedFacilitiesData[i].facilityId,
+      })),
     };
 
     const newBookingArr = await Booking.create([bookingData], { session });
@@ -462,15 +517,15 @@ const walkInBooking = asyncHandler(async (req, res) => {
 });
 
 const getMyBookings = asyncHandler(async (req, res) => {
-    const bookings = await Booking.find({ user: req.user._id }).populate('hall', 'name location');
+    const bookings = await Booking.find({ user: req.user._id }).populate('hall', 'name location').populate('selectedFacilities.facility');
     res.status(200).json(new ApiResponse(200, bookings, "User bookings fetched successfully."));
 });
 
 const getBookingById = asyncHandler(async (req, res) => {
-    const booking = await Booking.findById(req.params.id).populate('user', 'fullName email').populate('hall', 'name location');
+    const booking = await Booking.findById(req.params.id).populate('user', 'fullName email').populate('hall', 'name location').populate('selectedFacilities.facility');
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (req.user.role === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
+    if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not authorized to view this booking.");
     }
     res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));
@@ -491,7 +546,7 @@ const cancelBooking = asyncHandler(async (req, res) => {
     const booking = await Booking.findById(req.params.id).populate('hall').populate('user');
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'super-admin') {
+    if (booking.user.toString() !== req.user._id.toString() && req.user.activeRole !== 'super-admin') {
         throw new ApiError(403, "You are not authorized to cancel this booking.");
     }
     
@@ -534,10 +589,10 @@ const cancelBooking = asyncHandler(async (req, res) => {
 
 const getBookingByBookingId = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('hall');
+    const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('hall').populate('selectedFacilities.facility');
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (req.user.role === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
+    if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not authorized to view this booking.");
     }
     res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));

@@ -42,14 +42,11 @@ const router = Router();
  *           format: date-time
  *     SubscriptionInput:
  *       type: object
- *       required: [licenseTierId, paymentReference]
+ *       required: [tierId]
  *       properties:
- *         licenseTierId:
+ *         tierId:
  *           type: string
  *           example: "60d0fe4f5311236168a109ce"
- *         paymentReference:
- *           type: string
- *           example: "pay_ref_12345"
  */
 
 router.use(verifyJWT);
@@ -144,7 +141,12 @@ router.route('/recommend')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/SubscriptionInput'
+ *             type: object
+ *             required: [newTierId]
+ *             properties:
+ *               newTierId:
+ *                 type: string
+ *                 example: "60d0fe4f5311236168a109cf"
  *     responses:
  *       200:
  *         description: Subscription upgrade payment initialized successfully.

@@ -59,9 +59,15 @@ const bookingSchema = new mongoose.Schema(
     },
     selectedFacilities: [
       {
+        facility: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Facility',
+          required: true,
+        },
         name: { type: String, required: true },
         cost: { type: Number, required: true },
         chargeMethod: { type: String, required: true },
+        quantity: { type: Number, required: true },
       },
     ],
   },

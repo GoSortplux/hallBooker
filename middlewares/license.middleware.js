@@ -4,7 +4,7 @@ import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { Hall } from '../models/hall.model.js';
 
 export const checkActiveLicense = asyncHandler(async (req, res, next) => {
-  if (req.user.role === 'super-admin') {
+  if (req.user.role.includes('super-admin')) {
     return next();
   }
 
@@ -20,11 +20,5 @@ export const checkActiveLicense = asyncHandler(async (req, res, next) => {
       throw new ApiError(403, "Access Denied: Your subscription has expired.");
   }
 
-  const hallCount = await Hall.countDocuments({ owner: req.user._id });
-
-  if (subscription.tier && hallCount >= subscription.tier.maxHalls) {
-    throw new ApiError(403, `You have reached the maximum number of halls (${subscription.tier.maxHalls}) for your current subscription plan.`);
-  }
-  
   next();
 });

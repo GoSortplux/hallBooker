@@ -18,7 +18,7 @@ const subscriptionHistorySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'active', 'expired', 'cancelled', 'upgraded'],
+      enum: ['pending', 'active', 'expired', 'cancelled', 'upgraded', 'failed', 'refunded'],
       required: true,
     },
     purchaseDate: {
@@ -28,9 +28,15 @@ const subscriptionHistorySchema = new mongoose.Schema(
     expiryDate: {
       type: Date,
     }, // Null for lifetime licenses
-    transactionId: {
+    transactionReference: {
       type: String,
-    }, // Optional: for linking to a payment gateway transaction
+    },
+    paymentReference: {
+      type: String,
+    },
+    paymentMethod: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

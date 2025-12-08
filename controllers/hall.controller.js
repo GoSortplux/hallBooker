@@ -193,25 +193,50 @@ const getHallById = asyncHandler(async (req, res) => {
 
 const updateHall = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { location, allowRecurringBookings, recurringBookingDiscount, facilities, ...otherDetails } = req.body;
+    // Separate facility details from the rest of the body.
+    // This allows for adding/updating a single facility via the PATCH endpoint.
+    const { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit, ...otherDetails } = req.body;
+    const { location, allowRecurringBookings, recurringBookingDiscount, facilities } = otherDetails;
 
     // Prevent owner field from being updated
     if (otherDetails.owner) {
         throw new ApiError(400, "Cannot update the owner of a hall.");
     }
 
-    // Validate facilities
-    if (facilities && facilities.length > 0) {
-        const facilityIds = facilities.map(f => f.facility);
-        const foundFacilities = await Facility.find({ '_id': { $in: facilityIds } });
-        if (foundFacilities.length !== facilityIds.length) {
-            throw new ApiError(400, 'One or more facilities are invalid.');
-        }
-    }
-
     const hall = await Hall.findById(id);
     if (!hall) {
         throw new ApiError(404, "Hall not found.");
+    }
+
+    // Handle single facility add/update if a facilityId is provided
+    if (facilityId) {
+        const facilityExists = await Facility.findById(facilityId);
+        if (!facilityExists) {
+            throw new ApiError(404, 'Facility with the provided ID does not exist.');
+        }
+
+        const facilityData = { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit };
+        // Remove undefined properties so Mongoose defaults are not overridden with null
+        Object.keys(facilityData).forEach(key => facilityData[key] === undefined && delete facilityData[key]);
+
+        const existingFacilityIndex = hall.facilities.findIndex(f => f.facility.toString() === facilityId);
+
+        if (existingFacilityIndex > -1) {
+            // Update the existing facility sub-document
+            Object.assign(hall.facilities[existingFacilityIndex], facilityData);
+        } else {
+            // Add as a new facility to the hall
+            hall.facilities.push(facilityData);
+        }
+    }
+    // Handle full replacement of the facilities array if `facilities` is provided explicitly
+    else if (facilities) {
+        const facilityIds = facilities.map(f => f.facility);
+        const foundFacilities = await Facility.find({ '_id': { $in: facilityIds } });
+        if (foundFacilities.length !== facilityIds.length) {
+            throw new ApiError(400, 'One or more facilities in the provided array are invalid.');
+        }
+        hall.facilities = facilities;
     }
 
     // Handle location update separately
@@ -226,7 +251,7 @@ const updateHall = asyncHandler(async (req, res) => {
             };
             hall.directionUrl = `https://www.google.com/maps/dir/?api=1&destination=${geocodedData[0].latitude},${geocodedData[0].longitude}`;
         } else {
-            hall.geoLocation = undefined;
+            hall.geoLocation = undefined; // Important to avoid GeoJSON error for empty coordinates
             hall.directionUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
         }
     }
@@ -259,7 +284,7 @@ const updateHall = asyncHandler(async (req, res) => {
         }
     }
 
-    // Apply other updates
+    // Apply other non-facility updates
     Object.assign(hall, otherDetails);
 
     const updatedHall = await hall.save({ validateBeforeSave: true });
@@ -341,12 +366,25 @@ const deleteHallMedia = asyncHandler(async (req, res) => {
 
 const getHallsByOwner = asyncHandler(async (req, res) => {
     let query = {};
-    if (req.user.role === 'hall-owner') {
-        query = { owner: req.user._id };
-    } else if (req.user.role === 'staff') {
-        query = { staff: req.user._id };
+    const { activeRole, _id } = req.user;
+
+    if (activeRole === 'hall-owner') {
+        query = { owner: _id };
+    } else if (activeRole === 'staff') {
+        query = { staff: { $in: [_id] } };
+    } else {
+        // If the role is not one of the expected, return an empty array
+        // or handle as an error, depending on desired behavior.
+        return res.status(200).json(new ApiResponse(200, [], "No halls found for this role"));
     }
-    const halls = await Hall.find(query).populate('owner', 'fullName');
+
+    const halls = await Hall.find(query)
+        .populate('owner', 'fullName')
+        .populate('country')
+        .populate('state')
+        .populate('localGovernment')
+        .populate('facilities.facility');
+
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 

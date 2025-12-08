@@ -21,11 +21,11 @@ const router = Router();
  * @swagger
  * /api/v1/facilities:
  *   get:
- *     summary: Retrieve a list of all facilities
+ *     summary: Retrieve a list of all facilities and available charge methods
  *     tags: [Facilities]
  *     responses:
  *       '200':
- *         description: A list of facilities
+ *         description: A list of facilities along with the available methods for charging.
  *         content:
  *           application/json:
  *             schema:
@@ -35,12 +35,20 @@ const router = Router();
  *                   type: integer
  *                   example: 200
  *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Facility'
+ *                   type: object
+ *                   properties:
+ *                     facilities:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Facility'
+ *                     chargeMethods:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["free", "flat", "per_hour", "per_day"]
  *                 message:
  *                   type: string
- *                   example: "Facilities retrieved successfully"
+ *                   example: "Facilities and charge methods retrieved successfully"
  *                 success:
  *                   type: boolean
  *                   example: true

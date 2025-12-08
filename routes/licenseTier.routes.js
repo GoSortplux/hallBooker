@@ -13,8 +13,10 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: License Tiers
- *   description: Management of license tiers (Super Admin only)
+ *   - name: License Tiers
+ *     description: Management of license tiers (Super Admin only)
+ *   - name: License Tiers (Hall Owner/Staff)
+ *     description: License tier information for hall owners and staff
  */
 
 /**
@@ -93,8 +95,8 @@ const router = Router();
  *                   type: string
  *                   example: "License tier created successfully"
  *   get:
- *     summary: Get all license tiers (Super Admin only)
- *     tags: [License Tiers]
+ *     summary: Get all license tiers
+ *     tags: [License Tiers (Hall Owner/Staff)]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -116,18 +118,17 @@ const router = Router();
  *                   type: string
  *                   example: "License tiers fetched successfully"
  */
-router.use(verifyJWT, authorizeRoles('super-admin'));
-
-router.route('/')
-  .post(createLicenseTier)
-  .get(getAllLicenseTiers);
+router
+  .route('/')
+  .post(verifyJWT, authorizeRoles('super-admin'), createLicenseTier)
+  .get(verifyJWT, authorizeRoles('super-admin', 'hall-owner', 'staff'), getAllLicenseTiers);
 
 /**
  * @swagger
  * /api/v1/license-tiers/{id}:
  *   get:
- *     summary: Get a license tier by ID (Super Admin only)
- *     tags: [License Tiers]
+ *     summary: Get a license tier by ID
+ *     tags: [License Tiers (Hall Owner/Staff)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -222,9 +223,10 @@ router.route('/')
  *       404:
  *         description: License tier not found
  */
-router.route('/:id')
-  .get(getLicenseTierById)
-  .patch(updateLicenseTier)
-  .delete(deleteLicenseTier);
+router
+  .route('/:id')
+  .get(verifyJWT, authorizeRoles('super-admin', 'hall-owner', 'staff'), getLicenseTierById)
+  .patch(verifyJWT, authorizeRoles('super-admin'), updateLicenseTier)
+  .delete(verifyJWT, authorizeRoles('super-admin'), deleteLicenseTier);
 
 export default router;

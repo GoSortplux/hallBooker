@@ -42,14 +42,29 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
- *         selectedFacilityNames:
+ *         selectedFacilities:
  *           type: array
  *           items:
- *             type: string
- *           description: An array of names of the selected facilities.
- *         numberOfPeople:
- *           type: number
- *         eventType:
+ *             type: object
+ *             properties:
+ *               facility:
+ *                 type: string
+ *                 description: "The ID of the master facility."
+ *                 example: "60c72b2f9b1d8c001f8e4c6a"
+ *               name:
+ *                 type: string
+ *                 example: "Projector"
+ *               cost:
+ *                 type: number
+ *                 description: "The final calculated cost for this facility for the booking duration and quantity."
+ *                 example: 150
+ *               chargeMethod:
+ *                 type: string
+ *                 example: "flat"
+ *               quantity:
+ *                 type: number
+ *                 example: 1
+ *         eventDetails:
  *           type: string
  *         status:
  *           type: string
@@ -69,9 +84,23 @@ const router = Router();
  *         recurringBookingId:
  *           type: string
  *
+ *     BookingFacilityInput:
+ *       type: object
+ *       description: "Specifies a facility and the quantity requested by the user for a booking."
+ *       required: [facilityId, quantity]
+ *       properties:
+ *         facilityId:
+ *           type: string
+ *           description: "The ID of the facility."
+ *           example: "60c72b2f9b1d8c001f8e4c6a"
+ *         quantity:
+ *           type: number
+ *           description: "The number of units of the facility requested."
+ *           example: 50
+ *
  *     BookingInput:
  *       type: object
- *       required: [hall, startTime, endTime]
+ *       required: [hall, startTIdime, endTime]
  *       properties:
  *         hall:
  *           type: string
@@ -82,10 +111,12 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
- *         numberOfPeople:
- *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
+ *         selectedFacilities:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/BookingFacilityInput'
  *
  *     RecurringBookingInput:
  *       type: object
@@ -106,9 +137,7 @@ const router = Router();
  *         time:
  *           type: string
  *           example: "14:00"
- *         numberOfPeople:
- *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  *
  *     WalkInBookingInput:
@@ -123,11 +152,10 @@ const router = Router();
  *         endTime:
  *           type: string
  *           format: date-time
- *         selectedFacilityNames:
+ *         selectedFacilities:
  *           type: array
  *           items:
- *             type: string
- *           description: An array of names of the selected facilities.
+ *             $ref: '#/components/schemas/BookingFacilityInput'
  *         paymentMethod:
  *           type: string
  *           enum: [cash, pos, transfer]
@@ -141,18 +169,21 @@ const router = Router();
  *               format: email
  *             phone:
  *               type: string
- *         numberOfPeople:
- *           type: number
- *         eventType:
+ *         eventDetails:
  *           type: string
  *
- *     UpdateBookingDetailsInput:
+ *     WalkInUserDetails:
  *       type: object
+ *       required: [fullName, phone]
  *       properties:
- *         numberOfPeople:
- *           type: number
- *         eventType:
+ *         fullName:
  *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         phone:
+ *           type: string
+ *
  */
 
 router.use(verifyJWT);
@@ -161,7 +192,11 @@ router.use(verifyJWT);
  * @swagger
  * /api/v1/bookings/recurring:
  *   post:
- *     summary: Create a recurring booking
+ *     summary: Create a recurring booking (for Staff, Hall Owners, or Admins)
+ *     description: |
+ *       This endpoint functions similarly to a walk-in booking but for multiple dates.
+ *       It allows authorized users to create a series of bookings based on a recurrence rule.
+ *       Payment can be handled offline (cash, pos, transfer) or a payment link can be generated for online payment.
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -170,10 +205,22 @@ router.use(verifyJWT);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/RecurringBookingInput'
+ *             allOf:
+ *               - $ref: '#/components/schemas/RecurringBookingInput'
+ *               - type: object
+ *                 properties:
+ *                   paymentMethod:
+ *                     type: string
+ *                     description: "The method of payment (e.g., 'cash', 'pos', 'online'). Required if status is 'paid'."
+ *                   paymentStatus:
+ *                     type: string
+ *                     enum: [pending, paid]
+ *                     description: "The current payment status."
+ *                   walkInUserDetails:
+ *                     $ref: '#/components/schemas/WalkInUserDetails'
  *     responses:
  *       201:
- *         description: Recurring booking created successfully
+ *         description: Recurring booking created successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -183,16 +230,24 @@ router.use(verifyJWT);
  *                   type: integer
  *                   example: 201
  *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Booking'
+ *                   type: object
+ *                   properties:
+ *                     bookings:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Booking'
+ *                     recurringBookingId:
+ *                       type: string
+ *                       description: A unique ID for the entire recurring series.
  *                 message:
  *                   type: string
- *                   example: "Recurring booking created successfully"
+ *                   example: "Recurring booking created successfully!"
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked.
+ *         description: Bad request, such as invalid recurrence rule or conflicting booking.
+ *       403:
+ *         description: Forbidden, user is not authorized.
  */
-router.route('/recurring').post(createRecurringBooking);
+router.route('/recurring').post(authorizeRoles('staff', 'hall-owner', 'super-admin'), createRecurringBooking);
 
 /**
  * @swagger
@@ -208,6 +263,16 @@ router.route('/recurring').post(createRecurringBooking);
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/BookingInput'
+ *           example:
+ *             hallId: "60d0fe4f5311236168a109ca"
+ *             startTime: "2025-12-01T10:00:00.000Z"
+ *             endTime: "2025-12-01T14:00:00.000Z"
+ *             eventDetails: "Birthday Party"
+ *             selectedFacilities:
+ *               - facilityId: "60c72b2f9b1d8c001f8e4c6a"
+ *                 quantity: 100
+ *               - facilityId: "60c72b2f9b1d8c001f8e4c6b"
+ *                 quantity: 1
  *     responses:
  *       201:
  *         description: Booking created successfully, returns payment initialization details.
@@ -367,7 +432,7 @@ router.route('/search/:bookingId')
  *       404:
  *         description: Booking not found.
  *   patch:
- *     summary: Update booking details (e.g., number of people)
+ *     summary: Update booking event details
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -383,7 +448,11 @@ router.route('/search/:bookingId')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateBookingDetailsInput'
+ *             type: object
+ *             properties:
+ *               eventDetails:
+ *                 type: string
+ *                 description: The new details for the event.
  *     responses:
  *       200:
  *         description: Booking updated successfully.

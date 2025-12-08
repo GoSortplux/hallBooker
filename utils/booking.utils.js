@@ -1,17 +1,15 @@
 import { ApiError } from './apiError.js';
 
-export const calculateBookingPriceAndValidate = (startTime, endTime, pricing, selectedFacilities = []) => {
+export const calculateBookingPriceAndValidate = (startTime, endTime, pricing, facilitiesToPrice = []) => {
   const newBookingStartTime = new Date(startTime);
   const newBookingEndTime = new Date(endTime);
 
-  // Basic time validation
   if (newBookingStartTime >= newBookingEndTime) {
     throw new ApiError(400, 'Start time must be before end time.');
   }
 
   const bookingDurationHours = (newBookingEndTime - newBookingStartTime) / (1000 * 60 * 60);
 
-  // Duration validation
   if (bookingDurationHours * 60 < 30) {
     throw new ApiError(400, 'Booking must be for at least 30 minutes.');
   }
@@ -22,57 +20,61 @@ export const calculateBookingPriceAndValidate = (startTime, endTime, pricing, se
   const { hourlyRate, dailyRate } = pricing;
   let hallPrice;
 
-  // Case 1: Hall has both hourly and daily rates
   if (hourlyRate && dailyRate) {
-    if (bookingDurationHours < 24) {
-      // Use hourly rate for bookings less than 24 hours
-      hallPrice = bookingDurationHours * hourlyRate;
-    } else {
-      // Use daily rate for bookings 24 hours or longer
-      const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-      hallPrice = bookingDurationDays * dailyRate;
-    }
-  }
-  // Case 2: Hall has only an hourly rate
-  else if (hourlyRate) {
+    hallPrice = bookingDurationHours < 24 ? bookingDurationHours * hourlyRate : Math.ceil(bookingDurationHours / 24) * dailyRate;
+  } else if (hourlyRate) {
     hallPrice = bookingDurationHours * hourlyRate;
-  }
-  // Case 3: Hall has only a daily rate
-  else if (dailyRate) {
+  } else if (dailyRate) {
     if (bookingDurationHours < 24) {
       throw new ApiError(400, 'This hall requires a minimum booking of 24 hours.');
     }
-    const bookingDurationDays = Math.ceil(bookingDurationHours / 24);
-    hallPrice = bookingDurationDays * dailyRate;
-  }
-  // Case 4: No valid pricing (should be caught earlier, but good to have)
-  else {
+    hallPrice = Math.ceil(bookingDurationHours / 24) * dailyRate;
+  } else {
     throw new ApiError(400, 'Hall does not have valid pricing information.');
   }
 
   let facilitiesPrice = 0;
   const facilitiesWithCalculatedCosts = [];
 
-  if (selectedFacilities && Array.isArray(selectedFacilities)) {
-    selectedFacilities.forEach(facility => {
+  if (facilitiesToPrice && Array.isArray(facilitiesToPrice)) {
+    facilitiesToPrice.forEach(facility => {
+      if (facility.requestedQuantity <= 0) {
+        throw new ApiError(400, 'Facility quantity must be a positive number.');
+      }
+      if (facility.requestedQuantity > facility.quantity) {
+        throw new ApiError(400, `Cannot book ${facility.requestedQuantity} of ${facility.facility.name}. Only ${facility.quantity} available.`);
+      }
+
       let calculatedCost = 0;
       if (facility.chargeable) {
-        if (facility.chargeMethod === 'flat') {
-          calculatedCost = facility.cost;
-        } else if (facility.chargeMethod === 'per_hour') {
-          calculatedCost = facility.cost * bookingDurationHours;
+        const baseCost = facility.cost;
+        let multiplier = 1;
+
+        if (facility.chargeMethod === 'per_hour') {
+          multiplier = bookingDurationHours;
+        } else if (facility.chargeMethod === 'per_day') {
+          multiplier = Math.ceil(bookingDurationHours / 24);
         }
+
+        const costByDuration = baseCost * multiplier;
+
+        calculatedCost = facility.chargePerUnit
+          ? costByDuration * facility.requestedQuantity
+          : costByDuration;
       }
+
       facilitiesPrice += calculatedCost;
       facilitiesWithCalculatedCosts.push({
-        name: facility.name,
+        name: facility.facility.name,
         cost: calculatedCost,
         chargeMethod: facility.chargeMethod,
+        quantity: facility.requestedQuantity,
       });
     });
   }
 
-  const totalPrice = hallPrice + facilitiesPrice;
+  let totalPrice = hallPrice + facilitiesPrice;
+  totalPrice = Math.round(totalPrice * 100) / 100;
 
   return { totalPrice, facilitiesWithCalculatedCosts };
 };

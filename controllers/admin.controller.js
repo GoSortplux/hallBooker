@@ -2,11 +2,14 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
+import { Booking } from '../models/booking.model.js';
+
+import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
-  const users = await User.find({ role: 'hall-owner', status: 'pending' }).select(
-    'fullName email phone status'
+  const users = await User.find({ 'hallOwnerApplication.status': 'pending' }).select(
+    'fullName email phone hallOwnerApplication'
   );
 
   if (!users || users.length === 0) {
@@ -33,7 +36,10 @@ const approveHallOwnerApplication = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'User not found');
   }
 
-  user.status = 'approved';
+  user.hallOwnerApplication.status = 'approved';
+  if (!user.role.includes('hall-owner')) {
+    user.role.push('hall-owner');
+  }
   await user.save();
 
   // Notify hall owner
@@ -44,7 +50,7 @@ const approveHallOwnerApplication = asyncHandler(async (req, res) => {
   );
 
   // Notify admin
-  const admin = await User.findOne({ role: 'super-admin' });
+  const admin = await User.findOne({ role: { $in: ['super-admin'] } });
   if (admin) {
     createNotification(
       io,
@@ -60,6 +66,7 @@ const approveHallOwnerApplication = asyncHandler(async (req, res) => {
 
 const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
     const { userId } = req.params;
+    const { rejectionReason } = req.body;
     const io = req.app.get('io');
 
     const user = await User.findById(userId);
@@ -67,7 +74,8 @@ const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
       throw new ApiError(404, 'User not found');
     }
 
-    user.status = 'rejected';
+    user.hallOwnerApplication.status = 'rejected';
+    user.hallOwnerApplication.rejectionReason = rejectionReason;
     await user.save();
 
     // Notify hall owner
@@ -78,7 +86,7 @@ const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
     );
 
     // Notify admin
-    const admin = await User.findOne({ role: 'super-admin' });
+    const admin = await User.findOne({ role: { $in: ['super-admin'] } });
     if (admin) {
       createNotification(
         io,
@@ -174,4 +182,96 @@ export {
   removePaymentMethod,
   addPaymentStatus,
   removePaymentStatus,
+  getAllBookings,
+  getBookingsForHall,
 };
+
+const getBookingsForHall = asyncHandler(async (req, res) => {
+  const { hallId } = req.params;
+
+  const hall = await Hall.findById(hallId);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found');
+  }
+
+
+  const {
+    page = 1,
+    limit = 100,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    status,
+  } = req.query;
+
+  const query = { hall: hallId };
+  if (status) {
+    query.status = status;
+  }
+
+  const sort = {};
+  if (sortBy) {
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  }
+
+  const bookings = await Booking.find(query)
+    .sort(sort)
+    .skip((page - 1) * limit)
+    .limit(parseInt(limit));
+
+  const totalBookings = await Booking.countDocuments(query);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        bookings,
+        totalPages: Math.ceil(totalBookings / limit),
+        currentPage: parseInt(page),
+      },
+      'Bookings for hall retrieved successfully'
+    )
+  );
+});
+
+const getAllBookings = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 100,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    hall,
+    status,
+  } = req.query;
+
+  const query = {};
+  if (hall) {
+    query.hall = hall;
+  }
+  if (status) {
+    query.status = status;
+  }
+
+  const sort = {};
+  if (sortBy) {
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  }
+
+  const bookings = await Booking.find(query)
+    .sort(sort)
+    .skip((page - 1) * limit)
+    .limit(parseInt(limit));
+
+  const totalBookings = await Booking.countDocuments(query);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        bookings,
+        totalPages: Math.ceil(totalBookings / limit),
+        currentPage: parseInt(page),
+      },
+      'Bookings retrieved successfully'
+    )
+  );
+});

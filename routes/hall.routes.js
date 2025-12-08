@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles, authorizeHallAccess } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js';
+import { checkHallCreationLimit } from '../middlewares/subscription.middleware.js';
 import {
     toggleOnlineBooking,
     createHall,
@@ -30,8 +31,9 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
- *     Facility:
+ *     FacilityInput:
  *       type: object
+ *       description: "Defines a facility when a hall owner adds it to a hall."
  *       properties:
  *         facility:
  *           type: string
@@ -45,11 +47,19 @@ const router = Router();
  *           example: true
  *         chargeMethod:
  *           type: string
- *           enum: [free, flat, per_hour]
- *           example: "per_hour"
+ *           description: "The method of charging. Valid options are dynamically fetched from settings (e.g., 'flat', 'per_hour')."
+ *           example: "flat"
  *         cost:
  *           type: number
- *           example: 50
+ *           example: 5
+ *         quantity:
+ *           type: number
+ *           description: "The total number of this item available (e.g., 150 chairs)."
+ *           example: 150
+ *         chargePerUnit:
+ *           type: boolean
+ *           description: "If true, 'cost' is per unit. If false, 'cost' is a lump sum for any quantity."
+ *           example: true
  *       required:
  *         - facility
  *     Hall:
@@ -118,7 +128,6 @@ const router = Router();
  *                 example: false
  *               chargeMethod:
  *                 type: string
- *                 enum: [free, flat, per_hour]
  *                 example: "free"
  *               cost:
  *                 type: number
@@ -135,6 +144,7 @@ const router = Router();
  *             type: string
  *     HallUpdateInput:
  *       type: object
+ *       description: "Use one of the following methods to update facilities, not both. 1) To add or update a single facility, provide its details at the root level. 2) To replace all facilities, provide a complete array for the `facilities` field."
  *       properties:
  *         name:
  *           type: string
@@ -164,10 +174,6 @@ const router = Router();
  *               type: number
  *             hourlyRate:
  *               type: number
- *         facilities:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/Facility'
  *         carParkCapacity:
  *           type: number
  *           example: 50
@@ -191,6 +197,28 @@ const router = Router();
  *           type: string
  *           format: uri
  *           example: "https://www.google.com/maps/dir/?api=1&destination=40.730610,-73.935242"
+ *       oneOf:
+ *         - type: object
+ *           properties:
+ *             facility:
+ *               type: string
+ *               description: "ID of the single facility to add or update."
+ *               example: "60c72b2f9b1d8c001f8e4c6a"
+ *             available:
+ *               type: boolean
+ *             chargeable:
+ *               type: boolean
+ *             chargeMethod:
+ *               type: string
+ *             cost:
+ *               type: number
+ *         - type: object
+ *           properties:
+ *             facilities:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/FacilityInput'
+ *               description: "An array to completely replace all of the hall's facilities."
  *     HallInput:
  *       type: object
  *       required: [name, description, capacity, openingHour, closingHour, location, pricing, country, state, localGovernment]
@@ -235,7 +263,7 @@ const router = Router();
  *         facilities:
  *           type: array
  *           items:
- *             $ref: '#/components/schemas/Facility'
+ *             $ref: '#/components/schemas/FacilityInput'
  *         carParkCapacity:
  *           type: number
  *           example: 50
@@ -368,7 +396,7 @@ const router = Router();
  */
 router.route('/')
     .get(getAllHalls)
-    .post(verifyJWT, authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, createHall);
+    .post(verifyJWT, authorizeRoles('hall-owner', 'super-admin'), checkActiveLicense, checkHallCreationLimit, createHall);
 
 /**
  * @swagger

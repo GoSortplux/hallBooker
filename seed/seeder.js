@@ -3,6 +3,7 @@ import connectDB from '../config/db.js';
 import { Country } from '../models/country.model.js';
 import { State } from '../models/state.model.js';
 import { LocalGovernment } from '../models/localGovernment.model.js';
+import Setting from '../models/setting.model.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,6 +12,16 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const seedSettings = async () => {
+  const chargeMethods = ['free', 'flat', 'per_hour', 'per_day'];
+  await Setting.findOneAndUpdate(
+    { key: 'chargeMethods' },
+    { key: 'chargeMethods', value: chargeMethods },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  console.log('Charge methods setting seeded.');
+};
 
 const importData = async () => {
   try {
@@ -32,6 +43,8 @@ const importData = async () => {
         }
       }
     }
+
+    await seedSettings();
 
     console.log('Data Imported!');
     process.exit();
