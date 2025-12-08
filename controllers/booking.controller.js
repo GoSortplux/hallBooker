@@ -54,7 +54,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Invalid recurrence rule provided.');
   }
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
+  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
   if (!hall.allowRecurringBookings) throw new ApiError(400, 'This hall does not allow recurring bookings.');
 
@@ -355,7 +355,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName');
+  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
 
   const isHallOwner = hall.owner._id.toString() === req.user._id.toString();
