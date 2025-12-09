@@ -295,7 +295,7 @@ const router = Router();
  *       properties:
  *         reservationPattern:
  *           type: string
- *           enum: [date-range, full-week, full-month, specific-days]
+ *           enum: [date-range, full-week, full-month, specific-days, specific-dates]
  *           example: "date-range"
  *         startDate:
  *           type: string
@@ -320,6 +320,13 @@ const router = Router();
  *             type: number
  *           description: "An array of numbers representing days of the week (0=Sun, 1=Mon,...)"
  *           example: [1, 3, 5]
+ *         dates:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: date
+ *           description: "An array of specific dates to reserve."
+ *           example: ["2024-12-25", "2025-01-01"]
  */
 
 /**

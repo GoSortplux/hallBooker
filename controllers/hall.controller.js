@@ -431,7 +431,7 @@ const generateCloudinarySignature = asyncHandler(async (req, res) => {
 
 const createReservation = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { reservationPattern, startDate, endDate, year, month, week, days } = req.body;
+  const { reservationPattern, startDate, endDate, year, month, week, days, dates } = req.body;
 
   const hall = await Hall.findById(id);
   if (!hall) {
@@ -496,6 +496,16 @@ const createReservation = asyncHandler(async (req, res) => {
         currentDay.setUTCDate(currentDay.getUTCDate() + 1);
       }
       break;
+
+    case 'specific-dates':
+        if (!dates || !Array.isArray(dates) || dates.length === 0) {
+            throw new ApiError(400, 'An array of dates is required for this reservation type.');
+        }
+        dates.forEach(dateStr => {
+            const date = new Date(dateStr);
+            datesToBlock.push(new Date(date.setUTCHours(0, 0, 0, 0)));
+        });
+        break;
 
     default:
       throw new ApiError(400, 'Invalid reservation pattern provided.');

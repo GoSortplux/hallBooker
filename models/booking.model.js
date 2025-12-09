@@ -6,9 +6,15 @@ const bookingSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     hall: { type: mongoose.Schema.Types.ObjectId, ref: 'Hall', required: true },
     eventDetails: { type: String, required: true },
-    startTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
+    bookingDates: [
+      {
+        startTime: { type: Date, required: true },
+        endTime: { type: Date, required: true },
+      },
+    ],
     totalPrice: { type: Number, required: true },
+    hallPrice: { type: Number },
+    facilitiesPrice: { type: Number },
     paymentMethod: {
       type: String,
       required: true
