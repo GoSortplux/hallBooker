@@ -172,6 +172,55 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
+    // Notifications are sent only after the transaction is successful
+    try {
+      if (walkInUserDetails.email) {
+        const pdfReceipt = generatePdfReceipt({
+            ...newBookings[0].toObject(),
+            bookingDates: newBookings.map(b => b.bookingDates[0]),
+            totalPrice: newBookings.reduce((acc, b) => acc + b.totalPrice, 0),
+            hallPrice: newBookings.reduce((acc, b) => acc + b.hallPrice, 0),
+            facilitiesPrice: newBookings.reduce((acc, b) => acc + b.facilitiesPrice, 0),
+            user: { fullName: walkInUserDetails.fullName, email: walkInUserDetails.email },
+            hall: hall,
+        });
+
+        await sendEmail({
+          io,
+          email: walkInUserDetails.email,
+          subject: 'Recurring Booking Confirmation - HallBooker',
+          html: generateRecurringBookingConfirmationEmail(walkInUserDetails.fullName, newBookings, hall),
+          attachments: [{
+            filename: `receipt-recurring-${recurringBookingId}.pdf`,
+            content: Buffer.from(pdfReceipt),
+            contentType: 'application/pdf'
+          }],
+        });
+      }
+
+      const admins = await User.find({ role: 'super-admin' });
+      const adminEmails = admins.map(admin => admin.email);
+      const notificationEmails = [hall.owner.email, ...adminEmails];
+
+      await Promise.all(notificationEmails.map(email => {
+          const userIsAdmin = admins.some(admin => admin.email === email);
+          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+          sendEmail({
+              io,
+              email,
+              subject: 'New Recurring Booking Notification',
+              html: generateRecurringBookingConfirmationEmail(hall.owner.fullName, newBookings, hall),
+              notification: {
+                  recipient: recipient.toString(),
+                  message: `A new recurring booking has been made for hall: ${hall.name}.`,
+                  link: `/bookings/recurring/${recurringBookingId}`,
+              },
+          });
+      }));
+    } catch (emailError) {
+      console.error('Email notification failed after successful recurring booking:', emailError);
+    }
+
     res.status(201).json(new ApiResponse(201, { bookings: newBookings, recurringBookingId }, 'Recurring booking created successfully!'));
 
   } catch (error) {
