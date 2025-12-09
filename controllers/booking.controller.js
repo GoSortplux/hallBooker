@@ -136,8 +136,9 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     const recurringBookingId = crypto.randomUUID();
     const createdBookings = [];
 
-    for (const date of bookingDates) {
-      const bookingId = await generateBookingId(hall.name);
+    for (let i = 0; i < bookingDates.length; i++) {
+      const date = bookingDates[i];
+      const bookingId = await generateBookingId(hall.name, i);
       const bookingStart = new Date(date);
       bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
       const bookingEnd = new Date(date);
