@@ -134,11 +134,21 @@ const router = Router();
  *
  *     RecurringBookingInput:
  *       type: object
- *       required: [hall, time, eventDetails]
+ *       description: "Provide either a 'recurrenceRule' object or a 'dates' array."
+ *       required: [hallId, startTime, endTime, eventDetails]
  *       properties:
- *         hall:
+ *         hallId:
  *           type: string
- *           description: The ID of the hall to book.
+ *         startTime:
+ *           type: string
+ *           format: date-time
+ *           description: "The start time for each recurring instance."
+ *         endTime:
+ *           type: string
+ *           format: date-time
+ *           description: "The end time for each recurring instance."
+ *         eventDetails:
+ *           type: string
  *         recurrenceRule:
  *           type: object
  *           properties:
@@ -149,10 +159,10 @@ const router = Router();
  *               type: array
  *               items:
  *                 type: number
- *               description: The days of the week (0=Sun, 1=Mon, ...). Required for weekly recurrence.
+ *               description: "Required for 'weekly' frequency (0=Sun, 1=Mon, ...)."
  *             dayOfMonth:
  *               type: number
- *               description: The day of the month. Required for monthly recurrence.
+ *               description: "Required for 'monthly' frequency."
  *             endDate:
  *               type: string
  *               format: date
@@ -162,12 +172,7 @@ const router = Router();
  *             type: string
  *             format: date
  *           description: "An array of specific dates to book."
- *           example: ["2024-12-25", "2025-01-01"]
- *         time:
- *           type: string
- *           example: "14:00"
- *         eventDetails:
- *           type: string
+ *           example: ["2025-10-05", "2025-10-12", "2025-10-19"]
  *
  *     WalkInBookingInput:
  *       type: object
@@ -299,8 +304,11 @@ router.route('/recurring').post(authorizeRoles('staff', 'hall-owner', 'super-adm
  *             $ref: '#/components/schemas/BookingInput'
  *           example:
  *             hallId: "60d0fe4f5311236168a109ca"
- *             startTime: "2025-12-01T10:00:00.000Z"
- *             endTime: "2025-12-01T14:00:00.000Z"
+ *             bookingDates:
+ *               - startTime: "2025-12-01T10:00:00.000Z"
+ *                 endTime: "2025-12-01T14:00:00.000Z"
+ *               - startTime: "2025-12-03T10:00:00.000Z"
+ *                 endTime: "2025-12-03T14:00:00.000Z"
  *             eventDetails: "Birthday Party"
  *             selectedFacilities:
  *               - facilityId: "60c72b2f9b1d8c001f8e4c6a"
@@ -343,6 +351,18 @@ router.route('/')
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/WalkInBookingInput'
+ *           example:
+ *             hallId: "60d0fe4f5311236168a109ca"
+ *             bookingDates:
+ *               - startTime: "2025-11-05T10:00:00.000Z"
+ *                 endTime: "2025-11-05T17:00:00.000Z"
+ *             eventDetails: "Team Offsite"
+ *             walkInUserDetails:
+ *               fullName: "Jane Doe"
+ *               email: "jane.doe@example.com"
+ *               phone: "555-555-5555"
+ *             paymentMethod: "pos"
+ *             paymentStatus: "paid"
  *     responses:
  *       201:
  *         description: Walk-in booking created successfully.
