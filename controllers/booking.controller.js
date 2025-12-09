@@ -8,7 +8,7 @@ import { Hall } from '../models/hall.model.js';
 import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
-import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail } from '../utils/emailTemplates.js';
+import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail, generateRecurringBookingConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
 import crypto from 'crypto';
