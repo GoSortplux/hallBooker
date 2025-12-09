@@ -241,6 +241,10 @@ const makePayment = asyncHandler(async (req, res) => {
 
     if (!booking) throw new ApiError(404, 'Booking not found');
 
+    if (booking.paymentStatus === 'paid') {
+        throw new ApiError(400, 'Payment has already been made for this booking.');
+    }
+
     if (booking.bookingType !== 'walk-in' && !req.user)
         throw new ApiError(401, 'Login required');
 
@@ -326,7 +330,7 @@ const makePaymentForRecurring = asyncHandler(async (req, res) => {
     const firstBooking = bookings[0];
 
     if (firstBooking.paymentStatus === 'paid') {
-        throw new ApiError(400, 'This recurring booking has already been paid for.');
+        throw new ApiError(400, 'Payment has already been made for this booking.');
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
