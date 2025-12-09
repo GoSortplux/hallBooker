@@ -627,11 +627,12 @@ export {
 
 function generateRecurringBookingConfirmationEmail(customerName, bookings, hall) {
     const totalAmount = bookings.reduce((acc, booking) => acc + booking.totalPrice, 0);
+    const totalHallPrice = bookings.reduce((acc, booking) => acc + booking.hallPrice, 0);
+    const totalFacilitiesPrice = bookings.reduce((acc, booking) => acc + booking.facilitiesPrice, 0);
     const firstBooking = bookings[0];
-    const lastBooking = bookings[bookings.length - 1];
 
     const bookingDatesHtml = bookings.map(b => {
-        const date = new Date(b.startTime);
+        const date = new Date(b.bookingDates[0].startTime);
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
         return `<li>${date.toLocaleDateString('en-US', dateOptions)} (${date.toLocaleTimeString('en-US', timeOptions)})</li>`;
@@ -666,6 +667,14 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${firstBooking.paymentStatus}</td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Hall Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${totalHallPrice.toLocaleString()}</strong></td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Facilities Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${totalFacilitiesPrice.toLocaleString()}</strong></td>
                 </tr>
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
