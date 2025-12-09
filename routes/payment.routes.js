@@ -29,6 +29,8 @@ const router = Router();
  *     responses:
  *       200:
  *         description: Payment initialized successfully.
+ *       400:
+ *         description: Payment has already been made for this booking.
  *       404:
  *         description: No bookings found for the provided recurring ID.
  */
@@ -66,6 +68,8 @@ router.route('/initialize/recurring/:recurringBookingId').post(verifyJWT, makePa
  *                 message:
  *                   type: string
  *                   example: "Transaction initialized successfully"
+ *       400:
+ *         description: Payment has already been made for this booking.
  *       404:
  *         description: Booking not found.
  */
