@@ -15,7 +15,7 @@ import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails } = req.body;
+  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails, dates } = req.body;
   const io = req.app.get('io');
 
   const authorizedRoles = ['super-admin', 'hall-owner', 'staff'];
@@ -45,13 +45,8 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     finalPaymentMethod = 'online';
   }
 
-  if (!recurrenceRule || typeof recurrenceRule !== 'object') {
-    throw new ApiError(400, 'Recurrence rule is required and must be an object.');
-  }
-
-  const { frequency, daysOfWeek, dayOfMonth, endDate } = recurrenceRule;
-  if (!frequency || !endDate || (frequency === 'weekly' && !daysOfWeek) || (frequency === 'monthly' && !dayOfMonth)) {
-    throw new ApiError(400, 'Invalid recurrence rule provided.');
+  if (!recurrenceRule && !dates) {
+    throw new ApiError(400, 'Either a recurrence rule or a list of dates is required.');
   }
 
   const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
@@ -60,22 +55,32 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 
   const initialStartTime = new Date(startTime);
   const initialEndTime = new Date(endTime);
-  const recurrenceEndDate = new Date(endDate);
+  let bookingDates = [];
 
-  const bookingDates = [];
-  let currentDate = new Date(initialStartTime);
-
-  while (currentDate <= recurrenceEndDate) {
-    if (frequency === 'weekly') {
-      if (daysOfWeek.includes(currentDate.getDay())) {
-        bookingDates.push(new Date(currentDate));
-      }
-    } else if (frequency === 'monthly') {
-      if (currentDate.getDate() === dayOfMonth) {
-        bookingDates.push(new Date(currentDate));
-      }
+  if (recurrenceRule) {
+    const { frequency, daysOfWeek, dayOfMonth, endDate } = recurrenceRule;
+    if (!frequency || !endDate || (frequency === 'weekly' && !daysOfWeek) || (frequency === 'monthly' && !dayOfMonth)) {
+      throw new ApiError(400, 'Invalid recurrence rule provided.');
     }
-    currentDate.setDate(currentDate.getDate() + 1);
+    const recurrenceEndDate = new Date(endDate);
+    let currentDate = new Date(initialStartTime);
+
+    while (currentDate <= recurrenceEndDate) {
+      if (frequency === 'weekly') {
+        if (daysOfWeek.includes(currentDate.getDay())) {
+          bookingDates.push(new Date(currentDate));
+        }
+      } else if (frequency === 'monthly') {
+        if (currentDate.getDate() === dayOfMonth) {
+          bookingDates.push(new Date(currentDate));
+        }
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  } else {
+      dates.forEach(dateStr => {
+          bookingDates.push(new Date(dateStr));
+      });
   }
 
   if (bookingDates.length === 0) {
@@ -98,29 +103,30 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     const existingBooking = await Booking.findOne({
       hall: hallId,
       $or: [
-        { status: 'confirmed' },
-        { paymentStatus: 'pending' }
+            { status: 'confirmed' },
+            { paymentStatus: 'pending' }
       ],
-      $and: [
-        {
-          $or: [
-            { startTime: { $lt: bookingEnd, $gte: bookingStart } },
-            { endTime: { $gt: bookingStart, $lte: bookingEnd } },
-            { startTime: { $lte: bookingStart }, endTime: { $gte: bookingEnd } }
-          ]
-        }
-      ]
+        bookingDates: {
+            $elemMatch: {
+                startTime: { $lt: bookingEnd },
+                endTime: { $gt: bookingStart },
+            },
+        },
     });
     if (existingBooking) {
       throw new ApiError(409, `Time slot on ${date.toDateString()} is already booked.`);
     }
   }
 
-  const { totalPrice: singleBookingPrice } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing);
+  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice } = calculateBookingPriceAndValidate([{ startTime: initialStartTime, endTime: initialEndTime }], hall.pricing);
   let finalPricePerBooking = singleBookingPrice;
+  let finalHallPricePerBooking = singleBookingHallPrice;
+  let finalFacilitiesPricePerBooking = singleBookingFacilitiesPrice;
 
   if (hall.recurringBookingDiscount.percentage > 0 && bookingDates.length >= hall.recurringBookingDiscount.minBookings) {
     finalPricePerBooking = singleBookingPrice * (1 - hall.recurringBookingDiscount.percentage / 100);
+    finalHallPricePerBooking = singleBookingHallPrice * (1 - hall.recurringBookingDiscount.percentage / 100);
+    finalFacilitiesPricePerBooking = singleBookingFacilitiesPrice * (1 - hall.recurringBookingDiscount.percentage / 100);
   }
 
   const session = await mongoose.startSession();
@@ -140,10 +146,11 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
       const bookingData = {
         bookingId,
         hall: hallId,
-        startTime: bookingStart,
-        endTime: bookingEnd,
+        bookingDates: [{ startTime: bookingStart, endTime: bookingEnd }],
         eventDetails,
         totalPrice: finalPricePerBooking,
+        hallPrice: finalHallPricePerBooking,
+        facilitiesPrice: finalFacilitiesPricePerBooking,
         paymentMethod: finalPaymentMethod,
         paymentStatus: paymentStatus,
         bookingType: 'walk-in',
@@ -175,7 +182,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 });
 
 const createBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, selectedFacilities: selectedFacilitiesData } = req.body;
+  const { hallId, bookingDates, eventDetails, selectedFacilities: selectedFacilitiesData } = req.body;
 
   const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
   if (!hall) throw new ApiError(404, 'Hall not found');
@@ -184,27 +191,64 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Hall does not have valid pricing information. Pricing should be an object with hourlyRate and/or dailyRate.');
   }
 
-  const newBookingStartTime = new Date(startTime);
-  const newBookingEndTime = new Date(endTime);
+  for (const bookingDate of bookingDates) {
+    const { startTime, endTime } = bookingDate;
+    const newBookingStartTime = new Date(startTime);
+    const newBookingEndTime = new Date(endTime);
 
-  // Check for reservations
-  const canOverrideReservation = ['super-admin', 'hall-owner', 'staff'].includes(req.user.role);
-  if (!canOverrideReservation && hall.blockedDates && hall.blockedDates.length > 0) {
-    const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0).getTime()));
-    let currentDate = new Date(newBookingStartTime);
-    while (currentDate <= newBookingEndTime) {
-      const currentDay = new Date(currentDate).setUTCHours(0, 0, 0, 0);
-      if (blockedDatesSet.has(currentDay)) {
-        throw new ApiError(400, `The hall is reserved for ${new Date(currentDate).toDateString()} and cannot be booked.`);
+    // Check for reservations
+    const canOverrideReservation = ['super-admin', 'hall-owner', 'staff'].includes(req.user.role);
+    if (!canOverrideReservation && hall.blockedDates && hall.blockedDates.length > 0) {
+      const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0).getTime()));
+      let currentDate = new Date(newBookingStartTime);
+      while (currentDate <= newBookingEndTime) {
+        const currentDay = new Date(currentDate).setUTCHours(0, 0, 0, 0);
+        if (blockedDatesSet.has(currentDay)) {
+          throw new ApiError(400, `The hall is reserved for ${new Date(currentDate).toDateString()} and cannot be booked.`);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Validation for future bookings
+    if (newBookingStartTime < new Date()) {
+      throw new ApiError(400, 'Booking must be in the future.');
+    }
+
+    if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
+      throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
+    }
+    if (hall.closingHour && newBookingEndTime.getHours() > hall.closingHour) {
+      throw new ApiError(400, `Hall closes at ${hall.closingHour}:00.`);
     }
   }
 
-  // Validation for future bookings
-  if (newBookingStartTime < new Date()) {
-    throw new ApiError(400, 'Booking must be in the future.');
-  }
+    const orQuery = bookingDates.map(bookingDate => {
+        const { startTime, endTime } = bookingDate;
+        return {
+            bookingDates: {
+                $elemMatch: {
+                    startTime: { $lt: new Date(endTime) },
+                    endTime: { $gt: new Date(startTime) },
+                },
+            },
+        };
+    });
+
+    const existingBooking = await Booking.findOne({
+        hall: hallId,
+        $or: [
+            { status: 'confirmed' },
+            { paymentStatus: 'pending' }
+        ],
+        $and: [
+            { $or: orQuery }
+        ]
+    });
+
+    if (existingBooking) {
+        throw new ApiError(409, `One of the selected time slots is already booked.`);
+    }
 
   // Prepare facilities data for price calculation
   const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
@@ -215,33 +259,7 @@ const createBooking = asyncHandler(async (req, res) => {
     return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
   }) || [];
 
-  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, facilitiesToPrice);
-
-  if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
-    throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
-  }
-  if (hall.closingHour && newBookingEndTime.getHours() > hall.closingHour) {
-    throw new ApiError(400, `Hall closes at ${hall.closingHour}:00.`);
-  }
-
-  const existingBooking = await Booking.findOne({
-    hall: hallId,
-    $or: [
-        { status: 'confirmed' },
-        { paymentStatus: 'pending' }
-    ],
-    $and: [
-        {
-          $or: [
-            { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
-            { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
-            { startTime: { $lte: newBookingStartTime }, endTime: { $gte: newBookingEndTime } }
-          ]
-        }
-    ]
-  });
-
-  if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
+  const { totalPrice, hallPrice, facilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(bookingDates, hall.pricing, facilitiesToPrice);
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -252,10 +270,11 @@ const createBooking = asyncHandler(async (req, res) => {
       bookingId,
       hall: hallId,
       user: req.user._id,
-      startTime: newBookingStartTime,
-      endTime: newBookingEndTime,
+      bookingDates,
       eventDetails,
       totalPrice,
+      hallPrice,
+      facilitiesPrice,
       paymentMethod: 'online',
       paymentStatus: 'pending',
       bookingType: 'online',
@@ -327,7 +346,7 @@ const createBooking = asyncHandler(async (req, res) => {
 });
 
 const walkInBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilities: selectedFacilitiesData } = req.body;
+  const { hallId, bookingDates, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilities: selectedFacilitiesData } = req.body;
   const io = req.app.get('io');
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {
@@ -369,12 +388,49 @@ const walkInBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Hall does not have valid pricing information. Pricing should be an object with hourlyRate and/or dailyRate.');
   }
 
-  const newBookingStartTime = new Date(startTime);
-  const newBookingEndTime = new Date(endTime);
+  for (const bookingDate of bookingDates) {
+    const { startTime, endTime } = bookingDate;
+    const newBookingStartTime = new Date(startTime);
+    const newBookingEndTime = new Date(endTime);
 
-  if (newBookingStartTime < new Date()) {
-    throw new ApiError(400, 'Booking must be in the future.');
+    if (newBookingStartTime < new Date()) {
+      throw new ApiError(400, 'Booking must be in the future.');
+    }
+
+    if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
+      throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
+    }
+    if (hall.closingHour && newBookingEndTime.getHours() > hall.closingHour) {
+      throw new ApiError(400, `Hall closes at ${hall.closingHour}:00.`);
+    }
   }
+
+    const orQuery = bookingDates.map(bookingDate => {
+        const { startTime, endTime } = bookingDate;
+        return {
+            bookingDates: {
+                $elemMatch: {
+                    startTime: { $lt: new Date(endTime) },
+                    endTime: { $gt: new Date(startTime) },
+                },
+            },
+        };
+    });
+
+    const existingBooking = await Booking.findOne({
+        hall: hallId,
+        $or: [
+            { status: 'confirmed' },
+            { paymentStatus: 'pending' }
+        ],
+        $and: [
+            { $or: orQuery }
+        ]
+    });
+
+    if (existingBooking) {
+        throw new ApiError(409, `One of the selected time slots is already booked.`);
+    }
 
   const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
     const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
@@ -384,33 +440,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
     return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
   }) || [];
 
-  const { totalPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(startTime, endTime, hall.pricing, facilitiesToPrice);
-
-  if (hall.openingHour && newBookingStartTime.getHours() < hall.openingHour) {
-    throw new ApiError(400, `Hall is not open until ${hall.openingHour}:00.`);
-  }
-  if (hall.closingHour && newBookingEndTime.getHours() > hall.closingHour) {
-    throw new ApiError(400, `Hall closes at ${hall.closingHour}:00.`);
-  }
-
-  const existingBooking = await Booking.findOne({
-    hall: hallId,
-    $or: [
-        { status: 'confirmed' },
-        { paymentStatus: 'pending' }
-    ],
-    $and: [
-        {
-          $or: [
-            { startTime: { $lt: newBookingEndTime, $gte: newBookingStartTime } },
-            { endTime: { $gt: newBookingStartTime, $lte: newBookingEndTime } },
-            { startTime: { $lte: newBookingStartTime }, endTime: { $gte: newBookingEndTime } }
-          ]
-        }
-    ]
-  });
-
-  if (existingBooking) throw new ApiError(409, 'This time slot is already booked.');
+  const { totalPrice, hallPrice, facilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(bookingDates, hall.pricing, facilitiesToPrice);
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -421,10 +451,11 @@ const walkInBooking = asyncHandler(async (req, res) => {
     const bookingData = {
       bookingId,
       hall: hallId,
-      startTime: newBookingStartTime,
-      endTime: newBookingEndTime,
+      bookingDates,
       eventDetails,
       totalPrice,
+      hallPrice,
+      facilitiesPrice,
       paymentMethod: finalPaymentMethod,
       paymentStatus: paymentStatus,
       bookingType: 'walk-in',

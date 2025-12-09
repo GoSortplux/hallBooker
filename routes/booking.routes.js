@@ -36,12 +36,17 @@ const router = Router();
  *           $ref: '#/components/schemas/User'
  *         hall:
  *           $ref: '#/components/schemas/Hall'
- *         startTime:
- *           type: string
- *           format: date-time
- *         endTime:
- *           type: string
- *           format: date-time
+ *         bookingDates:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
  *         selectedFacilities:
  *           type: array
  *           items:
@@ -69,6 +74,10 @@ const router = Router();
  *         status:
  *           type: string
  *           enum: [pending, confirmed, cancelled, completed]
+ *         hallPrice:
+ *           type: number
+ *         facilitiesPrice:
+ *           type: number
  *         totalPrice:
  *           type: number
  *         paymentMethod:
@@ -100,17 +109,22 @@ const router = Router();
  *
  *     BookingInput:
  *       type: object
- *       required: [hall, startTIdime, endTime]
+ *       required: [hall, bookingDates]
  *       properties:
  *         hall:
  *           type: string
  *           description: The ID of the hall to book.
- *         startTime:
- *           type: string
- *           format: date-time
- *         endTime:
- *           type: string
- *           format: date-time
+ *         bookingDates:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
  *         eventDetails:
  *           type: string
  *         selectedFacilities:
@@ -120,20 +134,35 @@ const router = Router();
  *
  *     RecurringBookingInput:
  *       type: object
- *       required: [hall, startDate, endDate, dayOfWeek, time]
+ *       required: [hall, time, eventDetails]
  *       properties:
  *         hall:
  *           type: string
  *           description: The ID of the hall to book.
- *         startDate:
- *           type: string
- *           format: date
- *         endDate:
- *           type: string
- *           format: date
- *         dayOfWeek:
- *           type: number
- *           description: The day of the week (0=Sun, 1=Mon, ...).
+ *         recurrenceRule:
+ *           type: object
+ *           properties:
+ *             frequency:
+ *               type: string
+ *               enum: [weekly, monthly]
+ *             daysOfWeek:
+ *               type: array
+ *               items:
+ *                 type: number
+ *               description: The days of the week (0=Sun, 1=Mon, ...). Required for weekly recurrence.
+ *             dayOfMonth:
+ *               type: number
+ *               description: The day of the month. Required for monthly recurrence.
+ *             endDate:
+ *               type: string
+ *               format: date
+ *         dates:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: date
+ *           description: "An array of specific dates to book."
+ *           example: ["2024-12-25", "2025-01-01"]
  *         time:
  *           type: string
  *           example: "14:00"
@@ -142,16 +171,21 @@ const router = Router();
  *
  *     WalkInBookingInput:
  *       type: object
- *       required: [hall, startTime, endTime, paymentMethod, walkInUserDetails]
+ *       required: [hall, bookingDates, paymentMethod, walkInUserDetails]
  *       properties:
  *         hall:
  *           type: string
- *         startTime:
- *           type: string
- *           format: date-time
- *         endTime:
- *           type: string
- *           format: date-time
+ *         bookingDates:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
  *         selectedFacilities:
  *           type: array
  *           items:

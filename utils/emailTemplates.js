@@ -79,7 +79,35 @@ const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
 }
 
 const generatePaymentConfirmationEmail = (booking) => {
-    const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+    const bookingDatesHtml = booking.bookingDates.map(bookingDate => {
+        const duration = formatDuration(new Date(bookingDate.startTime), new Date(bookingDate.endTime));
+        const startDate = new Date(bookingDate.startTime);
+        const endDate = new Date(bookingDate.endTime);
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+        const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
+                          startDate.getMonth() === endDate.getMonth() &&
+                          startDate.getDate() === endDate.getDate();
+
+        const formattedDate = isSameDay
+          ? startDate.toLocaleDateString('en-US', dateOptions)
+          : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
+        const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+
+        const formattedTime = isSameDay
+            ? `${new Date(bookingDate.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(bookingDate.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
+            : `${new Date(bookingDate.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(bookingDate.endTime).toLocaleString('en-US', dateTimeOptions)}`;
+
+        return `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+            </tr>
+        `;
+    }).join('');
 
     let facilitiesHtml = '';
     if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
@@ -97,26 +125,6 @@ const generatePaymentConfirmationEmail = (booking) => {
             ${facilityRows}
         `;
     }
-
-    const startDate = new Date(booking.startTime);
-    const endDate = new Date(booking.endTime);
-    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-
-    const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
-                      startDate.getMonth() === endDate.getMonth() &&
-                      startDate.getDate() === endDate.getDate();
-
-    const formattedDate = isSameDay
-      ? startDate.toLocaleDateString('en-US', dateOptions)
-      : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
-
-    const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-    const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
-
-    const formattedTime = isSameDay
-        ? `${new Date(booking.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(booking.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
-        : `${new Date(booking.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(booking.endTime).toLocaleString('en-US', dateTimeOptions)}`;
-
 
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -148,16 +156,20 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.hall.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+                    <td colspan="2" style="padding: 10px; border-bottom: 1px solid #ddd;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <thead>
+                                <tr style="background-color: #f9f9f9;">
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Date</th>
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Time</th>
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${bookingDatesHtml}
+                            </tbody>
+                        </table>
+                    </td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
@@ -168,6 +180,14 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
                 </tr>
                 ${facilitiesHtml}
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.hallPrice || 0).toLocaleString()}</strong></td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Facilities Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.facilitiesPrice || 0).toLocaleString()}</strong></td>
+                </tr>
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
@@ -184,7 +204,35 @@ const generatePaymentConfirmationEmail = (booking) => {
 }
 
 const generateBookingConfirmationEmail = (booking) => {
-    const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+    const bookingDatesHtml = booking.bookingDates.map(bookingDate => {
+        const duration = formatDuration(new Date(bookingDate.startTime), new Date(bookingDate.endTime));
+        const startDate = new Date(bookingDate.startTime);
+        const endDate = new Date(bookingDate.endTime);
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+        const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
+                          startDate.getMonth() === endDate.getMonth() &&
+                          startDate.getDate() === endDate.getDate();
+
+        const formattedDate = isSameDay
+          ? startDate.toLocaleDateString('en-US', dateOptions)
+          : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+
+        const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+
+        const formattedTime = isSameDay
+            ? `${new Date(bookingDate.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(bookingDate.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
+            : `${new Date(bookingDate.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(bookingDate.endTime).toLocaleString('en-US', dateTimeOptions)}`;
+
+        return `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+            </tr>
+        `;
+    }).join('');
 
     let facilitiesHtml = '';
     if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
@@ -202,25 +250,6 @@ const generateBookingConfirmationEmail = (booking) => {
             ${facilityRows}
         `;
     }
-
-    const startDate = new Date(booking.startTime);
-    const endDate = new Date(booking.endTime);
-    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-
-    const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
-                      startDate.getMonth() === endDate.getMonth() &&
-                      startDate.getDate() === endDate.getDate();
-
-    const formattedDate = isSameDay
-      ? startDate.toLocaleDateString('en-US', dateOptions)
-      : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
-
-    const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-    const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
-
-    const formattedTime = isSameDay
-        ? `${new Date(booking.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(booking.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
-        : `${new Date(booking.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(booking.endTime).toLocaleString('en-US', dateTimeOptions)}`;
 
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -252,16 +281,20 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><a href="${booking.hall.directionUrl}" style="color: #0056b3; text-decoration: none;">Get Directions</a></td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+                    <td colspan="2" style="padding: 10px; border-bottom: 1px solid #ddd;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <thead>
+                                <tr style="background-color: #f9f9f9;">
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Date</th>
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Time</th>
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${bookingDatesHtml}
+                            </tbody>
+                        </table>
+                    </td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
@@ -272,6 +305,14 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
                 </tr>
                 ${facilitiesHtml}
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.hallPrice || 0).toLocaleString()}</strong></td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Facilities Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.facilitiesPrice || 0).toLocaleString()}</strong></td>
+                </tr>
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
@@ -294,26 +335,52 @@ const generateBookingConfirmationEmail = (booking) => {
 }
 
 const generateNewBookingNotificationEmailForOwner = (booking) => {
-    const duration = formatDuration(new Date(booking.startTime), new Date(booking.endTime));
+    const bookingDatesHtml = booking.bookingDates.map(bookingDate => {
+        const duration = formatDuration(new Date(bookingDate.startTime), new Date(bookingDate.endTime));
+        const startDate = new Date(bookingDate.startTime);
+        const endDate = new Date(bookingDate.endTime);
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
-    const startDate = new Date(booking.startTime);
-    const endDate = new Date(booking.endTime);
-    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
+                          startDate.getMonth() === endDate.getMonth() &&
+                          startDate.getDate() === endDate.getDate();
 
-    const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
-                        startDate.getMonth() === endDate.getMonth() &&
-                        startDate.getDate() === endDate.getDate();
+        const formattedDate = isSameDay
+          ? startDate.toLocaleDateString('en-US', dateOptions)
+          : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
 
-    const formattedDate = isSameDay
-        ? startDate.toLocaleDateString('en-US', dateOptions)
-        : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+        const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
 
-    const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-    const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+        const formattedTime = isSameDay
+            ? `${new Date(bookingDate.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(bookingDate.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
+            : `${new Date(bookingDate.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(bookingDate.endTime).toLocaleString('en-US', dateTimeOptions)}`;
 
-    const formattedTime = isSameDay
-        ? `${new Date(booking.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(booking.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
-        : `${new Date(booking.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(booking.endTime).toLocaleString('en-US', dateTimeOptions)}`;
+        return `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+            </tr>
+        `;
+    }).join('');
+
+    let facilitiesHtml = '';
+    if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
+        const facilityRows = booking.selectedFacilities.map(f => `
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${f.cost.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        facilitiesHtml = `
+            <tr style="background-color: #f2f2f2;">
+                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Facilities</th>
+            </tr>
+            ${facilityRows}
+        `;
+    }
 
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -337,22 +404,35 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${formattedTime}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Duration:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${duration}</td>
+                    <td colspan="2" style="padding: 10px; border-bottom: 1px solid #ddd;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <thead>
+                                <tr style="background-color: #f9f9f9;">
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Date</th>
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Time</th>
+                                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${bookingDatesHtml}
+                            </tbody>
+                        </table>
+                    </td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.eventDetails}</td>
                 </tr>
-                 <tr style="background-color: #f2f2f2;">
+                ${facilitiesHtml}
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.hallPrice || 0).toLocaleString()}</strong></td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Facilities Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.facilitiesPrice || 0).toLocaleString()}</strong></td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
                 </tr>
