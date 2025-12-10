@@ -139,6 +139,10 @@ const router = Router();
  *         hallSize:
  *           type: string
  *           example: "100 sqm"
+ *         bookingBufferInHours:
+ *           type: number
+ *           description: "Buffer period in hours before and after a booking."
+ *           example: 2
  *         rules:
  *           type: array
  *           items:
@@ -181,6 +185,10 @@ const router = Router();
  *         hallSize:
  *           type: string
  *           example: "100 sqm"
+ *         bookingBufferInHours:
+ *           type: number
+ *           description: "Buffer period in hours before and after a booking. Defaults to 5 if not provided."
+ *           example: 2
  *         rules:
  *           type: array
  *           items:
@@ -198,6 +206,10 @@ const router = Router();
  *           type: string
  *           format: uri
  *           example: "https://www.google.com/maps/dir/?api=1&destination=40.730610,-73.935242"
+ *         bookingBufferInHours:
+ *           type: number
+ *           description: "Buffer period in hours before and after a booking."
+ *           example: 2
  *       oneOf:
  *         - type: object
  *           properties:
