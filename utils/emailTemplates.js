@@ -195,7 +195,11 @@ const generatePaymentConfirmationEmail = (booking) => {
             </tbody>
         </table>
 
-        <p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>
+        ${booking.hall.bookingBufferInHours && booking.hall.bookingBufferInHours > 0 ? `
+        <p style="font-size: 14px; color: #555; border-left: 4px solid #4CAF50; padding-left: 10px; background-color: #f0fff0;">
+            To ensure a smooth transition between events, please be aware that a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period is required after your booking. We kindly ask that you complete your activities and vacate the hall by the end of your scheduled time.
+        </p>
+        ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
         <p style="font-size: 14px; color: #555;">We have also attached an updated PDF receipt for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
         <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
@@ -326,7 +330,11 @@ const generateBookingConfirmationEmail = (booking) => {
         </div>
 
         <p style="font-size: 14px; color: #555;">Alternatively, you can log in to your dashboard to complete the payment.</p>
-        <p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>
+        ${booking.hall.bookingBufferInHours && booking.hall.bookingBufferInHours > 0 ? `
+        <p style="font-size: 14px; color: #555; border-left: 4px solid #0056b3; padding-left: 10px; background-color: #f0f8ff;">
+            To ensure a smooth transition between events, please be aware that a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period is required after your booking. We kindly ask that you complete your activities and vacate the hall by the end of your scheduled time.
+        </p>
+        ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
         <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your payment and booking details for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
         <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>

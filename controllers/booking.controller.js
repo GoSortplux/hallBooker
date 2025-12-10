@@ -100,6 +100,10 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
       throw new ApiError(409, `The hall is reserved for ${date.toDateString()} and cannot be booked.`);
     }
 
+    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+    const bufferedBookingStart = new Date(bookingStart.getTime() - bufferMilliseconds);
+    const bufferedBookingEnd = new Date(bookingEnd.getTime() + bufferMilliseconds);
+
     const existingBooking = await Booking.findOne({
       hall: hallId,
       $or: [
@@ -108,13 +112,13 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
       ],
         bookingDates: {
             $elemMatch: {
-                startTime: { $lt: bookingEnd },
-                endTime: { $gt: bookingStart },
+                startTime: { $lt: bufferedBookingEnd },
+                endTime: { $gt: bufferedBookingStart },
             },
         },
     });
     if (existingBooking) {
-      throw new ApiError(409, `Time slot on ${date.toDateString()} is already booked.`);
+        throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
     }
   }
 
@@ -273,13 +277,18 @@ const createBooking = asyncHandler(async (req, res) => {
     }
   }
 
+    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
     const orQuery = bookingDates.map(bookingDate => {
-        const { startTime, endTime } = bookingDate;
+        const originalStartTime = new Date(bookingDate.startTime);
+        const originalEndTime = new Date(bookingDate.endTime);
+
+        const bufferedStartTime = new Date(originalStartTime.getTime() - bufferMilliseconds);
+        const bufferedEndTime = new Date(originalEndTime.getTime() + bufferMilliseconds);
         return {
             bookingDates: {
                 $elemMatch: {
-                    startTime: { $lt: new Date(endTime) },
-                    endTime: { $gt: new Date(startTime) },
+                    startTime: { $lt: bufferedEndTime },
+                    endTime: { $gt: bufferedStartTime },
                 },
             },
         };
@@ -297,7 +306,7 @@ const createBooking = asyncHandler(async (req, res) => {
     });
 
     if (existingBooking) {
-        throw new ApiError(409, `One of the selected time slots is already booked.`);
+        throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
     }
 
   // Prepare facilities data for price calculation
@@ -455,13 +464,18 @@ const walkInBooking = asyncHandler(async (req, res) => {
     }
   }
 
+    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
     const orQuery = bookingDates.map(bookingDate => {
-        const { startTime, endTime } = bookingDate;
+        const originalStartTime = new Date(bookingDate.startTime);
+        const originalEndTime = new Date(bookingDate.endTime);
+
+        const bufferedStartTime = new Date(originalStartTime.getTime() - bufferMilliseconds);
+        const bufferedEndTime = new Date(originalEndTime.getTime() + bufferMilliseconds);
         return {
             bookingDates: {
                 $elemMatch: {
-                    startTime: { $lt: new Date(endTime) },
-                    endTime: { $gt: new Date(startTime) },
+                    startTime: { $lt: bufferedEndTime },
+                    endTime: { $gt: bufferedStartTime },
                 },
             },
         };
@@ -479,7 +493,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
     });
 
     if (existingBooking) {
-        throw new ApiError(409, `One of the selected time slots is already booked.`);
+        throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
     }
 
   const facilitiesToPrice = selectedFacilitiesData?.map(sf => {

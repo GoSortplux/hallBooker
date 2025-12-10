@@ -97,6 +97,10 @@ const hallSchema = new mongoose.Schema(
     directionUrl: {
       type: String,
     },
+    bookingBufferInHours: {
+      type: Number,
+      default: 5,
+    },
   },
   {
     timestamps: true,
