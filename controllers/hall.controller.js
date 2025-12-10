@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
+import { Booking } from '../models/booking.model.js';
 import { Hall } from '../models/hall.model.js';
 import { Facility } from '../models/facility.model.js';
 import { User } from '../models/user.model.js';
@@ -592,4 +593,52 @@ export {
     generateCloudinarySignature,
     createReservation,
     bookDemo,
+    getHallBookings,
 };
+
+const getHallBookings = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { status, startDate, endDate, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+
+    const hall = await Hall.findById(id);
+    if (!hall) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    let query = { hall: id };
+
+    if (status) {
+        query.status = status;
+    }
+
+    if (startDate && endDate) {
+        query.bookingDates = {
+            $elemMatch: {
+                startTime: { $gte: new Date(startDate) },
+                endTime: { $lte: new Date(endDate) },
+            },
+        };
+    }
+
+    const sortOptions = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+
+    const bookings = await Booking.find(query)
+        .populate('user', 'fullName email phone')
+        .populate('selectedFacilities.facility', 'name')
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(limit);
+
+    const totalBookings = await Booking.countDocuments(query);
+
+    const paginationData = {
+        totalBookings,
+        totalPages: Math.ceil(totalBookings / limit),
+        currentPage: page,
+    };
+
+    return res.status(200).json(new ApiResponse(200, { bookings, pagination: paginationData }, "Bookings fetched successfully"));
+});
