@@ -16,6 +16,7 @@ import {
     generateCloudinarySignature,
     createReservation,
     bookDemo,
+    getHallBookings,
 } from '../controllers/hall.controller.js';
 
 const router = Router();
@@ -764,26 +765,7 @@ router.route('/:id/media')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ReservationInput'
- *     responses:
- *       200:
- *         description: Reservation created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 statusCode:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   $ref: '#/components/schemas/Hall'
- *                 message:
- *                   type: string
- *                   example: "Reservation created successfully"
- *       400:
- *         description: Bad request (e.g., invalid pattern)
- */
+_*/
 router.route('/:id/reservations')
     .post(verifyJWT, authorizeHallAccess, checkActiveLicense, createReservation);
 
@@ -825,5 +807,100 @@ router.route('/:id/reservations')
  */
 router.route('/:id/toggle-online-booking')
     .patch(verifyJWT, authorizeHallAccess, checkActiveLicense, toggleOnlineBooking);
+
+/**
+ * @swagger
+ * /api/v1/halls/{id}/bookings:
+ *   get:
+ *     summary: Get all bookings for a specific hall
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The ID of the hall.
+ *         example: "60d0fe4f5311236168a109ca"
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, confirmed, cancelled]
+ *         description: "Filter bookings by status."
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: "The start date for a date range filter."
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: "The end date for a date range filter."
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: "Field to sort by."
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: "Sort order."
+ *     responses:
+ *       200:
+ *         description: A list of bookings for the hall.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     bookings:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Booking'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         totalBookings:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                         currentPage:
+ *                           type: integer
+ *                 message:
+ *                   type: string
+ *                   example: "Bookings fetched successfully"
+ *       403:
+ *         description: Forbidden - User does not have access to this hall.
+ *       404:
+ *         description: Hall not found.
+ */
+router.route('/:id/bookings')
+    .get(verifyJWT, authorizeHallAccess, getHallBookings);
 
 export default router;
