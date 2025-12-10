@@ -206,10 +206,6 @@ const router = Router();
  *           type: string
  *           format: uri
  *           example: "https://www.google.com/maps/dir/?api=1&destination=40.730610,-73.935242"
- *         bookingBufferInHours:
- *           type: number
- *           description: "Buffer period in hours before and after a booking."
- *           example: 2
  *       oneOf:
  *         - type: object
  *           properties:
@@ -777,7 +773,7 @@ router.route('/:id/media')
  *       content:
  *         application/json:
  *           schema:
-_*/
+ */
 router.route('/:id/reservations')
     .post(verifyJWT, authorizeHallAccess, checkActiveLicense, createReservation);
 
