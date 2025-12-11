@@ -640,10 +640,13 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
     const firstBooking = bookings[0];
 
     const bookingDatesHtml = bookings.map(b => {
-        const date = new Date(b.bookingDates[0].startTime);
+        const startTime = new Date(b.bookingDates[0].startTime);
+        const endTime = new Date(b.bookingDates[0].endTime);
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-        return `<li>${date.toLocaleDateString('en-US', dateOptions)} (${date.toLocaleTimeString('en-US', timeOptions)})</li>`;
+        const formattedStartTime = startTime.toLocaleTimeString('en-US', timeOptions);
+        const formattedEndTime = endTime.toLocaleTimeString('en-US', timeOptions);
+        return `<li>${startTime.toLocaleDateString('en-US', dateOptions)} (${formattedStartTime} - ${formattedEndTime})</li>`;
     }).join('');
 
     return `
