@@ -122,7 +122,11 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice } = calculateBookingPriceAndValidate([{ startTime: initialStartTime, endTime: initialEndTime }], hall.pricing);
+  const singleBookingStart = new Date(initialStartTime);
+  const singleBookingEnd = new Date(initialEndTime);
+  singleBookingEnd.setFullYear(singleBookingStart.getFullYear(), singleBookingStart.getMonth(), singleBookingStart.getDate());
+
+  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice } = calculateBookingPriceAndValidate([{ startTime: singleBookingStart, endTime: singleBookingEnd }], hall.pricing);
   let finalPricePerBooking = singleBookingPrice;
   let finalHallPricePerBooking = singleBookingHallPrice;
   let finalFacilitiesPricePerBooking = singleBookingFacilitiesPrice;
