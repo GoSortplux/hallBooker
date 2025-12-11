@@ -55,6 +55,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 
   const initialStartTime = new Date(startTime);
   const initialEndTime = new Date(endTime);
+  const eventDuration = initialEndTime.getTime() - initialStartTime.getTime();
   let bookingDates = [];
 
   if (recurrenceRule) {
@@ -93,11 +94,15 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
   for (const date of bookingDates) {
     const bookingStart = new Date(date);
     bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
-    const bookingEnd = new Date(date);
-    bookingEnd.setHours(initialEndTime.getHours(), initialEndTime.getMinutes(), initialEndTime.getSeconds());
+    const bookingEnd = new Date(bookingStart.getTime() + eventDuration);
 
-    if (!canOverrideReservation && blockedDatesSet.has(new Date(date).setHours(0, 0, 0, 0))) {
-      throw new ApiError(409, `The hall is reserved for ${date.toDateString()} and cannot be booked.`);
+    // Because the booking can span multiple days, we need to check each day for a reservation.
+    let checkDate = new Date(bookingStart);
+    while (checkDate <= bookingEnd) {
+        if (!canOverrideReservation && blockedDatesSet.has(new Date(checkDate).setHours(0, 0, 0, 0))) {
+            throw new ApiError(409, `The hall is reserved for ${checkDate.toDateString()} and cannot be booked.`);
+        }
+        checkDate.setDate(checkDate.getDate() + 1);
     }
 
     const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
@@ -122,11 +127,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const singleBookingStart = new Date(initialStartTime);
-  const singleBookingEnd = new Date(initialEndTime);
-  singleBookingEnd.setFullYear(singleBookingStart.getFullYear(), singleBookingStart.getMonth(), singleBookingStart.getDate());
-
-  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice } = calculateBookingPriceAndValidate([{ startTime: singleBookingStart, endTime: singleBookingEnd }], hall.pricing);
+  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice } = calculateBookingPriceAndValidate([{ startTime: initialStartTime, endTime: initialEndTime }], hall.pricing);
   let finalPricePerBooking = singleBookingPrice;
   let finalHallPricePerBooking = singleBookingHallPrice;
   let finalFacilitiesPricePerBooking = singleBookingFacilitiesPrice;
@@ -150,8 +151,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
       const bookingId = (i === 0) ? firstBookingId : await generateBookingId(hall.name, i);
       const bookingStart = new Date(date);
       bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
-      const bookingEnd = new Date(date);
-      bookingEnd.setHours(initialEndTime.getHours(), initialEndTime.getMinutes(), initialEndTime.getSeconds());
+      const bookingEnd = new Date(bookingStart.getTime() + eventDuration);
 
       const bookingData = {
         bookingId,
