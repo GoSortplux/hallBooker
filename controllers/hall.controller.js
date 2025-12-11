@@ -69,7 +69,7 @@ const toggleOnlineBooking = asyncHandler(async (req, res) => {
 
 
 const createHall = asyncHandler(async (req, res) => {
-    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment } = req.body;
+    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
@@ -89,7 +89,7 @@ const createHall = asyncHandler(async (req, res) => {
 
     const geocodedData = await geocoder.geocode(location);
 
-    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment };
+    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount };
 
     if (geocodedData.length > 0) {
         hallData.geoLocation = {

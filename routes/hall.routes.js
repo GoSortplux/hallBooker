@@ -206,6 +206,22 @@ const router = Router();
  *           type: string
  *           format: uri
  *           example: "https://www.google.com/maps/dir/?api=1&destination=40.730610,-73.935242"
+ *         allowRecurringBookings:
+ *           type: boolean
+ *           description: "Set to true to enable recurring bookings for this hall."
+ *           example: true
+ *         recurringBookingDiscount:
+ *           type: object
+ *           description: "Configuration for recurring booking discounts. Can be partially updated."
+ *           properties:
+ *             percentage:
+ *               type: number
+ *               description: "The discount percentage (0-100)."
+ *               example: 10
+ *             minBookings:
+ *               type: number
+ *               description: "The minimum number of bookings required to qualify for the discount."
+ *               example: 5
  *       oneOf:
  *         - type: object
  *           properties:
@@ -284,6 +300,22 @@ const router = Router();
  *           items:
  *             type: string
  *           example: ["No smoking", "No pets"]
+ *         allowRecurringBookings:
+ *           type: boolean
+ *           description: "Set to true to enable recurring bookings for this hall."
+ *           example: true
+ *         recurringBookingDiscount:
+ *           type: object
+ *           description: "Configuration for recurring booking discounts."
+ *           properties:
+ *             percentage:
+ *               type: number
+ *               description: "The discount percentage (0-100)."
+ *               example: 10
+ *             minBookings:
+ *               type: number
+ *               description: "The minimum number of bookings required to qualify for the discount."
+ *               example: 5
  *     HallMediaInput:
  *       type: object
  *       required: [imageUrl]
