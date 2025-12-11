@@ -170,4 +170,92 @@ const generateSubscriptionPdfReceipt = (subscription) => {
     return doc.output('arraybuffer');
 };
 
-export { generatePdfReceipt, generateSubscriptionPdfReceipt };
+const generateRecurringBookingPdfReceipt = (customerDetails, bookings, hall) => {
+    const doc = new jsPDF();
+    const firstBooking = bookings[0];
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(40);
+    doc.text('Booking Confirmation Receipt', 105, 25, null, null, 'center');
+
+    // Use the first booking's ID as the main identifier
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Booking ID: ${firstBooking.bookingId}`, 105, 35, null, null, 'center');
+
+    // Billed To Section
+    doc.setFontSize(14);
+    doc.setTextColor(40);
+    doc.text('Billed To', 14, 55);
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(customerDetails.fullName, 14, 62);
+    if (customerDetails.email) {
+        doc.text(customerDetails.email, 14, 69);
+    }
+
+    // Booking Details Table
+    doc.setFontSize(14);
+    doc.setTextColor(40);
+    doc.text('Booking Details', 14, 85);
+
+    const tableBody = [
+        ['Hall', hall.name],
+        ['Location', hall.location],
+        ['Event Details', firstBooking.eventDetails],
+        ['Payment Method', firstBooking.paymentMethod],
+        ['Payment Status', firstBooking.paymentStatus],
+    ];
+
+    autoTable(doc, {
+        startY: 92,
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 160, 133] },
+    });
+
+    // Dates Table
+    const bookingDatesBody = bookings.map(booking => {
+        const startDate = new Date(booking.bookingDates[0].startTime);
+        const endDate = new Date(booking.bookingDates[0].endTime);
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+
+        const formattedDate = startDate.toLocaleDateString('en-US', dateOptions);
+        const formattedTime = `${startDate.toLocaleTimeString('en-US', timeWithOptions)} - ${endDate.toLocaleTimeString('en-US', timeWithOptions)}`;
+
+        return [formattedDate, formattedTime, formatDuration(startDate, endDate)];
+    });
+
+    autoTable(doc, {
+        head: [['Date', 'Time', 'Duration']],
+        body: bookingDatesBody,
+        theme: 'striped',
+        headStyles: { fillColor: [22, 160, 133] },
+    });
+
+    // Calculate totals
+    const totalHallPrice = bookings.reduce((sum, booking) => sum + (booking.hallPrice || 0), 0);
+    const totalFacilitiesPrice = bookings.reduce((sum, booking) => sum + (booking.facilitiesPrice || 0), 0);
+    const totalPrice = bookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+
+    const costBody = [
+        ['Hall Price', `NGN ${totalHallPrice.toLocaleString()}`],
+        ['Facilities Price', `NGN ${totalFacilitiesPrice.toLocaleString()}`],
+        [{ content: 'Total Price', styles: { fontStyle: 'bold' } }, { content: `NGN ${totalPrice.toLocaleString()}`, styles: { fontStyle: 'bold' } }],
+    ];
+
+    autoTable(doc, {
+        body: costBody,
+        theme: 'grid',
+    });
+
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text('Thank you for booking with HallBooker.', 14, doc.internal.pageSize.height - 15);
+
+    return doc.output('arraybuffer');
+};
+
+export { generatePdfReceipt, generateSubscriptionPdfReceipt, generateRecurringBookingPdfReceipt };

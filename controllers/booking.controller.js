@@ -9,7 +9,7 @@ import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail, generateRecurringBookingConfirmationEmail } from '../utils/emailTemplates.js';
-import { generatePdfReceipt } from '../utils/pdfGenerator.js';
+import { generatePdfReceipt, generateRecurringBookingPdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
 import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
@@ -179,15 +179,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     // Notifications are sent only after the transaction is successful
     try {
       if (walkInUserDetails.email) {
-        const pdfReceipt = generatePdfReceipt({
-            ...newBookings[0].toObject(),
-            bookingDates: newBookings.map(b => b.bookingDates[0]),
-            totalPrice: newBookings.reduce((acc, b) => acc + b.totalPrice, 0),
-            hallPrice: newBookings.reduce((acc, b) => acc + b.hallPrice, 0),
-            facilitiesPrice: newBookings.reduce((acc, b) => acc + b.facilitiesPrice, 0),
-            user: { fullName: walkInUserDetails.fullName, email: walkInUserDetails.email },
-            hall: hall,
-        });
+        const pdfReceipt = generateRecurringBookingPdfReceipt(walkInUserDetails, newBookings, hall);
 
         await sendEmail({
           io,
