@@ -652,7 +652,7 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">Recurring Booking Confirmation</h2>
-        <p style="text-align: center; font-size: 14px; color: #555;">Booking ID: ${firstBooking.bookingId}</p>
+        <p style="text-align: center; font-size: 14px; color: #555;">Recurring Booking ID: ${firstBooking.recurringBookingId}</p>
         <p>Hi ${customerName},</p>
         <p>Your recurring booking for <strong>${hall.name}</strong> has been successfully confirmed. Here is a summary of your booked dates:</p>
 

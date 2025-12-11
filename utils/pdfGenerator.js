@@ -179,10 +179,10 @@ const generateRecurringBookingPdfReceipt = (customerDetails, bookings, hall) => 
     doc.setTextColor(40);
     doc.text('Booking Confirmation Receipt', 105, 25, null, null, 'center');
 
-    // Use the first booking's ID as the main identifier
+    // Use the recurring booking ID as the main identifier
     doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(`Booking ID: ${firstBooking.bookingId}`, 105, 35, null, null, 'center');
+    doc.text(`Recurring Booking ID: ${firstBooking.recurringBookingId}`, 105, 35, null, null, 'center');
 
     // Billed To Section
     doc.setFontSize(14);

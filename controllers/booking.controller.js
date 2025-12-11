@@ -137,12 +137,13 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
   session.startTransaction();
 
   try {
-    const recurringBookingId = crypto.randomUUID();
+    const firstBookingId = await generateBookingId(hall.name, 0);
+    const recurringBookingId = `REC-${firstBookingId}`;
     const createdBookings = [];
 
     for (let i = 0; i < bookingDates.length; i++) {
       const date = bookingDates[i];
-      const bookingId = await generateBookingId(hall.name, i);
+      const bookingId = (i === 0) ? firstBookingId : await generateBookingId(hall.name, i);
       const bookingStart = new Date(date);
       bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
       const bookingEnd = new Date(date);
