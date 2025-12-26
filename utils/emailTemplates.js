@@ -197,7 +197,7 @@ const generatePaymentConfirmationEmail = (booking) => {
 
         ${booking.hall.bookingBufferInHours && booking.hall.bookingBufferInHours > 0 ? `
         <p style="font-size: 14px; color: #555; border-left: 4px solid #4CAF50; padding-left: 10px; background-color: #f0fff0;">
-            To ensure a smooth transition between events, please be aware that a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period is required after your booking. We kindly ask that you complete your activities and vacate the hall by the end of your scheduled time.
+            All bookings include a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period after the paid time expires for cleanup and exit. Please ensure all activities are completed and the hall is fully vacated before the end of this grace period to avoid additional charges.
         </p>
         ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
         <p style="font-size: 14px; color: #555;">We have also attached an updated PDF receipt for your records.</p>
@@ -332,7 +332,7 @@ const generateBookingConfirmationEmail = (booking) => {
         <p style="font-size: 14px; color: #555;">Alternatively, you can log in to your dashboard to complete the payment.</p>
         ${booking.hall.bookingBufferInHours && booking.hall.bookingBufferInHours > 0 ? `
         <p style="font-size: 14px; color: #555; border-left: 4px solid #0056b3; padding-left: 10px; background-color: #f0f8ff;">
-            To ensure a smooth transition between events, please be aware that a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period is required after your booking. We kindly ask that you complete your activities and vacate the hall by the end of your scheduled time.
+            All bookings include a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period after the paid time expires for cleanup and exit. Please ensure all activities are completed and the hall is fully vacated before the end of this grace period to avoid additional charges.
         </p>
         ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
         <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your payment and booking details for your records.</p>

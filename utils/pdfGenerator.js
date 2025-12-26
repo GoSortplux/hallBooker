@@ -105,6 +105,18 @@ const generatePdfReceipt = (booking) => {
         theme: 'grid',
     });
 
+    // Grace Period Note
+    if (booking.hall.bookingBufferInHours && booking.hall.bookingBufferInHours > 0) {
+        const finalY = doc.autoTable.previous.finalY;
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.setFont(undefined, 'italic');
+        const gracePeriodText = `Note: All bookings include a ${booking.hall.bookingBufferInHours}-hour grace period after the paid time expires for cleanup and exit. Please ensure all activities are completed and the hall is fully vacated before the end of this grace period to avoid additional charges.`;
+        const splitText = doc.splitTextToSize(gracePeriodText, 180); // 180 is width, adjust as needed
+        doc.text(splitText, 14, finalY + 10);
+        doc.setFont(undefined, 'normal');
+    }
+
     doc.setFontSize(10);
     doc.setTextColor(150);
     doc.text('Thank you for booking with HallBooker.', 14, doc.internal.pageSize.height - 15);
