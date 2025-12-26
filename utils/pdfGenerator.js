@@ -107,7 +107,7 @@ const generatePdfReceipt = (booking) => {
 
     // Grace Period Note
     if (booking.hall.bookingBufferInHours && booking.hall.bookingBufferInHours > 0) {
-        if (doc.autoTable.previous) {
+        if (doc.autoTable && doc.autoTable.previous) {
             const finalY = doc.autoTable.previous.finalY;
             doc.setFontSize(9);
             doc.setTextColor(100);
