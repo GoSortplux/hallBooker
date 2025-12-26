@@ -390,6 +390,20 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
         `;
     }
 
+    const userDetails = booking.bookingType === 'walk-in' ? booking.walkInUserDetails : booking.user;
+    const phoneHtml = userDetails.phone ? `
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Phone:</strong></td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.phone}</td>
+        </tr>
+    ` : '';
+    const whatsappHtml = userDetails.whatsappNumber ? `
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>WhatsApp:</strong></td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.whatsappNumber}</td>
+        </tr>
+    ` : '';
+
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">New Booking Notification</h2>
@@ -457,12 +471,14 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
             <tbody>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Full Name:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.user.fullName}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.fullName}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Email:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.user.email}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.email}</td>
                 </tr>
+                ${phoneHtml}
+                ${whatsappHtml}
             </tbody>
         </table>
 
