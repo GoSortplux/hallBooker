@@ -250,7 +250,7 @@ const createBooking = asyncHandler(async (req, res) => {
     // Check for reservations
     const canOverrideReservation = ['super-admin', 'hall-owner', 'staff'].includes(req.user.role);
     if (!canOverrideReservation && hall.blockedDates && hall.blockedDates.length > 0) {
-      const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0).getTime()));
+      const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0)));
       let currentDate = new Date(newBookingStartTime);
       while (currentDate <= newBookingEndTime) {
         const currentDay = new Date(currentDate).setUTCHours(0, 0, 0, 0);
