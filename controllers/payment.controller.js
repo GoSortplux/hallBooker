@@ -264,7 +264,7 @@ const makePayment = asyncHandler(async (req, res) => {
         paymentDescription: `Payment for booking of ${booking.hall.name}`,
         currencyCode: 'NGN',
         contractCode: process.env.MONNIFY_CONTRACT_CODE,
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
         redirectUrl,
     };
 
