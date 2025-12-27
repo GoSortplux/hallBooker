@@ -283,6 +283,25 @@ const makePayment = asyncHandler(async (req, res) => {
     if (booking.bookingType !== 'walk-in' && !req.user)
         throw new ApiError(401, 'Login required');
 
+    const hallOwner = booking.hall.owner;
+    const ownerSubAccount = await SubAccount.findOne({ user: hallOwner._id });
+
+    const commissionSetting = await Setting.findOne({ key: 'platformCommissionPercentage' });
+
+    const subaccounts = [];
+    if (ownerSubAccount) {
+        const commissionPercentage = commissionSetting ? parseFloat(commissionSetting.value) : 0;
+
+        if (commissionPercentage > 0 && commissionPercentage < 100) {
+            const netAmount = booking.totalPrice * (1 - commissionPercentage / 100);
+
+            subaccounts.push({
+                subAccountCode: ownerSubAccount.subAccountCode,
+                splitAmount: parseFloat(netAmount.toFixed(2)),
+            });
+        }
+    }
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const redirectUrl = `${frontendUrl}/payment/verify`;
     const uniquePaymentReference = `${bookingId}_${Date.now()}`;
@@ -302,6 +321,10 @@ const makePayment = asyncHandler(async (req, res) => {
         paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
         redirectUrl,
     };
+
+    if (subaccounts.length > 0) {
+        data.subaccounts = subaccounts;
+    }
 
     const response = await initializeTransaction(data);
     res.status(200).json(new ApiResponse(200, response.responseBody, 'Transaction initialized'));
