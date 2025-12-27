@@ -8,8 +8,11 @@ import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
 import Setting from '../models/setting.model.js';
 import { SubAccount } from '../models/subaccount.model.js';
+import { Disbursement } from '../models/disbursement.model.js';
 import sendEmail from '../services/email.service.js';
 import {
+    generateAdminDisbursementFailureEmail,
+    generateMandateCancellationEmail,
     generateBookingConfirmationEmail,
     generateSubscriptionConfirmationEmail,
     generateAdminLicenseNotificationEmail,
@@ -18,6 +21,38 @@ import {
     generateRecurringBookingConfirmationEmail
 } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
+
+// Helper function to parse Monnify's custom date format
+const parseMonnifyDate = (dateString) => {
+    if (!dateString) return null;
+
+    // Monnify format: "17/03/2021 3:23:38 AM"
+    const parts = dateString.split(' ');
+    if (parts.length < 3) return new Date(dateString); // Fallback for standard formats
+
+    const dateParts = parts[0].split('/'); // [dd, mm, yyyy]
+    const timeParts = parts[1].split(':'); // [hh, mm, ss]
+    const ampm = parts[2].toUpperCase();
+
+    if (dateParts.length < 3 || timeParts.length < 3) return new Date(dateString);
+
+    const day = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10) - 1; // JS months are 0-indexed
+    const year = parseInt(dateParts[2], 10);
+
+    let hour = parseInt(timeParts[0], 10);
+    const minute = parseInt(timeParts[1], 10);
+    const second = parseInt(timeParts[2], 10);
+
+    if (ampm === 'PM' && hour < 12) {
+        hour += 12;
+    }
+    if (ampm === 'AM' && hour === 12) { // Midnight case (12 AM is 00 hours)
+        hour = 0;
+    }
+
+    return new Date(Date.UTC(year, month, day, hour, minute, second));
+};
 
 
 // ---------------------- SUBSCRIPTION PROCESSING ----------------------
@@ -299,19 +334,72 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
 const handleMonnifyWebhook = asyncHandler(async (req, res) => {
     const { eventType, eventData } = req.body;
+    const io = req.app.get('io');
 
-    if (eventType !== 'SUCCESSFUL_TRANSACTION')
-        return res.status(200).json(new ApiResponse(200, null, 'Non-success webhook'));
+    switch (eventType) {
+        case 'SUCCESSFUL_TRANSACTION': {
+            const response = await verifyTransaction(eventData.paymentReference);
+            const transaction = response.responseBody;
+            const isBookingPayment = transaction.paymentReference.includes('_');
 
-    const response = await verifyTransaction(eventData.paymentReference);
-    const transaction = response.responseBody;
+            if (isBookingPayment) {
+                await processBookingTransaction(transaction, io);
+            } else {
+                await processTransaction(transaction, io);
+            }
+            break;
+        }
 
-    const isBookingPayment = transaction.paymentReference.includes('_');
+        case 'SUCCESSFUL_DISBURSEMENT': {
+            const parsedData = {
+                ...eventData,
+                completedOn: parseMonnifyDate(eventData.completedOn),
+                status: 'SUCCESS',
+            };
+            await Disbursement.create(parsedData);
+            break;
+        }
 
-    if (isBookingPayment) {
-        await processBookingTransaction(transaction, req.app.get('io'));
-    } else {
-        await processTransaction(transaction, req.app.get('io'));
+        case 'FAILED_DISBURSEMENT': {
+            const parsedData = {
+                ...eventData,
+                completedOn: parseMonnifyDate(eventData.completedOn),
+                status: 'FAILED',
+            };
+            await Disbursement.create(parsedData);
+            const admin = await User.findOne({ role: 'super-admin' });
+            if (admin) {
+                await sendEmail({
+                    io,
+                    email: admin.email,
+                    subject: 'Disbursement Failure Alert',
+                    html: generateAdminDisbursementFailureEmail(parsedData),
+                });
+            }
+            break;
+        }
+
+        case 'MANDATE_UPDATE': {
+            if (eventData.mandateStatus === 'CANCELLED') {
+                const subscription = await SubscriptionHistory.findOne({ mandateCode: eventData.mandateCode }).populate('owner');
+                if (subscription) {
+                    subscription.mandateStatus = 'CANCELLED';
+                    await subscription.save();
+
+                    await sendEmail({
+                        io,
+                        email: subscription.owner.email,
+                        subject: 'Your Subscription Auto-Renewal Was Cancelled',
+                        html: generateMandateCancellationEmail(subscription.owner.fullName, subscription.expiryDate),
+                    });
+                }
+            }
+            break;
+        }
+
+        default:
+            console.log(`Received unhandled event type: ${eventType}`);
+            break;
     }
 
     res.status(200).json(new ApiResponse(200, null, 'Webhook processed'));

@@ -106,6 +106,11 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
 
     const paymentResponse = await initializeTransaction(paymentData);
 
+    if (paymentResponse.responseBody && paymentResponse.responseBody.mandateCode) {
+        newSubscription.mandateCode = paymentResponse.responseBody.mandateCode;
+        await newSubscription.save();
+    }
+
     res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, "Payment initialized successfully."));
 });
 
@@ -167,6 +172,11 @@ const upgradeSubscription = asyncHandler(async (req, res) => {
     };
 
     const paymentResponse = await initializeTransaction(paymentData);
+
+    if (paymentResponse.responseBody && paymentResponse.responseBody.mandateCode) {
+        newSubscription.mandateCode = paymentResponse.responseBody.mandateCode;
+        await newSubscription.save();
+    }
 
     res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, "Upgrade payment initialized successfully."));
 });

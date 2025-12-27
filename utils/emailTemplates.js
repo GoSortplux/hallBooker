@@ -16,6 +16,37 @@ const generateVerificationEmail = (name, token) => {
   `;
 };
 
+const generateAdminDisbursementFailureEmail = (disbursementData) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #d9534f;">Disbursement Failure Alert</h2>
+        <p>A disbursement (payout) to a hall owner has failed. Please investigate immediately.</p>
+        <h3>Failure Details:</h3>
+        <ul>
+            <li><strong>Transaction Reference:</strong> ${disbursementData.transactionReference}</li>
+            <li><strong>Amount:</strong> NGN ${disbursementData.amount.toLocaleString()}</li>
+            <li><strong>Destination Account:</strong> ${disbursementData.destinationAccountName} (${disbursementData.destinationAccountNumber})</li>
+            <li><strong>Bank:</strong> ${disbursementData.destinationBankName}</li>
+            <li><strong>Reason:</strong> ${disbursementData.transactionDescription}</li>
+            <li><strong>Timestamp:</strong> ${new Date(disbursementData.completedOn).toLocaleString()}</li>
+        </ul>
+        <p>Please log in to the Monnify dashboard to view more details and resolve the issue.</p>
+    </div>
+  `;
+};
+
+const generateMandateCancellationEmail = (userName, expiryDate) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Subscription Auto-Renewal Cancelled</h2>
+        <p>Hi ${userName},</p>
+        <p>This email confirms that the automatic renewal for your subscription has been successfully cancelled.</p>
+        <p>Your subscription will remain active and you can continue to enjoy all its benefits until the current billing period ends on <strong>${new Date(expiryDate).toDateString()}</strong>.</p>
+        <p>If you change your mind, you can set up a new subscription from your dashboard at any time. Thank you for using HallBooker.</p>
+    </div>
+  `;
+};
+
 const generateWelcomeEmail = (name) => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -636,6 +667,8 @@ export {
   generateNewBookingNotificationEmailForOwner,
   generateHallCreationEmail,
   generateLicensePurchaseEmail,
+  generateAdminDisbursementFailureEmail,
+  generateMandateCancellationEmail,
   generatePendingBookingCancelledEmail,
   generateReviewNotificationEmail,
   generateHallOwnerApplicationEmailForUser,
