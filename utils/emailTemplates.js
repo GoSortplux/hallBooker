@@ -175,6 +175,10 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC</td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
