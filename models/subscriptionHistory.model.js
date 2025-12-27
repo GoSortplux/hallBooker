@@ -37,6 +37,12 @@ const subscriptionHistorySchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
     },
+    mandateCode: {
+      type: String,
+    },
+    mandateStatus: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
