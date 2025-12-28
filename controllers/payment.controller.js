@@ -219,6 +219,31 @@ async function processBookingTransaction(bookingDetails, io) {
                         link: `/bookings/${confirmedBooking._id}`,
                     },
                 }).catch(err => console.error("Email error:", err));
+
+                // Notify hall owner and admins
+                const hallOwner = await User.findById(confirmedBooking.hall.owner);
+                if (!hallOwner) {
+                    console.error(`Hall owner with ID ${confirmedBooking.hall.owner} not found. Skipping notification.`);
+                    return;
+                }
+                const admins = await User.find({ role: 'super-admin' });
+                const notificationEmails = [hallOwner.email, ...admins.map(admin => admin.email)];
+
+                await Promise.all(notificationEmails.map(email => {
+                    const userIsAdmin = admins.some(admin => admin.email === email);
+                    const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hallOwner._id;
+                    sendEmail({
+                        io,
+                        email,
+                        subject: `Payment Confirmed for Booking #${confirmedBooking.bookingId}`,
+                        html: generatePaymentConfirmationEmail(bookingForEmail),
+                        notification: {
+                            recipient: recipient.toString(),
+                            message: `Payment has been confirmed for Booking ID: ${confirmedBooking.bookingId}.`,
+                            link: `/bookings/${confirmedBooking._id}`,
+                        },
+                    });
+                }));
             }
         }
     }
