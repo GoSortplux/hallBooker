@@ -5,6 +5,14 @@ import { createSubAccount as createMonnifySubAccount } from '../services/payment
 import { SubAccount } from '../models/subaccount.model.js';
 import { User } from '../models/user.model.js';
 
+const getSubAccounts = asyncHandler(async (req, res) => {
+  const subAccounts = await SubAccount.find().populate('user', 'firstName lastName email');
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, subAccounts, 'Sub-accounts retrieved successfully.'));
+});
+
 const createSubAccount = asyncHandler(async (req, res) => {
   const {
     userId,
@@ -51,4 +59,4 @@ const createSubAccount = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, newSubAccount, 'Sub-account created successfully.'));
 });
 
-export { createSubAccount };
+export { createSubAccount, getSubAccounts };
