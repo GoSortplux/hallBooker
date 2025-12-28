@@ -277,6 +277,10 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC</td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
@@ -426,6 +430,10 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC</td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
@@ -571,7 +579,7 @@ const generateSubscriptionPaymentEmail = (subscription) => {
             </tbody>
         </table>
 
-        <p style="font-size: 14px; color: #555;">We have attached a PDF receipt for your records.</p>
+        <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
         <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
@@ -673,6 +681,7 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">Recurring Booking Confirmation</h2>
         <p style="text-align: center; font-size: 14px; color: #555;">Recurring Booking ID: ${firstBooking.recurringBookingId}</p>
+        <p style="text-align: center; font-size: 14px; color: #555;">Booked On: ${new Date(firstBooking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC</p>
         <p>Hi ${customerName},</p>
         <p>Your recurring booking for <strong>${hall.name}</strong> has been successfully confirmed. Here is a summary of your booked dates:</p>
 
