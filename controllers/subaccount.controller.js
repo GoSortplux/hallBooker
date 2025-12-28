@@ -6,7 +6,14 @@ import { SubAccount } from '../models/subaccount.model.js';
 import { User } from '../models/user.model.js';
 
 const createSubAccount = asyncHandler(async (req, res) => {
-  const { userId, bankCode, accountNumber, accountName, currencyCode = 'NGN' } = req.body;
+  const {
+    userId,
+    bankCode,
+    accountNumber,
+    accountName,
+    currencyCode = 'NGN',
+    defaultSplitPercentage = 100
+  } = req.body;
 
   const user = await User.findById(userId);
   if (!user || !user.role.includes('hall-owner')) {
@@ -24,6 +31,7 @@ const createSubAccount = asyncHandler(async (req, res) => {
     bankCode,
     currencyCode,
     email: user.email,
+    defaultSplitPercentage: String(defaultSplitPercentage),
   });
 
   if (!monnifyResponse || !monnifyResponse.subAccountCode) {

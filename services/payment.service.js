@@ -70,12 +70,12 @@ const verifyTransaction = async (reference) => {
 const createSubAccount = async (data) => {
     try {
         const token = await getAuthToken();
-        const response = await monnify.post('/sub-accounts', data, {
+        const response = await monnify.post('/sub-accounts', [data], {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        return response.data.responseBody;
+        return response.data.responseBody[0];
     } catch (error) {
         console.error("Error from Monnify (createSubAccount):", error.response ? error.response.data : error.message);
         throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to create sub account');
