@@ -344,50 +344,56 @@ const createBooking = asyncHandler(async (req, res) => {
     const newBookingArr = await Booking.create([bookingData], { session });
     const newBooking = newBookingArr[0];
 
-    const bookingForEmail = { ...newBooking.toObject(), user: req.user, hall: hall };
-
-    const pdfReceipt = generatePdfReceipt(bookingForEmail);
-    const io = req.app.get('io');
-
-    await sendEmail({
-      io,
-      email: req.user.email,
-      subject: 'Booking Confirmation - HallBooker',
-      html: generateBookingConfirmationEmail(bookingForEmail),
-      attachments: [{
-        filename: `receipt-${bookingForEmail.bookingId}.pdf`,
-        content: Buffer.from(pdfReceipt),
-        contentType: 'application/pdf'
-      }],
-      notification: {
-        recipient: req.user._id.toString(),
-        message: `Your booking for ${hall.name} has been confirmed.`,
-        link: `/bookings/${newBooking._id}`,
-      },
-    });
-
-    const admins = await User.find({ role: 'super-admin' });
-    const adminEmails = admins.map(admin => admin.email);
-
-    const notificationEmails = [hall.owner.email, ...adminEmails];
-
-    await Promise.all(notificationEmails.map(email => {
-        const userIsAdmin = admins.some(admin => admin.email === email);
-        const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
-        sendEmail({
-            io,
-            email,
-            subject: 'New Booking Notification',
-            html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
-            notification: {
-                recipient: recipient.toString(),
-                message: `A new booking has been made for hall: ${hall.name}.`,
-                link: `/bookings/${newBooking._id}`,
-            },
-        })
-    }));
-
     await session.commitTransaction();
+
+    // Notifications are sent only after the transaction is successful
+    try {
+      const bookingForEmail = { ...newBooking.toObject(), user: req.user, hall: hall };
+
+      const pdfReceipt = generatePdfReceipt(bookingForEmail);
+      const io = req.app.get('io');
+
+      await sendEmail({
+        io,
+        email: req.user.email,
+        subject: 'Booking Confirmation - HallBooker',
+        html: generateBookingConfirmationEmail(bookingForEmail),
+        attachments: [{
+          filename: `receipt-${bookingForEmail.bookingId}.pdf`,
+          content: Buffer.from(pdfReceipt),
+          contentType: 'application/pdf'
+        }],
+        notification: {
+          recipient: req.user._id.toString(),
+          message: `Your booking for ${hall.name} has been confirmed.`,
+          link: `/bookings/${newBooking._id}`,
+        },
+      });
+
+      const admins = await User.find({ role: 'super-admin' });
+      const adminEmails = admins.map(admin => admin.email);
+
+      const notificationEmails = [hall.owner.email, ...adminEmails];
+
+      await Promise.all(notificationEmails.map(email => {
+          const userIsAdmin = admins.some(admin => admin.email === email);
+          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+          sendEmail({
+              io,
+              email,
+              subject: 'New Booking Notification',
+              html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
+              notification: {
+                  recipient: recipient.toString(),
+                  message: `A new booking has been made for hall: ${hall.name}.`,
+                  link: `/bookings/${newBooking._id}`,
+              },
+          })
+      }));
+    } catch (emailError) {
+        console.error('Email notification failed after successful booking:', emailError);
+    }
+
     res.status(201).json(new ApiResponse(201, newBooking, 'Booking created successfully!'));
   } catch (error) {
     await session.abortTransaction();
