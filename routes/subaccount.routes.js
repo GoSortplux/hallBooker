@@ -39,6 +39,10 @@ const router = Router();
  *           type: string
  *           description: The account name for the hall owner's account.
  *           example: "John Doe"
+ *         defaultSplitPercentage:
+ *           type: number
+ *           description: The percentage of the transaction to be paid to this subaccount.
+ *           example: 100
  *
  *     Subaccount:
  *       type: object
