@@ -15,7 +15,8 @@ import {
     generateAdminLicenseNotificationEmail,
     generateSubscriptionPaymentEmail,
     generatePaymentConfirmationEmail,
-    generateRecurringBookingConfirmationEmail
+    generateRecurringBookingConfirmationEmail,
+    generateNewBookingNotificationEmailForOwner
 } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
 
@@ -192,24 +193,32 @@ async function processBookingTransaction(bookingDetails, io) {
             booking.paymentStatus = 'paid';
             await booking.save();
 
-            const confirmedBooking = await Booking.findById(booking._id).populate('user').populate('hall');
-            let emailToSend;
-            let userForEmail;
+            const confirmedBooking = await Booking.findById(booking._id)
+                .populate('user')
+                .populate({
+                    path: 'hall',
+                    populate: { path: 'owner' }
+                });
+
+            const hallOwner = confirmedBooking.hall.owner;
+            const admins = await User.find({ role: 'super-admin' });
+            let customerEmail;
+            let customerDetails;
 
             if (confirmedBooking.bookingType === 'walk-in') {
-                emailToSend = confirmedBooking.walkInUserDetails.email;
-                userForEmail = { fullName: confirmedBooking.walkInUserDetails.fullName };
+                customerEmail = confirmedBooking.walkInUserDetails.email;
+                customerDetails = confirmedBooking.walkInUserDetails;
             } else {
-                emailToSend = confirmedBooking.user.email;
-                userForEmail = confirmedBooking.user;
+                customerEmail = confirmedBooking.user.email;
+                customerDetails = confirmedBooking.user;
             }
 
-            if (emailToSend) {
-                const bookingForEmail = { ...confirmedBooking.toObject(), user: userForEmail };
+            if (customerEmail) {
+                const bookingForEmail = { ...confirmedBooking.toObject(), user: customerDetails };
                 const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
                 sendEmail({
                     io,
-                    email: emailToSend,
+                    email: customerEmail,
                     subject: 'Payment Confirmation and Receipt',
                     html: generatePaymentConfirmationEmail(bookingForEmail),
                     attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
@@ -219,32 +228,35 @@ async function processBookingTransaction(bookingDetails, io) {
                         link: `/bookings/${confirmedBooking._id}`,
                     },
                 }).catch(err => console.error("Email error:", err));
-
-                // Notify hall owner and admins
-                const hallOwner = await User.findById(confirmedBooking.hall.owner);
-                if (!hallOwner) {
-                    console.error(`Hall owner with ID ${confirmedBooking.hall.owner} not found. Skipping notification.`);
-                    return;
-                }
-                const admins = await User.find({ role: 'super-admin' });
-                const notificationEmails = [hallOwner.email, ...admins.map(admin => admin.email)];
-
-                await Promise.all(notificationEmails.map(email => {
-                    const userIsAdmin = admins.some(admin => admin.email === email);
-                    const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hallOwner._id;
-                    sendEmail({
-                        io,
-                        email,
-                        subject: `Payment Confirmed for Booking #${confirmedBooking.bookingId}`,
-                        html: generatePaymentConfirmationEmail(bookingForEmail),
-                        notification: {
-                            recipient: recipient.toString(),
-                            message: `Payment has been confirmed for Booking ID: ${confirmedBooking.bookingId}.`,
-                            link: `/bookings/${confirmedBooking._id}`,
-                        },
-                    });
-                }));
             }
+
+            // Notify hall owner
+            sendEmail({
+                io,
+                email: hallOwner.email,
+                subject: `Booking Payment Received for ${confirmedBooking.hall.name}`,
+                html: generateNewBookingNotificationEmailForOwner(hallOwner, customerDetails, confirmedBooking),
+                notification: {
+                    recipient: hallOwner._id.toString(),
+                    message: `Payment for booking #${confirmedBooking.bookingId} has been confirmed.`,
+                    link: `/hall-owner/bookings/${confirmedBooking._id}`,
+                },
+            }).catch(err => console.error("Owner notification error:", err));
+
+            // Notify admins
+            admins.forEach(admin => {
+                sendEmail({
+                    io,
+                    email: admin.email,
+                    subject: `Admin Alert: Booking Payment Received for ${confirmedBooking.hall.name}`,
+                    html: generateNewBookingNotificationEmailForOwner(admin, customerDetails, confirmedBooking),
+                    notification: {
+                        recipient: admin._id.toString(),
+                        message: `Payment confirmed for booking #${confirmedBooking.bookingId} at ${confirmedBooking.hall.name}.`,
+                        link: `/admin/bookings/${confirmedBooking._id}`,
+                    },
+                }).catch(err => console.error("Admin notification error:", err));
+            });
         }
     }
 }
