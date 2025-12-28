@@ -175,10 +175,6 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Lagos' })} (UTC+1)</td>
-                </tr>
-                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
@@ -308,10 +304,6 @@ const generateBookingConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Lagos' })} (UTC+1)</td>
-                </tr>
-                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
                 </tr>
@@ -381,27 +373,26 @@ const generateBookingConfirmationEmail = (booking) => {
   `;
 }
 
-const generateNewBookingNotificationEmailForOwner = (booking) => {
+const generateNewBookingNotificationEmailForOwner = (recipient, customer, booking) => {
+    const timezone = 'Africa/Lagos';
+    const bookedOn = new Date(booking.createdAt).toLocaleString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone,
+        timeZoneName: 'shortOffset'
+    }).replace('GMT', 'UTC');
+
     const bookingDatesHtml = booking.bookingDates.map(bookingDate => {
         const duration = formatDuration(new Date(bookingDate.startTime), new Date(bookingDate.endTime));
-        const startDate = new Date(bookingDate.startTime);
-        const endDate = new Date(bookingDate.endTime);
-        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: timezone };
 
-        const isSameDay = startDate.getFullYear() === endDate.getFullYear() &&
-                          startDate.getMonth() === endDate.getMonth() &&
-                          startDate.getDate() === endDate.getDate();
-
-        const formattedDate = isSameDay
-          ? startDate.toLocaleDateString('en-US', dateOptions)
-          : `${startDate.toLocaleDateString('en-US', dateOptions)} - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
-
-        const timeWithOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-        const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
-
-        const formattedTime = isSameDay
-            ? `${new Date(bookingDate.startTime).toLocaleTimeString('en-US', timeWithOptions)} - ${new Date(bookingDate.endTime).toLocaleTimeString('en-US', timeWithOptions)}`
-            : `${new Date(bookingDate.startTime).toLocaleString('en-US', dateTimeOptions)} - ${new Date(bookingDate.endTime).toLocaleString('en-US', dateTimeOptions)}`;
+        const formattedDate = new Date(bookingDate.startTime).toLocaleDateString('en-US', dateOptions);
+        const formattedTime = `${new Date(bookingDate.startTime).toLocaleTimeString('en-US', timeOptions)} - ${new Date(bookingDate.endTime).toLocaleTimeString('en-US', timeOptions)}`;
 
         return `
             <tr>
@@ -416,38 +407,36 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
     if (booking.selectedFacilities && booking.selectedFacilities.length > 0) {
         const facilityRows = booking.selectedFacilities.map(f => `
             <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.name} (x${f.quantity})</td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${f.cost.toLocaleString()}</td>
             </tr>
         `).join('');
 
         facilitiesHtml = `
             <tr style="background-color: #f2f2f2;">
-                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Facilities</th>
+                <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Booked Facilities</th>
             </tr>
             ${facilityRows}
         `;
     }
 
-    const userDetails = booking.bookingType === 'walk-in' ? booking.walkInUserDetails : booking.user;
-    const phoneHtml = userDetails.phone ? `
+    const phoneHtml = customer.phone ? `
         <tr>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Phone:</strong></td>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.phone}</td>
-        </tr>
-    ` : '';
-    const whatsappHtml = userDetails.whatsappNumber ? `
-        <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>WhatsApp:</strong></td>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.whatsappNumber}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${customer.phone}</td>
         </tr>
     ` : '';
 
+    const bookingTypeTitle = booking.paymentStatus === 'paid' ? 'Booking Payment Confirmed' : 'New Booking Notification';
+    const mainMessage = booking.paymentStatus === 'paid'
+        ? `Payment has been confirmed for a booking at <strong>${booking.hall.name}</strong>.`
+        : `A new booking has been made for your hall, <strong>${booking.hall.name}</strong>.`;
+
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
-        <h2 style="color: #0056b3; text-align: center;">New Booking Notification</h2>
-        <p>Hi ${booking.hall.owner.fullName},</p>
-        <p>You have a new booking for your hall, ${booking.hall.name}. Here are the details:</p>
+        <h2 style="color: #0056b3; text-align: center;">${bookingTypeTitle}</h2>
+        <p>Hi ${recipient.fullName},</p>
+        <p>${mainMessage} Please find the details below:</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <thead>
@@ -462,7 +451,7 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Booked On:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(booking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Lagos' })} (UTC+1)</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${bookedOn}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
@@ -478,58 +467,72 @@ const generateNewBookingNotificationEmailForOwner = (booking) => {
                                     <th style="padding: 10px; border-bottom: 1px solid #ddd;">Duration</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${bookingDatesHtml}
-                            </tbody>
+                            <tbody>${bookingDatesHtml}</tbody>
                         </table>
                     </td>
                 </tr>
-                <tr>
+                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.eventDetails}</td>
-                </tr>
-                ${facilitiesHtml}
-                <tr style="background-color: #f2f2f2;">
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Price:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.hallPrice || 0).toLocaleString()}</strong></td>
-                </tr>
-                <tr style="background-color: #f2f2f2;">
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Facilities Price:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${(booking.facilitiesPrice || 0).toLocaleString()}</strong></td>
-                </tr>
-                <tr style="background-color: #f2f2f2;">
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Price:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
                 </tr>
             </tbody>
         </table>
 
-        <h3 style="color: #0056b3;">Booked By:</h3>
+        <h3 style="color: #0056b3;">Customer Details</h3>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
-             <thead>
+            <thead>
                 <tr style="background-color: #f2f2f2;">
-                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">User Details</th>
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Contact Information</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Full Name:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.fullName}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${customer.fullName}</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Email:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${userDetails.email}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${customer.email}</td>
                 </tr>
                 ${phoneHtml}
-                ${whatsappHtml}
+            </tbody>
+        </table>
+
+        <h3 style="color: #0056b3;">Payment Details</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Financial Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                        <strong style="color: ${booking.paymentStatus === 'paid' ? '#4CAF50' : '#d9534f'};">${booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}</strong>
+                    </td>
+                </tr>
+                ${facilitiesHtml}
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${(booking.hallPrice || 0).toLocaleString()}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Facilities Price:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${(booking.facilitiesPrice || 0).toLocaleString()}</td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; font-weight: bold;">Total Price:</td>
+                    <td style="padding: 10px; font-weight: bold; text-align: right;">NGN ${booking.totalPrice.toLocaleString()}</td>
+                </tr>
             </tbody>
         </table>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
     </div>
   `;
-}
+};
 
 const generateHallCreationEmail = (name, hallName, hallLocation) => {
     return `
@@ -714,7 +717,6 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">Recurring Booking Confirmation</h2>
         <p style="text-align: center; font-size: 14px; color: #555;">Recurring Booking ID: ${firstBooking.recurringBookingId}</p>
-        <p style="text-align: center; font-size: 14px; color: #555;">Booked On: ${new Date(firstBooking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Lagos' })} (UTC+1)</p>
         <p>Hi ${customerName},</p>
         <p>Your recurring booking for <strong>${hall.name}</strong> has been successfully confirmed. Here is a summary of your booked dates:</p>
 
