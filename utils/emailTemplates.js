@@ -235,7 +235,7 @@ const generatePaymentConfirmationEmail = (booking) => {
             All bookings include a <strong>${booking.hall.bookingBufferInHours}-hour</strong> grace period after the paid time expires for cleanup and exit. Please ensure all activities are completed and the hall is fully vacated before the end of this grace period to avoid additional charges.
         </p>
         ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
-        <p style="font-size: 14px; color: #555;">We have also attached an updated PDF receipt for your records.</p>
+        <p style="font-size: 14px; color: #555;">We have attached a PDF receipt for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
         <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
