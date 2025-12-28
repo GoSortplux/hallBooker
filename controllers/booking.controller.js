@@ -213,7 +213,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
               html: generateRecurringBookingConfirmationEmail(hall.owner.fullName, newBookings, hall),
               notification: {
                   recipient: recipient.toString(),
-                  message: `A new recurring booking has been made for hall: ${hall.name} on ${new Date(newBookings[0].createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC.`,
+                  message: `A new recurring booking has been made for hall: ${hall.name}.`,
                   link: `/bookings/recurring/${recurringBookingId}`,
               },
           });
@@ -381,7 +381,7 @@ const createBooking = asyncHandler(async (req, res) => {
             html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
             notification: {
                 recipient: recipient.toString(),
-                message: `A new booking has been made for hall: ${hall.name} on ${new Date(newBooking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC.`,
+                message: `A new booking has been made for hall: ${hall.name}.`,
                 link: `/bookings/${newBooking._id}`,
             },
         })
@@ -585,7 +585,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
               html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
               notification: {
                   recipient: recipient.toString(),
-                  message: `A new walk-in booking has been made for hall: ${hall.name} on ${new Date(newBooking.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' })} UTC.`,
+                  message: `A new walk-in booking has been made for hall: ${hall.name}.`,
                   link: `/bookings/${newBooking._id}`,
               },
           });
