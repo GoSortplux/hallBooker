@@ -348,48 +348,68 @@ const createBooking = asyncHandler(async (req, res) => {
 
     // Notifications are sent only after the transaction is successful
     try {
-      const bookingForEmail = { ...newBooking.toObject(), user: req.user, hall: hall };
+      // Refetch the booking to ensure all fields (like createdAt) and populated paths are available.
+      const finalBooking = await Booking.findById(newBooking._id)
+        .populate('user', 'fullName email phone')
+        .populate({
+            path: 'hall',
+            populate: {
+                path: 'owner',
+                select: 'fullName email'
+            }
+        })
+        .populate('selectedFacilities.facility');
 
-      const pdfReceipt = generatePdfReceipt(bookingForEmail);
+      if (!finalBooking) {
+        // This is a failsafe. If this happens, something is seriously wrong.
+        throw new Error(`Failed to refetch booking with ID ${newBooking._id} after transaction commit.`);
+      }
+
       const io = req.app.get('io');
 
+      // Send confirmation to the user who made the booking
+      const pdfReceipt = generatePdfReceipt(finalBooking);
       await sendEmail({
         io,
-        email: req.user.email,
+        email: finalBooking.user.email,
         subject: 'Booking Confirmation - HallBooker',
-        html: generateBookingConfirmationEmail(bookingForEmail),
+        html: generateBookingConfirmationEmail(finalBooking),
         attachments: [{
-          filename: `receipt-${bookingForEmail.bookingId}.pdf`,
+          filename: `receipt-${finalBooking.bookingId}.pdf`,
           content: Buffer.from(pdfReceipt),
           contentType: 'application/pdf'
         }],
         notification: {
-          recipient: req.user._id.toString(),
-          message: `Your booking for ${hall.name} has been confirmed.`,
-          link: `/bookings/${newBooking._id}`,
+          recipient: finalBooking.user._id.toString(),
+          message: `Your booking for ${finalBooking.hall.name} has been confirmed.`,
+          link: `/bookings/${finalBooking._id}`,
         },
       });
 
-      const admins = await User.find({ role: 'super-admin' });
-      const adminEmails = admins.map(admin => admin.email);
+      // Send notification to hall owner and all admins
+      const admins = await User.find({ role: 'super-admin' }).select('fullName email').lean();
+      const hallOwner = finalBooking.hall.owner;
+      const customer = finalBooking.user;
 
-      const notificationEmails = [hall.owner.email, ...adminEmails];
+      const notificationRecipients = new Map();
+      notificationRecipients.set(hallOwner.email, hallOwner);
+      admins.forEach(admin => notificationRecipients.set(admin.email, admin));
 
-      await Promise.all(notificationEmails.map(email => {
-          const userIsAdmin = admins.some(admin => admin.email === email);
-          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
-          sendEmail({
-              io,
-              email,
-              subject: 'New Booking Notification',
-              html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
-              notification: {
-                  recipient: recipient.toString(),
-                  message: `A new booking has been made for hall: ${hall.name}.`,
-                  link: `/bookings/${newBooking._id}`,
-              },
-          })
-      }));
+      await Promise.all(
+        Array.from(notificationRecipients.values()).map(recipient => {
+          return sendEmail({
+            io,
+            email: recipient.email,
+            subject: 'New Booking Notification',
+            html: generateNewBookingNotificationEmailForOwner(recipient, customer, finalBooking),
+            notification: {
+              recipient: recipient._id.toString(),
+              message: `A new booking has been made for hall: ${finalBooking.hall.name}.`,
+              link: `/bookings/${finalBooking._id}`,
+            },
+          });
+        })
+      );
     } catch (emailError) {
         console.error('Email notification failed after successful booking:', emailError);
     }
