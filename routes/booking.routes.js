@@ -442,7 +442,34 @@ router.route('/my-bookings')
  *                   type: integer
  *                   example: 200
  *                 data:
- *                   $ref: '#/components/schemas/Booking'
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Booking'
+ *                     - type: object
+ *                       properties:
+ *                         durationInHours:
+ *                           type: number
+ *                           description: "The total duration of the booking in hours."
+ *                           example: 4.5
+ *                         user:
+ *                           type: object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                             fullName:
+ *                               type: string
+ *                             email:
+ *                               type: string
+ *                             phone:
+ *                               type: string
+ *                         hall:
+ *                           type: object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                             name:
+ *                               type: string
+ *                             fullAddress:
+ *                               type: string
  *                 message:
  *                   type: string
  *                   example: "Booking retrieved successfully"

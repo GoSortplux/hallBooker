@@ -707,13 +707,33 @@ const cancelBooking = asyncHandler(async (req, res) => {
 
 const getBookingByBookingId = asyncHandler(async (req, res) => {
     const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId }).populate('user', 'fullName email').populate('hall').populate('selectedFacilities.facility');
+    const booking = await Booking.findOne({ bookingId })
+        .populate('user', 'fullName email phone')
+        .populate('bookedBy', 'fullName email phone')
+        .populate('hall', 'name fullAddress')
+        .populate('selectedFacilities.facility');
+
     if (!booking) throw new ApiError(404, "Booking not found");
 
-    if (req.user.activeRole === 'user' && booking.user._id.toString() !== req.user._id.toString()) {
+    if (req.user.activeRole === 'user' && (!booking.user || booking.user._id.toString() !== req.user._id.toString())) {
         throw new ApiError(403, "You are not authorized to view this booking.");
     }
-    res.status(200).json(new ApiResponse(200, booking, "Booking details fetched."));
+
+    let durationInMilliseconds = 0;
+    if (booking.bookingDates && booking.bookingDates.length > 0) {
+      durationInMilliseconds = booking.bookingDates.reduce((total, dateRange) => {
+        const startTime = new Date(dateRange.startTime);
+        const endTime = new Date(dateRange.endTime);
+        return total + (endTime.getTime() - startTime.getTime());
+      }, 0);
+    }
+
+    const durationInHours = durationInMilliseconds / (1000 * 60 * 60);
+
+    const bookingObject = booking.toObject();
+    bookingObject.durationInHours = durationInHours;
+
+    res.status(200).json(new ApiResponse(200, bookingObject, "Booking details fetched."));
 });
 
 export {
