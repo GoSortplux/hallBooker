@@ -112,4 +112,23 @@ const updateSubAccount = async (subAccountCode, data) => {
     }
 };
 
-export { initializeTransaction, verifyTransaction, createSubAccount, getBanks, updateSubAccount };
+const validateBankAccount = async (accountNumber, bankCode) => {
+    try {
+        const token = await getAuthToken();
+        const response = await monnify.get('/disbursements/account/validate', {
+            params: {
+                accountNumber,
+                bankCode,
+            },
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data.responseBody;
+    } catch (error) {
+        console.error("Error from Monnify (validateBankAccount):", error.response ? error.response.data : error.message);
+        throw new ApiError(500, (error.response && error.response.data && error.response.data.responseMessage) || 'Failed to validate bank account');
+    }
+};
+
+export { initializeTransaction, verifyTransaction, createSubAccount, getBanks, updateSubAccount, validateBankAccount };

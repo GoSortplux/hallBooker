@@ -19,14 +19,26 @@ const router = Router();
  *       type: object
  *       required:
  *         - userId
- *         - percentageCharge
+ *         - bankCode
+ *         - accountNumber
+ *         - accountName
  *       properties:
  *         userId:
  *           type: string
  *           description: The ID of the user (hall owner) to create the subaccount for.
- *         percentageCharge:
- *           type: number
- *           description: The percentage of the transaction to be paid to this subaccount.
+ *           example: "60d0fe4f5311236168a109ca"
+ *         bankCode:
+ *           type: string
+ *           description: The bank code for the hall owner's account.
+ *           example: "058"
+ *         accountNumber:
+ *           type: string
+ *           description: The account number for the hall owner's account.
+ *           example: "0123456789"
+ *         accountName:
+ *           type: string
+ *           description: The account name for the hall owner's account.
+ *           example: "John Doe"
  *
  *     Subaccount:
  *       type: object
