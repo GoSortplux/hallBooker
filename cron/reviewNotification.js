@@ -22,6 +22,11 @@ const scheduleReviewNotifications = (io) => {
       for (const booking of bookings) {
         const { user, hall } = booking;
 
+        // If there's no user associated with the booking (e.g., a walk-in), skip.
+        if (!user) {
+          continue;
+        }
+
         const reviewLink = `${process.env.FRONTEND_URL}/halls/${hall._id}/review`;
 
         await createNotification(
