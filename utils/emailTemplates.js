@@ -208,7 +208,7 @@ const generatePaymentConfirmationEmail = (booking) => {
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentMethod || 'N/A'}</td>
                 </tr>
                 ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
@@ -338,6 +338,10 @@ const generateBookingConfirmationEmail = (booking) => {
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentStatus}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Method:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentMethod || 'N/A'}</td>
                 </tr>
                 ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
@@ -511,6 +515,10 @@ const generateNewBookingNotificationEmailForOwner = (recipient, customer, bookin
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">
                         <strong style="color: ${booking.paymentStatus === 'paid' ? '#4CAF50' : '#d9534f'};">${booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}</strong>
                     </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Method:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentMethod || 'N/A'}</td>
                 </tr>
                 ${facilitiesHtml}
                 <tr>
@@ -743,6 +751,10 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${firstBooking.paymentStatus}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Method:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${firstBooking.paymentMethod || 'N/A'}</td>
                 </tr>
                 <tr style="background-color: #f2f2f2;">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Hall Price:</strong></td>
