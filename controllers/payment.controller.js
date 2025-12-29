@@ -151,7 +151,7 @@ async function processTransaction(transactionData, io) {
 // ---------------------- BOOKING PROCESSING (KEEP THIS) ----------------------
 
 async function processBookingTransaction(bookingDetails, io) {
-    const { paymentStatus, paymentReference: refFromMonnify } = bookingDetails;
+    const { paymentStatus, paymentReference: refFromMonnify, paymentMethod } = bookingDetails;
 
     if (refFromMonnify.startsWith('RECURRING_')) {
         const recurringBookingId = refFromMonnify.split('_')[1];
@@ -166,7 +166,7 @@ async function processBookingTransaction(bookingDetails, io) {
                 return;
             }
 
-            await Booking.updateMany({ recurringBookingId }, { $set: { paymentStatus: 'paid' } });
+            await Booking.updateMany({ recurringBookingId }, { $set: { paymentStatus: 'paid', paymentMethod } });
 
             const hall = bookings[0].hall;
             const customer = bookings[0].walkInUserDetails;
@@ -226,6 +226,7 @@ async function processBookingTransaction(bookingDetails, io) {
 
         if (paymentStatus === 'PAID') {
             booking.paymentStatus = 'paid';
+            booking.paymentMethod = paymentMethod;
             await booking.save();
 
             const confirmedBooking = await Booking.findById(booking._id)
