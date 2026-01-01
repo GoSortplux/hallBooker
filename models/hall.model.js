@@ -101,6 +101,17 @@ const hallSchema = new mongoose.Schema(
       type: Number,
       default: 5,
     },
+    reservationFeePercentage: {
+      type: Number,
+      default: 40,
+      min: 0,
+      max: 100,
+    },
+    reservationCutoffHours: {
+      type: Number,
+      default: 72,
+      min: 1,
+    },
   },
   {
     timestamps: true,
