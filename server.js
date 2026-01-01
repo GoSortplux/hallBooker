@@ -13,9 +13,11 @@ import { notFound, errorHandler } from './middlewares/error.middleware.js';
 import initializeCronJobs from './cron/licenseManager.js';
 import initializeBookingCronJobs from './cron/bookingManager.js';
 import initializeNotificationCronJobs from './cron/notificationManager.js';
+import initializeReservationCronJobs from './cron/reservationManager.js';
 import { scheduleReviewNotifications } from './cron/reviewNotification.js';
 
 // Route Imports
+import reservationRoutes from './routes/reservation.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import hallRoutes from './routes/hall.routes.js';
@@ -60,6 +62,7 @@ initializeCronJobs(io);
 initializeBookingCronJobs(io);
 initializeNotificationCronJobs();
 scheduleReviewNotifications(io);
+initializeReservationCronJobs(io);
 
 // Middleware
 app.use(cors({
@@ -97,6 +100,7 @@ app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1', recommendationRoutes);
 app.use('/api/v1/monnify', monnifyRoutes);
+app.use('/api/v1/reservations', reservationRoutes);
 
 
 

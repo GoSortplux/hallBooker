@@ -703,6 +703,59 @@ export {
   generateStaffAdditionEmail,
   generateStaffRemovalEmail,
   generateRecurringBookingConfirmationEmail,
+  generateReservationConfirmationEmail,
+  generateNewReservationNotificationForOwner,
+  generateReservationExpiredEmail,
+  generateReservationReminderEmail,
+};
+
+const generateReservationConfirmationEmail = (customerName, reservation) => {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2>Reservation Confirmed!</h2>
+      <p>Dear ${customerName},</p>
+      <p>Your reservation for <strong>${reservation.hall.name}</strong> has been successfully confirmed.</p>
+      <p><strong>Event Details:</strong> ${reservation.eventDetails}</p>
+      <p>This reservation is valid until <strong>${new Date(reservation.cutoffDate).toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}</strong>. Please ensure you convert this reservation into a full booking before this time to secure your date.</p>
+      <p>Thank you for using HallBooker!</p>
+    </div>
+  `;
+};
+
+const generateNewReservationNotificationForOwner = (ownerName, customer, reservation) => {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2>New Reservation Notification</h2>
+      <p>Dear ${ownerName},</p>
+      <p>A new reservation has been made for your hall, <strong>${reservation.hall.name}</strong>, by ${customer.fullName}.</p>
+      <p><strong>Event:</strong> ${reservation.eventDetails}</p>
+      <p>The reservation is active until ${new Date(reservation.cutoffDate).toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}.</p>
+    </div>
+  `;
+};
+
+const generateReservationExpiredEmail = (customerName, reservation) => {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2>Reservation Expired</h2>
+      <p>Dear ${customerName},</p>
+      <p>We're writing to inform you that your reservation for <strong>${reservation.hall.name}</strong> has expired because it was not converted into a booking before the cutoff time.</p>
+      <p>The time slot may now be available for other users. If you are still interested, please visit our website to make a new booking or reservation.</p>
+      <p>Thank you for your interest in HallBooker.</p>
+    </div>
+  `;
+};
+
+const generateReservationReminderEmail = (customerName, reservation) => {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2>Reservation Reminder</h2>
+      <p>Dear ${customerName},</p>
+      <p>This is a friendly reminder that your reservation for <strong>${reservation.hall.name}</strong> is due to expire on <strong>${new Date(reservation.cutoffDate).toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}</strong>.</p>
+      <p>Please log in to your account to convert your reservation into a full booking to secure your date.</p>
+      <p>Thank you for using HallBooker!</p>
+    </div>
+  `;
 };
 
 function generateRecurringBookingConfirmationEmail(customerName, bookings, hall) {
