@@ -707,7 +707,26 @@ export {
   generateNewReservationNotificationForOwner,
   generateReservationExpiredEmail,
   generateReservationReminderEmail,
+  generateUnknownPaymentMethodEmail,
 };
+
+function generateUnknownPaymentMethodEmail(adminName, bookingId, rawPaymentMethod, fallbackPaymentMethod) {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Action Required: Unrecognized Payment Method</h2>
+        <p>Dear ${adminName},</p>
+        <p>This is an automated alert to inform you that a payment has been successfully processed for <strong>Booking ID: ${bookingId}</strong>, but it used a payment method that was not recognized by the system.</p>
+        <ul>
+            <li><strong>Received Method:</strong> ${rawPaymentMethod}</li>
+            <li><strong>Fallback Method Used:</strong> ${fallbackPaymentMethod}</li>
+        </ul>
+        <p>The booking has been marked as 'paid' to ensure the customer's reservation is secure, and the payment method has been set to '${fallbackPaymentMethod}'.</p>
+        <p><strong>Please take a moment to review this transaction and update the booking details if necessary.</strong> You may also need to add "${rawPaymentMethod}" to the list of accepted payment methods in the admin settings to prevent this warning in the future.</p>
+        <p>Thank you,</p>
+        <p>The HallBooker System</p>
+    </div>
+    `;
+}
 
 const generateReservationConfirmationEmail = (customerName, reservation) => {
   return `
