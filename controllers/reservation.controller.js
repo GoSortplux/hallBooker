@@ -158,9 +158,22 @@ const createReservation = asyncHandler(async (req, res) => {
     return { 'bookingDates.startTime': { $lt: bufferedEndTime }, 'bookingDates.endTime': { $gt: bufferedStartTime } };
   });
 
-  const conflictQuery = { hall: hallId, $or: orQuery };
-  if (await Booking.findOne({ ...conflictQuery, $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }] })) throw new ApiError(409, "Time slot conflicts with a booking.");
-  if (await Reservation.findOne({ ...conflictQuery, status: 'ACTIVE', paymentStatus: 'paid' })) throw new ApiError(409, "Time slot conflicts with a reservation.");
+  const bookingConflictQuery = {
+    hall: hallId,
+    $and: [
+      { $or: orQuery },
+      { $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }] }
+    ]
+  };
+  if (await Booking.findOne(bookingConflictQuery)) throw new ApiError(409, "Time slot conflicts with a booking.");
+
+  const reservationConflictQuery = {
+    hall: hallId,
+    $or: orQuery,
+    status: 'ACTIVE',
+    paymentStatus: 'paid'
+  };
+  if (await Reservation.findOne(reservationConflictQuery)) throw new ApiError(409, "Time slot conflicts with a reservation.");
 
   const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
     const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
