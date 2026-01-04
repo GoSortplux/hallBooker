@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const reservationSchema = new mongoose.Schema(
   {
+    reservationId: { type: String, required: true, unique: true, index: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Can be null for walk-in
     hall: { type: mongoose.Schema.Types.ObjectId, ref: 'Hall', required: true },
     eventDetails: { type: String, required: true },
@@ -58,7 +59,7 @@ const reservationSchema = new mongoose.Schema(
       },
     ],
     remindersSent: {
-      type: [Date],
+      type: [String],
       default: [],
     },
   },

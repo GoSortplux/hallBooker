@@ -191,15 +191,12 @@ router.route('/:reservationId').get(verifyJWT, getReservationById);
  *             properties:
  *               paymentMethod:
  *                 type: string
- *                 description: "For walk-in conversions by admin/staff. E.g., 'cash', 'pos'."
- *               paymentStatus:
- *                 type: string
- *                 description: "For walk-in conversions. Must be 'paid'."
+ *                 description: "For offline conversions by admin/staff. E.g., 'cash', 'pos'. Omit for online payment."
  *     responses:
  *       '200':
  *         description: Conversion payment initiated for online users.
  *       '201':
- *         description: Booking created directly for walk-in or zero-balance conversions.
+ *         description: Booking created directly for offline or zero-balance conversions.
  */
 router.route('/:reservationId/convert').post(verifyJWT, convertReservation);
 

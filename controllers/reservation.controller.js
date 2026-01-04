@@ -183,8 +183,10 @@ const createReservation = asyncHandler(async (req, res) => {
 
   const { totalPrice, hallPrice, facilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(bookingDates, hall.pricing, facilitiesToPrice);
   const reservationFee = parseFloat((totalPrice * (hall.reservationFeePercentage / 100)).toFixed(2));
+  const reservationId = await generateBookingId(hall.name);
 
   const tempReservation = new Reservation({
+      reservationId: `RES-${reservationId}`,
       hall: hallId, user: isWalkIn ? null : user._id, reservedBy: user._id, bookingDates, eventDetails, totalPrice, hallPrice, facilitiesPrice, reservationFee,
       paymentStatus: 'pending', status: 'ACTIVE', reservationType: isWalkIn ? 'walk-in' : 'online', walkInUserDetails: isWalkIn ? walkInUserDetails : undefined,
       selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({ ...cf, facility: selectedFacilitiesData[i].facilityId })),
@@ -193,9 +195,65 @@ const createReservation = asyncHandler(async (req, res) => {
 
   const uniquePaymentReference = `RES_${tempReservation._id}_${crypto.randomBytes(6).toString('hex')}`;
   tempReservation.paymentReference = uniquePaymentReference;
-  await tempReservation.save();
+  const newReservation = await tempReservation.save();
 
-  res.status(201).json(new ApiResponse(201, tempReservation, 'Reservation created successfully. Pending payment.'));
+  // --- Send Notifications ---
+  try {
+    const customer = isWalkIn ? walkInUserDetails : user;
+    const hallOwner = await User.findById(hall.owner);
+    const admins = await User.find({ role: 'super-admin' });
+    const io = req.app.get('io');
+
+    // Notify customer
+    if (customer && customer.email) {
+      sendEmail({
+        io,
+        email: customer.email,
+        subject: `Your Reservation for ${hall.name} is Pending Payment`,
+        html: generateReservationConfirmationEmail(customer.fullName, newReservation), // You might want a specific "pending" template
+        notification: {
+          recipient: user?._id.toString(),
+          message: `Your reservation for ${hall.name} is pending payment.`,
+          link: `/reservations/${newReservation._id}`,
+        },
+      });
+    }
+
+    // Notify hall owner
+    if (hallOwner) {
+      sendEmail({
+        io,
+        email: hallOwner.email,
+        subject: `New Reservation Pending for ${hall.name}`,
+        html: generateNewReservationNotificationForOwner(hallOwner.fullName, customer, newReservation), // Again, maybe a "pending" version
+        notification: {
+          recipient: hallOwner._id.toString(),
+          message: `A new reservation for your hall ${hall.name} is awaiting payment.`,
+          link: `/hall-owner/reservations/${newReservation._id}`,
+        },
+      });
+    }
+
+    // Notify admins
+    admins.forEach(admin => {
+      sendEmail({
+        io,
+        email: admin.email,
+        subject: `Admin Alert: New Reservation Pending for ${hall.name}`,
+        html: generateNewReservationNotificationForOwner(admin.fullName, customer, newReservation),
+        notification: {
+          recipient: admin._id.toString(),
+          message: `A new reservation for ${hall.name} is pending payment.`,
+          link: `/admin/reservations/${newReservation._id}`,
+        },
+      });
+    });
+  } catch (error) {
+    console.error('Failed to send reservation creation notifications:', error);
+    // Do not throw an error, as the reservation itself was successful.
+  }
+
+  res.status(201).json(new ApiResponse(201, newReservation, 'Reservation created successfully. Pending payment.'));
 });
 
 const verifyReservationPayment = asyncHandler(async (req, res) => {
@@ -215,55 +273,52 @@ const verifyReservationPayment = asyncHandler(async (req, res) => {
 
 const convertReservation = asyncHandler(async (req, res) => {
     const { reservationId } = req.params;
-    const { paymentMethod, paymentStatus } = req.body;
+    const { paymentMethod } = req.body;
     const user = req.user;
 
-    const reservation = await Reservation.findById(reservationId).populate('hall');
+    const reservation = await Reservation.findOne({ reservationId }).populate('hall');
     if (!reservation) throw new ApiError(404, 'Reservation not found.');
-    if (reservation.status !== 'ACTIVE' || reservation.paymentStatus !== 'paid') throw new ApiError(400, 'This reservation is not active or paid.');
+    if (reservation.status !== 'ACTIVE' || reservation.paymentStatus !== 'paid') throw new ApiError(400, 'This reservation is not active or its fee has not been paid.');
     if (new Date() > new Date(reservation.cutoffDate)) {
         reservation.status = 'EXPIRED';
         await reservation.save();
-        throw new ApiError(400, 'This reservation has expired.');
+        throw new ApiError(400, 'This reservation has passed its cutoff date and has expired.');
     }
 
-    const isAuthorizedAdmin = ['super-admin', 'hall-owner', 'staff'].includes(user.activeRole);
-    if (isAuthorizedAdmin && paymentMethod && paymentStatus === 'paid') {
+    const remainingBalance = reservation.totalPrice - reservation.reservationFee;
+    if (remainingBalance <= 0) {
+        const newBooking = await finalizeConversion(reservation, { paymentMethod: 'online' }, req.app.get('io'));
+        return res.status(201).json(new ApiResponse(201, newBooking, 'Reservation converted to booking with no balance remaining.'));
+    }
+
+    const isAuthorizedOfflinePayment = ['super-admin', 'hall-owner', 'staff'].includes(user.activeRole) && paymentMethod && paymentMethod !== 'online';
+    if (isAuthorizedOfflinePayment) {
         const newBooking = await finalizeConversion(reservation, { paymentMethod }, req.app.get('io'));
-        res.status(201).json(new ApiResponse(201, newBooking, 'Reservation converted to booking successfully.'));
-    } else {
-        const remainingBalance = reservation.totalPrice - reservation.reservationFee;
-        if (remainingBalance <= 0) {
-            const newBooking = await finalizeConversion(reservation, { paymentMethod: 'online' }, req.app.get('io'));
-            res.status(201).json(new ApiResponse(201, newBooking, 'Reservation converted with no balance remaining.'));
-        } else {
-            const ownerSubAccount = await SubAccount.findOne({ user: reservation.hall.owner });
-            const commissionSetting = await Setting.findOne({ key: 'platformCommissionPercentage' });
-
-            const subaccounts = [];
-            if (ownerSubAccount && commissionSetting) {
-                const commissionPercentage = parseFloat(commissionSetting.value);
-                if (commissionPercentage > 0) {
-                    const netAmount = reservation.totalPrice * (1 - commissionPercentage / 100);
-                    subaccounts.push({ subAccountCode: ownerSubAccount.subAccountCode, splitAmount: parseFloat(netAmount.toFixed(2)) });
-                }
-            }
-
-            const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : await User.findById(reservation.user);
-            const redirectUrl = `${process.env.BASE_URL}/api/v1/reservations/verify-conversion`;
-            const uniquePaymentReference = `CONV_${reservation._id}_${crypto.randomBytes(6).toString('hex')}`;
-
-            const transactionData = {
-                amount: remainingBalance, customerName: customer.fullName, customerEmail: customer.email, paymentReference: uniquePaymentReference,
-                paymentDescription: `Booking balance for ${reservation.hall.name}`, currencyCode: 'NGN', contractCode: process.env.MONNIFY_CONTRACT_CODE,
-                paymentMethods: ["CARD", "ACCOUNT_TRANSFER"], redirectUrl, metadata: { reservationId: reservation._id.toString() },
-                ...(subaccounts.length > 0 && { subaccounts }),
-            };
-
-            const paymentResponse = await initializeTransaction(transactionData);
-            res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, 'Conversion payment initiated.'));
-        }
+        return res.status(201).json(new ApiResponse(201, newBooking, 'Reservation converted to booking successfully via offline payment.'));
     }
+
+    const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : await User.findById(reservation.user);
+    if (!customer) throw new ApiError(404, 'Customer details could not be found for this reservation.');
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
+    const uniquePaymentReference = `CONV_${reservation._id}_${crypto.randomBytes(6).toString('hex')}`;
+
+    const transactionData = {
+        amount: remainingBalance,
+        customerName: customer.fullName,
+        customerEmail: customer.email,
+        paymentReference: uniquePaymentReference,
+        paymentDescription: `Booking balance for ${reservation.hall.name}`,
+        currencyCode: 'NGN',
+        contractCode: process.env.MONNIFY_CONTRACT_CODE,
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
+        redirectUrl,
+        metadata: { reservationId: reservation._id.toString() },
+    };
+
+    const paymentResponse = await initializeTransaction(transactionData);
+    res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, 'Conversion payment initiated.'));
 });
 
 const verifyConversionPayment = asyncHandler(async (req, res) => {
