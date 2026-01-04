@@ -461,70 +461,66 @@ const handleMonnifyWebhook = asyncHandler(async (req, res) => {
     const { eventType, eventData } = req.body;
     const io = req.app.get('io');
 
-    switch (eventType) {
-        case 'SUCCESSFUL_TRANSACTION': {
-            const response = await verifyTransaction(eventData.paymentReference);
-            const transaction = response.responseBody;
-            const isBookingPayment = transaction.paymentReference.includes('_');
+    try {
+        switch (eventType) {
+            case 'SUCCESSFUL_TRANSACTION': {
+                const response = await verifyTransaction(eventData.paymentReference);
+                const transaction = response.responseBody;
+                const isBookingPayment = transaction.paymentReference.includes('_');
 
-            if (isBookingPayment) {
-                await processBookingTransaction(transaction, io);
-            } else {
-                await processTransaction(transaction, io);
+                if (isBookingPayment) {
+                    await processBookingTransaction(transaction, io);
+                } else {
+                    await processTransaction(transaction, io);
+                }
+                break;
             }
-            break;
-        }
 
-        case 'SUCCESSFUL_DISBURSEMENT': {
-            const parsedData = {
-                ...eventData,
-                completedOn: parseMonnifyDate(eventData.completedOn),
-                status: 'SUCCESS',
-            };
-            await Disbursement.create(parsedData);
-            break;
-        }
-
-        case 'FAILED_DISBURSEMENT': {
-            const parsedData = {
-                ...eventData,
-                completedOn: parseMonnifyDate(eventData.completedOn),
-                status: 'FAILED',
-            };
-            await Disbursement.create(parsedData);
-            const admin = await User.findOne({ role: 'super-admin' });
-            if (admin) {
-                await sendEmail({
-                    io,
-                    email: admin.email,
-                    subject: 'Disbursement Failure Alert',
-                    html: generateAdminDisbursementFailureEmail(parsedData),
-                });
+            case 'SUCCESSFUL_DISBURSEMENT': {
+                const parsedData = { ...eventData, completedOn: parseMonnifyDate(eventData.completedOn), status: 'SUCCESS' };
+                await Disbursement.create(parsedData);
+                break;
             }
-            break;
-        }
 
-        case 'MANDATE_UPDATE': {
-            if (eventData.mandateStatus === 'CANCELLED') {
-                const subscription = await SubscriptionHistory.findOne({ mandateCode: eventData.mandateCode }).populate('owner');
-                if (subscription) {
-                    subscription.mandateStatus = 'CANCELLED';
-                    await subscription.save();
-
+            case 'FAILED_DISBURSEMENT': {
+                const parsedData = { ...eventData, completedOn: parseMonnifyDate(eventData.completedOn), status: 'FAILED' };
+                await Disbursement.create(parsedData);
+                const admin = await User.findOne({ role: 'super-admin' });
+                if (admin) {
                     await sendEmail({
                         io,
-                        email: subscription.owner.email,
-                        subject: 'Your Subscription Auto-Renewal Was Cancelled',
-                        html: generateMandateCancellationEmail(subscription.owner.fullName, subscription.expiryDate),
+                        email: admin.email,
+                        subject: 'Disbursement Failure Alert',
+                        html: generateAdminDisbursementFailureEmail(parsedData),
                     });
                 }
+                break;
             }
-            break;
-        }
 
-        default:
-            console.log(`Received unhandled event type: ${eventType}`);
-            break;
+            case 'MANDATE_UPDATE': {
+                if (eventData.mandateStatus === 'CANCELLED') {
+                    const subscription = await SubscriptionHistory.findOne({ mandateCode: eventData.mandateCode }).populate('owner');
+                    if (subscription) {
+                        subscription.mandateStatus = 'CANCELLED';
+                        await subscription.save();
+                        await sendEmail({
+                            io,
+                            email: subscription.owner.email,
+                            subject: 'Your Subscription Auto-Renewal Was Cancelled',
+                            html: generateMandateCancellationEmail(subscription.owner.fullName, subscription.expiryDate),
+                        });
+                    }
+                }
+                break;
+            }
+
+            default:
+                console.log(`Received unhandled event type: ${eventType}`);
+                break;
+        }
+    } catch (error) {
+        console.error('Webhook processing error:', error);
+        // Still return a 200 to prevent Monnify from retrying. The error is logged for debugging.
     }
 
     res.status(200).json(new ApiResponse(200, null, 'Webhook processed'));

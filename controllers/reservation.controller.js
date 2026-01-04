@@ -134,7 +134,8 @@ export async function processConversionTransaction(transactionData, io) {
     if (reservation.status === 'CONVERTED') return;
 
     if (paymentStatus === 'PAID') {
-        await finalizeConversion(reservation, { paymentMethod }, io);
+        // Ensure paymentMethod from the transaction is passed to the final booking
+        await finalizeConversion(reservation, { paymentMethod: paymentMethod || 'online' }, io);
     }
 }
 
