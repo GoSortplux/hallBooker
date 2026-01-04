@@ -20,8 +20,7 @@ import {
     generateSubscriptionPaymentEmail,
     generatePaymentConfirmationEmail,
     generateRecurringBookingConfirmationEmail,
-    generateNewBookingNotificationEmailForOwner,
-    generateUnknownPaymentMethodEmail
+    generateNewBookingNotificationEmailForOwner
 } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
 import { processReservationTransaction, processConversionTransaction } from './reservation.controller.js';
@@ -155,31 +154,7 @@ async function processTransaction(transactionData, io) {
 // ---------------------- BOOKING PROCESSING (KEEP THIS) ----------------------
 
 async function processBookingTransaction(bookingDetails, io) {
-    const { paymentStatus, paymentReference: refFromMonnify, paymentMethod: rawPaymentMethod } = bookingDetails;
-
-    let finalPaymentMethod = 'online'; // Default fallback
-    let notificationNeeded = false;
-
-    if (paymentStatus === 'PAID' && rawPaymentMethod) {
-        // Fetch allowed payment methods from DB
-        const paymentMethodSettings = await Setting.findOne({ key: 'paymentMethods' });
-        const allowedPaymentMethods = paymentMethodSettings ? paymentMethodSettings.value : [];
-
-        // Normalize the incoming payment method
-        const normalizedPaymentMethod = rawPaymentMethod.toLowerCase();
-
-        // Check if the normalized method is directly allowed
-        if (allowedPaymentMethods.includes(normalizedPaymentMethod)) {
-            finalPaymentMethod = normalizedPaymentMethod;
-        } else {
-            // If not found, log it, set the flag for admin notification, and use the fallback
-            console.warn(`[Webhook Warning] Unsupported payment method received: '${rawPaymentMethod}'. Falling back to 'online'. Booking Reference: ${refFromMonnify}`);
-            notificationNeeded = true;
-            finalPaymentMethod = 'online'; // The safe, validated fallback
-        }
-    }
-
-    const paymentMethodForUpdate = paymentStatus === 'PAID' ? finalPaymentMethod : undefined;
+    const { paymentStatus, paymentReference: refFromMonnify, paymentMethod } = bookingDetails;
 
     if (refFromMonnify.startsWith('RES_')) {
         await processReservationTransaction(bookingDetails, io);
@@ -198,28 +173,12 @@ async function processBookingTransaction(bookingDetails, io) {
                 return;
             }
 
-            await Booking.updateMany({ recurringBookingId }, { $set: { paymentStatus: 'paid', paymentMethod: paymentMethodForUpdate } });
+            await Booking.updateMany({ recurringBookingId }, { $set: { paymentStatus: 'paid', paymentMethod } });
 
             const hall = bookings[0].hall;
             const customer = bookings[0].walkInUserDetails;
             const hallOwner = hall.owner;
             const admins = await User.find({ role: 'super-admin' });
-
-            if (notificationNeeded) {
-                admins.forEach(admin => {
-                    sendEmail({
-                        io,
-                        email: admin.email,
-                        subject: 'Action Required: Unrecognized Payment Method',
-                        html: generateUnknownPaymentMethodEmail(admin.fullName, recurringBookingId, rawPaymentMethod, finalPaymentMethod),
-                        notification: {
-                            recipient: admin._id.toString(),
-                            message: `A booking (#${recurringBookingId}) was paid with an unrecognized method: ${rawPaymentMethod}.`,
-                            link: `/admin/bookings?recurringId=${recurringBookingId}`,
-                        },
-                    }).catch(err => console.error("Admin fallback notification error:", err));
-                });
-            }
 
             // Send email to customer
             if (customer.email) {
@@ -274,7 +233,7 @@ async function processBookingTransaction(bookingDetails, io) {
 
         if (paymentStatus === 'PAID') {
             booking.paymentStatus = 'paid';
-            booking.paymentMethod = paymentMethodForUpdate;
+            booking.paymentMethod = paymentMethod;
             await booking.save();
 
             const confirmedBooking = await Booking.findById(booking._id)
@@ -288,22 +247,6 @@ async function processBookingTransaction(bookingDetails, io) {
             const admins = await User.find({ role: 'super-admin' });
             let customerEmail;
             let customerDetails;
-
-            if (notificationNeeded) {
-                admins.forEach(admin => {
-                    sendEmail({
-                        io,
-                        email: admin.email,
-                        subject: 'Action Required: Unrecognized Payment Method',
-                        html: generateUnknownPaymentMethodEmail(admin.fullName, confirmedBooking.bookingId, rawPaymentMethod, finalPaymentMethod),
-                        notification: {
-                            recipient: admin._id.toString(),
-                            message: `A booking (#${confirmedBooking.bookingId}) was paid with an unrecognized method: ${rawPaymentMethod}.`,
-                            link: `/admin/bookings/${confirmedBooking._id}`,
-                        },
-                    }).catch(err => console.error("Admin fallback notification error:", err));
-                });
-            }
 
             if (confirmedBooking.bookingType === 'walk-in') {
                 customerEmail = confirmedBooking.walkInUserDetails.email;

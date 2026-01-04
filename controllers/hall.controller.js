@@ -3,7 +3,6 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
-import { Reservation } from '../models/reservation.model.js';
 import { Hall } from '../models/hall.model.js';
 import { Facility } from '../models/facility.model.js';
 import { User } from '../models/user.model.js';
@@ -595,61 +594,7 @@ export {
     createReservation,
     bookDemo,
     getHallBookings,
-    getHallUnavailableDates,
 };
-
-const getHallUnavailableDates = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { startDate, endDate } = req.query;
-
-    const hall = await Hall.findById(id);
-    if (!hall) {
-        throw new ApiError(404, "Hall not found");
-    }
-
-    const dateQuery = {};
-    if (startDate) {
-        dateQuery['bookingDates.startTime'] = { ...dateQuery['bookingDates.startTime'], $gte: new Date(startDate) };
-    }
-    if (endDate) {
-        dateQuery['bookingDates.endTime'] = { ...dateQuery['bookingDates.endTime'], $lte: new Date(endDate) };
-    }
-
-
-    const bookings = await Booking.find({ hall: id, status: 'confirmed', ...dateQuery });
-    const reservations = await Reservation.find({ hall: id, status: 'ACTIVE', ...dateQuery });
-
-    const unavailableSlots = [];
-    const buffer = hall.bookingBufferInHours || 0;
-
-    bookings.forEach(booking => {
-        booking.bookingDates.forEach(slot => {
-            const startTime = new Date(slot.startTime);
-            startTime.setHours(startTime.getHours() - buffer);
-            const endTime = new Date(slot.endTime);
-            endTime.setHours(endTime.getHours() + buffer);
-            unavailableSlots.push({
-                startTime: startTime.toISOString(),
-                endTime: endTime.toISOString()
-            });
-        });
-    });
-
-    reservations.forEach(reservation => {
-        reservation.bookingDates.forEach(slot => {
-            const startTime = new Date(slot.startTime);
-            startTime.setHours(startTime.getHours() - buffer);
-            const endTime = new Date(slot.endTime);
-            endTime.setHours(endTime.getHours() + buffer);
-            unavailableSlots.push({
-                startTime: startTime.toISOString(),
-                endTime: endTime.toISOString()
-            });
-        });
-    });
-
-    return res.status(200).json(new ApiResponse(200, unavailableSlots, "Unavailable dates fetched successfully"));
-});
 
 const getHallBookings = asyncHandler(async (req, res) => {
     const { id } = req.params;
