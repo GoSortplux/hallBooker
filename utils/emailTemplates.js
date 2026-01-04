@@ -729,14 +729,74 @@ function generateUnknownPaymentMethodEmail(adminName, bookingId, rawPaymentMetho
 }
 
 const generateReservationConfirmationEmail = (customerName, reservation) => {
+  const remainingBalance = reservation.totalPrice - reservation.reservationFee;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const paymentUrl = `${frontendUrl}/reservations/${reservation.reservationId}/pay`; // Assuming a route like this
+
   return `
-    <div style="font-family: Arial, sans-serif; color: #333;">
-      <h2>Reservation Confirmed!</h2>
-      <p>Dear ${customerName},</p>
-      <p>Your reservation for <strong>${reservation.hall.name}</strong> has been successfully confirmed.</p>
-      <p><strong>Event Details:</strong> ${reservation.eventDetails}</p>
-      <p>This reservation is valid until <strong>${new Date(reservation.cutoffDate).toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}</strong>. Please ensure you convert this reservation into a full booking before this time to secure your date.</p>
-      <p>Thank you for using HallBooker!</p>
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #0056b3; text-align: center;">Your Reservation is Confirmed!</h2>
+        <p>Hi ${customerName},</p>
+        <p>Thank you for making a reservation with HallBooker. Your requested time slot for <strong>${reservation.hall.name}</strong> has been successfully held. To complete your booking, you must pay the remaining balance before the cutoff date.</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Reservation Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 150px;"><strong>Reservation ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.reservationId}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.hall.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.eventDetails}</td>
+                </tr>
+                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Valid Until:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>${new Date(reservation.cutoffDate).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Lagos' })}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="color: #0056b3;">Payment Summary</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+             <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Description</th>
+                    <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">Total Booking Price</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">NGN ${reservation.totalPrice.toLocaleString()}</td>
+                </tr>
+                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">Reservation Fee Paid</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">- NGN ${reservation.reservationFee.toLocaleString()}</td>
+                </tr>
+                <tr style="background-color: #f9f9f9;">
+                    <td style="padding: 12px; font-weight: bold; border-bottom: 1px solid #ddd;">Remaining Balance</td>
+                    <td style="padding: 12px; font-weight: bold; text-align: right; border-bottom: 1px solid #ddd;">NGN ${remainingBalance.toLocaleString()}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="font-size: 14px; color: #d9534f; text-align: center;">Please note: You must pay the remaining balance before the expiration date to secure your booking.</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${paymentUrl}" style="background-color: #4CAF50; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Now to Confirm Booking</a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
     </div>
   `;
 };
