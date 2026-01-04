@@ -17,7 +17,6 @@ import {
     createReservation,
     bookDemo,
     getHallBookings,
-    getHallUnavailableDates,
 } from '../controllers/hall.controller.js';
 
 const router = Router();
@@ -943,61 +942,5 @@ router.route('/:id/toggle-online-booking')
  */
 router.route('/:id/bookings')
     .get(verifyJWT, authorizeHallAccess, getHallBookings);
-
-/**
- * @swagger
- * /api/v1/halls/{id}/unavailable-dates:
- *   get:
- *     summary: Get all unavailable dates for a hall
- *     tags: [Halls]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: The ID of the hall.
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *         description: "Optional start date to filter unavailable slots."
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *         description: "Optional end date to filter unavailable slots."
- *     responses:
- *       200:
- *         description: An array of unavailable time slots.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 statusCode:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       startTime:
- *                         type: string
- *                         format: date-time
- *                       endTime:
- *                         type: string
- *                         format: date-time
- *                 message:
- *                   type: string
- *                   example: "Unavailable dates fetched successfully"
- *       404:
- *         description: Hall not found.
- */
-router.route('/:id/unavailable-dates')
-    .get(getHallUnavailableDates);
 
 export default router;
