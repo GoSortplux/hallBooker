@@ -13,11 +13,11 @@ import generateBookingId from '../utils/bookingIdGenerator.js';
 import crypto from 'crypto';
 import sendEmail from '../services/email.service.js';
 import {
-    generateBookingConfirmationEmail,
     generateNewBookingNotificationEmailForOwner,
     generateReservationConfirmationEmail,
     generateNewReservationNotificationForOwner,
-    generatePaymentConfirmationEmail
+    generatePaymentConfirmationEmail,
+    generateNewReservationPendingPaymentEmailForUser
 } from '../utils/emailTemplates.js';
 
 
@@ -51,14 +51,14 @@ export async function processReservationTransaction(transactionData, io) {
         if (hallOwner) {
             sendEmail({
                 io, email: hallOwner.email, subject: `New Reservation for Your Hall: ${reservation.hall.name}`,
-                html: generateNewReservationNotificationForOwner(hallOwner.fullName, customer, reservation),
+                html: generateNewReservationNotificationForOwner(hallOwner, customer, reservation),
                 notification: { recipient: hallOwner._id.toString(), message: `A new reservation has been made for your hall: ${reservation.hall.name}.`, link: `/hall-owner/reservations/${reservation._id}` }
             }).catch(console.error);
         }
         admins.forEach(admin => {
             sendEmail({
                 io, email: admin.email, subject: `Admin Alert: New Reservation Made for ${reservation.hall.name}`,
-                html: generateNewReservationNotificationForOwner(admin.fullName, customer, reservation),
+                html: generateNewReservationNotificationForOwner(admin, customer, reservation),
                 notification: { recipient: admin._id.toString(), message: `A new reservation was made for ${reservation.hall.name}.`, link: `/admin/reservations/${reservation._id}` }
             }).catch(console.error);
         });
@@ -215,7 +215,7 @@ const createReservation = asyncHandler(async (req, res) => {
         io,
         email: customer.email,
         subject: `Your Reservation for ${hall.name} is Pending Payment`,
-        html: generateReservationConfirmationEmail(customer.fullName, reservationForEmail),
+        html: generateNewReservationPendingPaymentEmailForUser(customer.fullName, reservationForEmail),
         notification: {
           recipient: user?._id.toString(),
           message: `Your reservation for ${hall.name} is pending payment.`,
@@ -230,7 +230,7 @@ const createReservation = asyncHandler(async (req, res) => {
         io,
         email: hallOwner.email,
         subject: `New Reservation Pending for ${hall.name}`,
-        html: generateNewReservationNotificationForOwner(hallOwner.fullName, customer, reservationForEmail),
+        html: generateNewReservationNotificationForOwner(hallOwner, customer, reservationForEmail),
         notification: {
           recipient: hallOwner._id.toString(),
           message: `A new reservation for your hall ${hall.name} is awaiting payment.`,
@@ -245,7 +245,7 @@ const createReservation = asyncHandler(async (req, res) => {
         io,
         email: admin.email,
         subject: `Admin Alert: New Reservation Pending for ${hall.name}`,
-        html: generateNewReservationNotificationForOwner(admin.fullName, customer, reservationForEmail),
+        html: generateNewReservationNotificationForOwner(admin, customer, reservationForEmail),
         notification: {
           recipient: admin._id.toString(),
           message: `A new reservation for ${hall.name} is pending payment.`,

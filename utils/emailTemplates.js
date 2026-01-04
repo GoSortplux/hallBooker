@@ -207,8 +207,12 @@ const generatePaymentConfirmationEmail = (booking) => {
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.eventDetails}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Method:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.paymentMethod || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; color: #4CAF50; font-weight: bold;">Paid</td>
                 </tr>
                 ${facilitiesHtml}
                 <tr style="background-color: #f2f2f2;">
@@ -707,6 +711,69 @@ export {
   generateNewReservationNotificationForOwner,
   generateReservationExpiredEmail,
   generateReservationReminderEmail,
+  generateNewReservationPendingPaymentEmailForUser,
+};
+
+const generateNewReservationPendingPaymentEmailForUser = (customerName, reservation) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  // The payment for the initial reservation fee is now handled by the frontend,
+  // which will trigger the payment initialization endpoint.
+  const paymentUrl = `${frontendUrl}/reservations/${reservation.reservationId}/pay`;
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #f0ad4e; text-align: center;">Your Reservation is Pending Payment</h2>
+        <p>Hi ${customerName},</p>
+        <p>You have successfully created a reservation for <strong>${reservation.hall.name}</strong>. Please complete the payment for the reservation fee to hold your slot.</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #f0ad4e;">Reservation Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 150px;"><strong>Reservation ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.reservationId}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.hall.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.eventDetails}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="color: #f0ad4e;">Payment Required</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+             <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Description</th>
+                    <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 12px; font-weight: bold; border-bottom: 1px solid #ddd;">Reservation Fee Due</td>
+                    <td style="padding: 12px; font-weight: bold; text-align: right; border-bottom: 1px solid #ddd;">NGN ${reservation.reservationFee.toLocaleString()}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="font-size: 14px; color: #d9534f; text-align: center;">This reservation is not confirmed until the fee is paid. The slot will be held for a limited time.</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${paymentUrl}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Pay Reservation Fee Now</a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
 };
 
 const generateReservationConfirmationEmail = (customerName, reservation) => {
@@ -782,14 +849,79 @@ const generateReservationConfirmationEmail = (customerName, reservation) => {
   `;
 };
 
-const generateNewReservationNotificationForOwner = (ownerName, customer, reservation) => {
+const generateNewReservationNotificationForOwner = (recipient, customer, reservation) => {
+  const isSuperAdmin = recipient.role.includes('super-admin');
+  const hallOwnershipText = isSuperAdmin ? `a hall on the platform, <strong>${reservation.hall.name}</strong>` : `your hall, <strong>${reservation.hall.name}</strong>`;
+  const paymentStatus = reservation.paymentStatus === 'paid' ? 'Fee Paid' : 'Pending Fee Payment';
+  const paymentStatusColor = reservation.paymentStatus === 'paid' ? '#4CAF50' : '#f0ad4e';
+
   return `
-    <div style="font-family: Arial, sans-serif; color: #333;">
-      <h2>New Reservation Notification</h2>
-      <p>Dear ${ownerName},</p>
-      <p>A new reservation has been made for your hall, <strong>${reservation.hall.name}</strong>, by ${customer.fullName}.</p>
-      <p><strong>Event:</strong> ${reservation.eventDetails}</p>
-      <p>The reservation is active until ${new Date(reservation.cutoffDate).toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}.</p>
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #0056b3; text-align: center;">New Reservation Notification</h2>
+        <p>Hi ${recipient.fullName},</p>
+        <p>A new reservation has been made for ${hallOwnershipText} by <strong>${customer.fullName}</strong>. Please find the details below:</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #0056b3;">Reservation Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 150px;"><strong>Reservation ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.reservationId}</td>
+                </tr>
+                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Name:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.hall.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Event Details:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.eventDetails}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Expires On:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(reservation.cutoffDate).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Lagos' })}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="color: #0056b3;">Customer Details</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+             <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Contact Information</th>
+                </tr>
+            </thead>
+            <tbody>
+                 <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 150px;"><strong>Full Name:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${customer.fullName}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Email:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${customer.email || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Phone:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${customer.phone || 'N/A'}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="color: #0056b3;">Payment Status</h3>
+         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <tbody>
+                <tr style="background-color: #f9f9f9;">
+                    <td style="padding: 12px; font-weight: bold; border-bottom: 1px solid #ddd;">Reservation Fee Status</td>
+                    <td style="padding: 12px; font-weight: bold; text-align: right; border-bottom: 1px solid #ddd; color: ${paymentStatusColor};">${paymentStatus}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
     </div>
   `;
 };
