@@ -508,4 +508,34 @@ const makePaymentForRecurring = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, response.responseBody, 'Recurring payment transaction initialized'));
 });
 
-export { makePayment, makePaymentForRecurring, verifyPayment, handleMonnifyWebhook };
+const makePaymentForReservation = asyncHandler(async (req, res) => {
+    const { reservationId } = req.params;
+
+    const reservation = await Reservation.findOne({ reservationId }).populate('hall', 'name');
+    if (!reservation) throw new ApiError(404, 'Reservation not found');
+    if (reservation.paymentStatus === 'paid') throw new ApiError(400, 'Reservation fee has already been paid.');
+
+    const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : await User.findById(reservation.user);
+    if (!customer) throw new ApiError(404, 'Customer details not found for this reservation.');
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/payment/verify`;
+
+    const transactionData = {
+        amount: reservation.reservationFee,
+        customerName: customer.fullName,
+        customerEmail: customer.email,
+        paymentReference: reservation.paymentReference,
+        paymentDescription: `Reservation fee for ${reservation.hall.name}`,
+        currencyCode: 'NGN',
+        contractCode: process.env.MONNIFY_CONTRACT_CODE,
+        paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
+        redirectUrl,
+    };
+
+    const response = await initializeTransaction(transactionData);
+    res.status(200).json(new ApiResponse(200, response.responseBody, 'Reservation payment transaction initialized'));
+});
+
+
+export { makePayment, makePaymentForRecurring, makePaymentForReservation, verifyPayment, handleMonnifyWebhook };

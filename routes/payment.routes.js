@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { makePayment, makePaymentForRecurring, verifyPayment, handleMonnifyWebhook } from '../controllers/payment.controller.js';
+import { makePayment, makePaymentForRecurring, makePaymentForReservation, verifyPayment, handleMonnifyWebhook } from '../controllers/payment.controller.js';
 
 const router = Router();
 
@@ -35,6 +35,32 @@ const router = Router();
  *         description: No bookings found for the provided recurring ID.
  */
 router.route('/initialize/recurring/:recurringBookingId').post(verifyJWT, makePaymentForRecurring);
+
+
+/**
+ * @swagger
+ * /api/v1/payments/reservations/{reservationId}/pay:
+ *   post:
+ *     summary: Initialize payment for a reservation fee
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reservationId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The human-readable ID of the reservation.
+ *     responses:
+ *       200:
+ *         description: Payment initialized successfully.
+ *       400:
+ *         description: Reservation fee has already been paid.
+ *       404:
+ *         description: Reservation not found.
+ */
+router.route('/reservations/:reservationId/pay').post(verifyJWT, makePaymentForReservation);
 
 /**
  * @swagger
