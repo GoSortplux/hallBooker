@@ -20,7 +20,7 @@ import {
 } from '../utils/emailTemplates.js';
 
 
-async function processReservationTransaction(transactionData, io) {
+export async function processReservationTransaction(transactionData, io) {
     const { paymentStatus, paymentReference, transactionReference } = transactionData;
     const reservationId = paymentReference.split('_')[1];
 
@@ -122,7 +122,7 @@ async function finalizeConversion(reservation, paymentDetails, io) {
     return newBooking;
 }
 
-async function processConversionTransaction(transactionData, io) {
+export async function processConversionTransaction(transactionData, io) {
     const { paymentStatus, paymentReference, paymentMethod } = transactionData;
     const reservationId = paymentReference.split('_')[1];
 
@@ -195,31 +195,21 @@ const createReservation = asyncHandler(async (req, res) => {
   tempReservation.paymentReference = uniquePaymentReference;
   await tempReservation.save();
 
-  const customerDetails = isWalkIn ? walkInUserDetails : user;
-  const redirectUrl = `${process.env.BASE_URL}/api/v1/reservations/verify`;
-
-  const transactionData = {
-    amount: reservationFee, customerName: customerDetails.fullName, customerEmail: customerDetails.email, paymentReference: uniquePaymentReference,
-    paymentDescription: `Reservation fee for ${hall.name}`, currencyCode: 'NGN', contractCode: process.env.MONNIFY_CONTRACT_CODE,
-    paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"], redirectUrl, metadata: { reservationId: tempReservation._id.toString() }
-  };
-
-  const paymentResponse = await initializeTransaction(transactionData);
-  res.status(200).json(new ApiResponse(200, paymentResponse.responseBody, 'Reservation payment initiated successfully.'));
+  res.status(201).json(new ApiResponse(201, tempReservation, 'Reservation created successfully. Pending payment.'));
 });
 
 const verifyReservationPayment = asyncHandler(async (req, res) => {
     const { paymentReference } = req.query;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     if (!paymentReference) throw new ApiError(400, 'Payment reference is required.');
 
     try {
         const { responseBody: transaction } = await verifyTransaction(paymentReference);
         await processReservationTransaction(transaction, req.app.get('io'));
-        res.redirect(`${frontendUrl}/payment/${transaction.paymentStatus === 'PAID' ? 'success' : 'failed'}?type=reservation`);
+        const status = transaction.paymentStatus === 'PAID' ? 'success' : 'failed';
+        res.status(200).json(new ApiResponse(200, { status, type: 'reservation' }, 'Payment verification complete.'));
     } catch (error) {
         console.error("Payment verification failed:", error);
-        res.redirect(`${frontendUrl}/payment/failed?type=reservation&error=verification_failed`);
+        throw new ApiError(500, 'Payment verification failed.');
     }
 });
 

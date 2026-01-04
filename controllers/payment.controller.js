@@ -23,6 +23,8 @@ import {
     generateUnknownPaymentMethodEmail
 } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
+import { processReservationTransaction, processConversionTransaction } from './reservation.controller.js';
+
 
 // Helper function to parse Monnify's custom date format
 const parseMonnifyDate = (dateString) => {
@@ -178,7 +180,11 @@ async function processBookingTransaction(bookingDetails, io) {
 
     const paymentMethodForUpdate = paymentStatus === 'PAID' ? finalPaymentMethod : undefined;
 
-    if (refFromMonnify.startsWith('RECURRING_')) {
+    if (refFromMonnify.startsWith('RES_')) {
+        await processReservationTransaction(bookingDetails, io);
+    } else if (refFromMonnify.startsWith('CONV_')) {
+        await processConversionTransaction(bookingDetails, io);
+    } else if (refFromMonnify.startsWith('RECURRING_')) {
         const recurringBookingId = refFromMonnify.split('_')[1];
         if (paymentStatus === 'PAID') {
             const bookings = await Booking.find({ recurringBookingId }).populate({
