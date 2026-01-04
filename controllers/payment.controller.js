@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 import { Booking } from '../models/booking.model.js';
+import { Reservation } from '../models/reservation.model.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
