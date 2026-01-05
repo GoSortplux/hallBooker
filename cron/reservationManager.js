@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { Reservation } from '../models/reservation.model.js';
 import Setting from '../models/setting.model.js';
-import User from '../models/user.model.js';
+import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateReservationExpiredEmail, generateReservationReminderEmail, generatePendingReservationCancelledEmail } from '../utils/emailTemplates.js';
 import { createNotification } from '../services/notification.service.js';
