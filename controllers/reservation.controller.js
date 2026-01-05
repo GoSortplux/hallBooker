@@ -398,5 +398,158 @@ export {
     convertReservation,
     verifyConversionPayment,
     getReservationsForHall,
-    getReservationById
+    getReservationById,
+    walkInReservation
 };
+
+const walkInReservation = asyncHandler(async (req, res) => {
+    const { hallId, bookingDates, eventDetails, selectedFacilities: selectedFacilitiesData, walkInUserDetails, paymentMethod } = req.body;
+    const staffUser = req.user;
+
+    if (!hallId || !bookingDates || !walkInUserDetails || !paymentMethod) {
+        throw new ApiError(400, 'Hall ID, booking dates, customer details, and payment method are required.');
+    }
+
+    if (!walkInUserDetails.fullName || !walkInUserDetails.phone) {
+        throw new ApiError(400, 'Customer full name and phone number are required.');
+    }
+
+    const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+    if (!paymentMethodsSetting || !paymentMethodsSetting.value.includes(paymentMethod)) {
+        throw new ApiError(400, `Invalid payment method: ${paymentMethod}`);
+    }
+
+    const hall = await Hall.findById(hallId).populate('facilities.facility');
+    if (!hall) {
+        throw new ApiError(404, 'Hall not found');
+    }
+
+    // --- Conflict Checking (copied from createReservation) ---
+    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+    const orQuery = bookingDates.map(date => {
+        const startTime = new Date(date.startTime);
+        const endTime = new Date(date.endTime);
+        if (isNaN(startTime.getTime()) || isNaN(endTime.getTime()) || startTime >= endTime || startTime < new Date()) {
+            throw new ApiError(400, 'Invalid or past date provided.');
+        }
+        const bufferedStartTime = new Date(startTime.getTime() - bufferMilliseconds);
+        const bufferedEndTime = new Date(endTime.getTime() + bufferMilliseconds);
+        return { 'bookingDates.startTime': { $lt: bufferedEndTime }, 'bookingDates.endTime': { $gt: bufferedStartTime } };
+    });
+
+    const bookingConflictQuery = {
+        hall: hallId,
+        $and: [
+            { $or: orQuery },
+            { $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }] }
+        ]
+    };
+    if (await Booking.findOne(bookingConflictQuery)) {
+        throw new ApiError(409, "Time slot conflicts with a booking.");
+    }
+
+    const reservationConflictQuery = {
+        hall: hallId,
+        $or: orQuery,
+        status: 'ACTIVE',
+        paymentStatus: 'paid'
+    };
+    if (await Reservation.findOne(reservationConflictQuery)) {
+        throw new ApiError(409, "Time slot conflicts with an active reservation.");
+    }
+
+    // --- Price Calculation (copied from createReservation) ---
+    const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
+        const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
+        if (!hallFacility) {
+            throw new ApiError(404, `Facility with ID ${sf.facilityId} not found.`);
+        }
+        return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
+    }) || [];
+
+    const { totalPrice, hallPrice, facilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(bookingDates, hall.pricing, facilitiesToPrice);
+    const reservationFee = parseFloat((totalPrice * (hall.reservationFeePercentage / 100)).toFixed(2));
+
+    const reservationId = await generateBookingId(hall.name);
+    const reservationData = {
+        reservationId: `RES-${reservationId}`,
+        hall: hallId,
+        user: null, // Walk-in reservations are not linked to a registered user
+        reservedBy: staffUser._id,
+        bookingDates,
+        eventDetails,
+        totalPrice,
+        hallPrice,
+        facilitiesPrice,
+        reservationFee,
+        reservationType: 'walk-in',
+        walkInUserDetails,
+        selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({ ...cf, facility: selectedFacilitiesData[i].facilityId })),
+        cutoffDate: new Date(new Date(bookingDates[0].startTime).getTime() - (hall.reservationCutoffHours * 60 * 60 * 1000)),
+    };
+
+    const io = req.app.get('io');
+    const hallOwner = await User.findById(hall.owner);
+    const admins = await User.find({ role: 'super-admin' });
+
+    if (paymentMethod === 'online') {
+        reservationData.paymentStatus = 'pending';
+        reservationData.status = 'ACTIVE'; // Remains active until cutoff
+
+        // Create a temporary reservation document to get the _id
+        const tempReservation = new Reservation(reservationData);
+
+        const uniquePaymentReference = `RES_${tempReservation._id}_${crypto.randomBytes(6).toString('hex')}`;
+        tempReservation.paymentReference = uniquePaymentReference;
+
+        const newReservation = await tempReservation.save();
+        const reservationForEmail = { ...newReservation.toObject(), hall };
+
+        if (walkInUserDetails.email) {
+            sendEmail({
+                io,
+                email: walkInUserDetails.email,
+                subject: `Your Reservation for ${hall.name} is Pending Payment`,
+                html: generateNewReservationPendingPaymentEmailForUser(walkInUserDetails.fullName, reservationForEmail),
+            }).catch(console.error);
+        }
+
+        return res.status(201).json(new ApiResponse(201, newReservation, 'Walk-in reservation created. Payment link will be sent to the customer.'));
+
+    } else {
+        reservationData.paymentStatus = 'paid';
+        reservationData.status = 'ACTIVE';
+        reservationData.paymentMethod = paymentMethod;
+
+        const newReservation = await Reservation.create(reservationData);
+        const reservationForEmail = { ...newReservation.toObject(), hall };
+
+        // Notify customer
+        if (walkInUserDetails.email) {
+            sendEmail({
+                io,
+                email: walkInUserDetails.email,
+                subject: `Your Reservation for ${hall.name} is Confirmed!`,
+                html: generateReservationConfirmationEmail(walkInUserDetails.fullName, reservationForEmail),
+            }).catch(console.error);
+        }
+
+        // Notify hall owner and admins
+        if (hallOwner) {
+            sendEmail({
+                io, email: hallOwner.email, subject: `New Walk-in Reservation for ${hall.name}`,
+                html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail),
+                notification: { recipient: hallOwner._id.toString(), message: `A new walk-in reservation has been made for your hall: ${hall.name}.`, link: `/hall-owner/reservations/${newReservation._id}` }
+            }).catch(console.error);
+        }
+        admins.forEach(admin => {
+            sendEmail({
+                io, email: admin.email, subject: `Admin Alert: New Walk-in Reservation for ${hall.name}`,
+                html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail),
+                notification: { recipient: admin._id.toString(), message: `A new walk-in reservation was made for ${hall.name}.`, link: `/admin/reservations/${newReservation._id}` }
+            }).catch(console.error);
+        });
+
+        return res.status(201).json(new ApiResponse(201, newReservation, 'Walk-in reservation created and marked as paid.'));
+    }
+});
