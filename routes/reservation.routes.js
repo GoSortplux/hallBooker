@@ -82,6 +82,11 @@ router.route('/').post(verifyJWT, createReservation);
  * /api/v1/reservations/walk-in:
  *   post:
  *     summary: Create a walk-in reservation (Admin/Staff only)
+ *     description: |
+ *       Allows authorized users (admins, staff, hall-owners) to create a reservation for a walk-in customer.
+ *       The `paymentStatus` is determined by the server based on the `paymentMethod` provided and should not be included in the request body.
+ *       - Using 'online' as the `paymentMethod` creates a reservation with a 'pending' status and emails a payment link to the customer.
+ *       - Using any other valid offline method (e.g., 'CASH', 'POS') creates a reservation with a 'paid' status.
  *     tags: [Reservations]
  *     security:
  *       - bearerAuth: []

@@ -514,12 +514,32 @@ const walkInReservation = asyncHandler(async (req, res) => {
             }).catch(console.error);
         }
 
+        // Notify hall owner and admins about the pending reservation
+        if (hallOwner) {
+            sendEmail({
+                io, email: hallOwner.email, subject: `New Walk-in Reservation Pending for ${hall.name}`,
+                html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail),
+                notification: { recipient: hallOwner._id.toString(), message: `A new walk-in reservation for ${hall.name} is awaiting payment.`, link: `/hall-owner/reservations/${newReservation._id}` }
+            }).catch(console.error);
+        }
+        admins.forEach(admin => {
+            sendEmail({
+                io, email: admin.email, subject: `Admin Alert: New Walk-in Reservation Pending for ${hall.name}`,
+                html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail),
+                notification: { recipient: admin._id.toString(), message: `A new walk-in reservation for ${hall.name} is pending payment.`, link: `/admin/reservations/${newReservation._id}` }
+            }).catch(console.error);
+        });
+
         return res.status(201).json(new ApiResponse(201, newReservation, 'Walk-in reservation created. Payment link will be sent to the customer.'));
 
     } else {
         reservationData.paymentStatus = 'paid';
         reservationData.status = 'ACTIVE';
         reservationData.paymentMethod = paymentMethod;
+
+        // Generate a unique reference for offline payments
+        const uniquePaymentReference = `OFFLINE_${reservationId}_${crypto.randomBytes(6).toString('hex')}`;
+        reservationData.paymentReference = uniquePaymentReference;
 
         const newReservation = await Reservation.create(reservationData);
         const reservationForEmail = { ...newReservation.toObject(), hall };
