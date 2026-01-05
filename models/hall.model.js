@@ -17,7 +17,6 @@ const hallSchema = new mongoose.Schema(
       },
       coordinates: {
         type: [Number],
-        index: '2dsphere',
       },
       address: {
         type: String,
@@ -119,5 +118,7 @@ const hallSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+hallSchema.index({ geoLocation: '2dsphere' });
 
 export const Hall = mongoose.model('Hall', hallSchema);
