@@ -170,13 +170,35 @@ const getHallRecommendations = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Hall not found');
   }
 
-  // If the reference hall has no location, we can't give location-based recommendations.
+  // If the reference hall has no location, use fallback logic.
   if (!referenceHall.geoLocation?.coordinates) {
+    // --- Fallback Logic: Recommend based on other similarities ---
+    const similarHalls = await Hall.find({
+      _id: { $ne: id },
+      state: referenceHall.state,
+      localGovernment: referenceHall.localGovernment,
+    }).populate('facilities.facility');
+
+    const recommendations = similarHalls.map(hall => {
+      const priceScore = calculatePriceScore(referenceHall, hall);
+      const facilitiesScore = calculateFacilitiesScore(referenceHall, hall);
+      // Combine scores with weighting
+      const similarityScore = (priceScore * 0.6) + (facilitiesScore * 0.4);
+      return { hall, similarityScore };
+    });
+
+    // Sort by similarity score in descending order
+    recommendations.sort((a, b) => b.similarityScore - a.similarityScore);
+
+    // Get the top 10 recommendations
+    const top10RecommendedHalls = recommendations.slice(0, 10).map(rec => rec.hall);
+
     return res
       .status(200)
-      .json(new ApiResponse(200, [], 'Cannot provide recommendations for a hall with no location.'));
+      .json(new ApiResponse(200, top10RecommendedHalls, 'Hall recommendations retrieved successfully'));
   }
 
+  // --- Original Logic: Geo-location based ---
   const [lon, lat] = referenceHall.geoLocation.coordinates;
   const maxDistanceInMeters = 50 * 1000; // 50km
 
