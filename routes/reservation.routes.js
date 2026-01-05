@@ -5,7 +5,8 @@ import {
     convertReservation,
     verifyConversionPayment,
     getReservationsForHall,
-    getReservationById
+    getReservationById,
+    walkInReservation
 } from '../controllers/reservation.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -75,6 +76,58 @@ const router = express.Router();
  *         description: Reservation payment initiated successfully.
  */
 router.route('/').post(verifyJWT, createReservation);
+
+/**
+ * @swagger
+ * /api/v1/reservations/walk-in:
+ *   post:
+ *     summary: Create a walk-in reservation (Admin/Staff only)
+ *     tags: [Reservations]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - hallId
+ *               - bookingDates
+ *               - eventDetails
+ *               - walkInUserDetails
+ *               - paymentMethod
+ *             properties:
+ *               hallId:
+ *                 type: string
+ *               bookingDates:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     startTime:
+ *                       type: string
+ *                       format: date-time
+ *                     endTime:
+ *                       type: string
+ *                       format: date-time
+ *               eventDetails:
+ *                 type: string
+ *               selectedFacilities:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/BookingFacilityInput'
+ *               walkInUserDetails:
+ *                  $ref: '#/components/schemas/WalkInUserDetails'
+ *               paymentMethod:
+ *                  type: string
+ *                  enum: [cash, pos, online]
+ *                  description: "'online' will create a pending reservation and send a payment link. Others create an active reservation."
+ *     responses:
+ *       '201':
+ *         description: Walk-in reservation created successfully.
+ */
+router.route('/walk-in').post(verifyJWT, authorizeRoles('super-admin', 'hall-owner', 'staff'), walkInReservation);
 
 /**
  * @swagger
@@ -174,6 +227,25 @@ router.route('/:reservationId').get(verifyJWT, getReservationById);
  * /api/v1/reservations/{reservationId}/convert:
  *   post:
  *     summary: Convert an active reservation to a full booking
+ *     description: |
+ *       This endpoint handles the conversion of an active reservation (where the initial fee has been paid) into a confirmed booking by settling the remaining balance. It supports multiple workflows:
+ *
+ *       **1. Online User Conversion:**
+ *       - A regular user calls this endpoint for their own reservation.
+ *       - The system calculates the remaining balance and initiates a new online payment transaction.
+ *       - The response contains the payment gateway URL, which the frontend uses to redirect the user to complete the payment.
+ *
+ *       **2. Admin/Staff-led Online Conversion (for Walk-ins):**
+ *       - An admin, staff, or hall owner calls this endpoint for a walk-in reservation.
+ *       - The system uses the customer details from `walkInUserDetails` to initiate the online payment for the remaining balance.
+ *       - The response contains a payment link that the admin can then share with the customer (e.g., via email or SMS) for them to complete the payment.
+ *
+ *       **3. Admin/Staff-led Offline Conversion:**
+ *       - An admin, staff, or hall owner calls this endpoint and includes a `paymentMethod` in the request body (e.g., "cash", "pos").
+ *       - The system assumes the remaining balance has been collected offline.
+ *       - It bypasses the payment gateway and directly converts the reservation into a confirmed booking.
+ *
+ *       The endpoint automatically handles both regular and walk-in reservations, regardless of how the initial reservation fee was paid.
  *     tags: [Reservations]
  *     security:
  *       - bearerAuth: []
@@ -191,12 +263,12 @@ router.route('/:reservationId').get(verifyJWT, getReservationById);
  *             properties:
  *               paymentMethod:
  *                 type: string
- *                 description: "For offline conversions by admin/staff. E.g., 'cash', 'pos'. Omit for online payment."
+ *                 description: "For offline conversions by admin/staff (e.g., 'cash', 'pos'). Omit this field to initiate an online payment for the remaining balance."
  *     responses:
  *       '200':
- *         description: Conversion payment initiated for online users.
+ *         description: Online payment initiated. The response body contains the payment gateway URL.
  *       '201':
- *         description: Booking created directly for offline or zero-balance conversions.
+ *         description: Booking created directly for offline payments or if the remaining balance was zero.
  */
 router.route('/:reservationId/convert').post(verifyJWT, convertReservation);
 

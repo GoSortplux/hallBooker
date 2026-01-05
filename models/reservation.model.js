@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Setting from './setting.model.js';
 
 const reservationSchema = new mongoose.Schema(
   {
@@ -18,9 +19,9 @@ const reservationSchema = new mongoose.Schema(
     facilitiesPrice: { type: Number, required: true },
     reservationFee: { type: Number, required: true },
     paymentReference: { type: String, required: true, unique: true },
+    paymentMethod: { type: String },
     paymentStatus: {
       type: String,
-      enum: ['paid', 'pending'],
       default: 'pending',
     },
     status: {
@@ -65,5 +66,21 @@ const reservationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+reservationSchema.pre('save', async function (next) {
+  if (this.isModified('paymentMethod') && this.paymentMethod) {
+    const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
+    if (!paymentMethodsSetting || !paymentMethodsSetting.value.includes(this.paymentMethod)) {
+      return next(new Error(`Invalid payment method: ${this.paymentMethod}`));
+    }
+  }
+  if (this.isModified('paymentStatus') && this.paymentStatus) {
+    const paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
+    if (!paymentStatusesSetting || !paymentStatusesSetting.value.includes(this.paymentStatus)) {
+      return next(new Error(`Invalid payment status: ${this.paymentStatus}`));
+    }
+  }
+  next();
+});
 
 export const Reservation = mongoose.model('Reservation', reservationSchema);
