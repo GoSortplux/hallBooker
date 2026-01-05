@@ -185,19 +185,39 @@ const createReservation = asyncHandler(async (req, res) => {
 
   const { totalPrice, hallPrice, facilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(bookingDates, hall.pricing, facilitiesToPrice);
   const reservationFee = parseFloat((totalPrice * (hall.reservationFeePercentage / 100)).toFixed(2));
-  const reservationId = await generateBookingId(hall.name);
 
-  const tempReservation = new Reservation({
-      reservationId: `RES-${reservationId}`,
-      hall: hallId, user: isWalkIn ? null : user._id, reservedBy: user._id, bookingDates, eventDetails, totalPrice, hallPrice, facilitiesPrice, reservationFee,
-      paymentStatus: 'pending', status: 'ACTIVE', reservationType: isWalkIn ? 'walk-in' : 'online', walkInUserDetails: isWalkIn ? walkInUserDetails : undefined,
-      selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({ ...cf, facility: selectedFacilitiesData[i].facilityId })),
-      cutoffDate: new Date(new Date(bookingDates[0].startTime).getTime() - (hall.reservationCutoffHours * 60 * 60 * 1000)),
-  });
+  let newReservation;
+  let attempts = 0;
+  const maxAttempts = 5;
 
-  const uniquePaymentReference = `RES_${tempReservation._id}_${crypto.randomBytes(6).toString('hex')}`;
-  tempReservation.paymentReference = uniquePaymentReference;
-  const newReservation = await tempReservation.save();
+  while (attempts < maxAttempts) {
+    try {
+      const reservationId = await generateBookingId(hall.name, attempts); // Pass attempt for uniqueness
+      const tempReservation = new Reservation({
+          reservationId: `RES-${reservationId}`,
+          hall: hallId, user: isWalkIn ? null : user._id, reservedBy: user._id, bookingDates, eventDetails, totalPrice, hallPrice, facilitiesPrice, reservationFee,
+          paymentStatus: 'pending', status: 'ACTIVE', reservationType: isWalkIn ? 'walk-in' : 'online', walkInUserDetails: isWalkIn ? walkInUserDetails : undefined,
+          selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({ ...cf, facility: selectedFacilitiesData[i].facilityId })),
+          cutoffDate: new Date(new Date(bookingDates[0].startTime).getTime() - (hall.reservationCutoffHours * 60 * 60 * 1000)),
+      });
+
+      const uniquePaymentReference = `RES_${tempReservation._id}_${crypto.randomBytes(6).toString('hex')}`;
+      tempReservation.paymentReference = uniquePaymentReference;
+
+      newReservation = await tempReservation.save();
+      break;
+    } catch (error) {
+      if (error.code === 11000 && error.keyPattern.reservationId) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new ApiError(500, 'Failed to generate a unique reservation ID after multiple attempts.');
+        }
+        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay before retrying
+      } else {
+        throw error;
+      }
+    }
+  }
 
   // --- Send Notifications ---
   try {
@@ -470,11 +490,17 @@ const walkInReservation = asyncHandler(async (req, res) => {
     const { totalPrice, hallPrice, facilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate(bookingDates, hall.pricing, facilitiesToPrice);
     const reservationFee = parseFloat((totalPrice * (hall.reservationFeePercentage / 100)).toFixed(2));
 
-    const reservationId = await generateBookingId(hall.name);
-    const reservationData = {
-        reservationId: `RES-${reservationId}`,
-        hall: hallId,
-        user: null, // Walk-in reservations are not linked to a registered user
+    let newReservation;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+  while (attempts < maxAttempts) {
+    try {
+        const reservationId = await generateBookingId(hall.name, attempts);
+        const reservationData = {
+            reservationId: `RES-${reservationId}`,
+            hall: hallId,
+            user: null, // Walk-in reservations are not linked to a registered user
         reservedBy: staffUser._id,
         bookingDates,
         eventDetails,
@@ -572,4 +598,16 @@ const walkInReservation = asyncHandler(async (req, res) => {
 
         return res.status(201).json(new ApiResponse(201, newReservation, 'Walk-in reservation created and marked as paid.'));
     }
+    } catch (error) {
+        if (error.code === 11000 && error.keyPattern.reservationId) {
+            attempts++;
+            if (attempts >= maxAttempts) {
+                throw new ApiError(500, 'Failed to generate a unique reservation ID after multiple attempts.');
+            }
+            await new Promise(resolve => setTimeout(resolve, 50)); // Small delay before retrying
+        } else {
+            throw error;
+        }
+    }
+  }
 });
