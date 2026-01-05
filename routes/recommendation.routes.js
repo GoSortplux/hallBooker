@@ -8,7 +8,7 @@ const router = express.Router();
  * /api/v1/halls/{id}/recommendations:
  *   get:
  *     summary: Get hall recommendations
- *     description: Retrieves a list of halls similar to the one specified by the ID.
+ *     description: Retrieves the top 10 most similar halls. The primary recommendation strategy is based on geo-location. If the specified hall lacks coordinates, it falls back to recommending halls in the same state and local government, scored by price and facility similarity.
  *     tags: [Halls]
  *     parameters:
  *       - in: path
