@@ -1,16 +1,101 @@
 import cron from 'node-cron';
 import { Reservation } from '../models/reservation.model.js';
+import Setting from '../models/setting.model.js';
+import User from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
-import { generateReservationExpiredEmail, generateReservationReminderEmail } from '../utils/emailTemplates.js';
+import { generateReservationExpiredEmail, generateReservationReminderEmail, generatePendingReservationCancelledEmail } from '../utils/emailTemplates.js';
+import { createNotification } from '../services/notification.service.js';
+
 
 const reservationManager = (io) => {
-  // Schedule a job to run every hour
+  // Schedule a job to run every minute to check for expired pending reservations
+  cron.schedule('* * * * *', async () => {
+    console.log('Running cron job to clean up expired pending reservations...');
+
+    try {
+        const setting = await Setting.findOne({ key: 'pendingReservationExpiryMinutes' });
+        const pendingReservationExpiryMinutes = setting ? setting.value : 30; // Default to 30 minutes
+
+        const cutoffTime = new Date(Date.now() - pendingReservationExpiryMinutes * 60 * 1000);
+
+        const expiredPendingReservations = await Reservation.find({
+            status: 'ACTIVE',
+            paymentStatus: 'pending',
+            createdAt: { $lt: cutoffTime }
+        }).populate('user').populate({
+            path: 'hall',
+            populate: {
+                path: 'owner',
+                model: 'User'
+            }
+        });
+
+
+        if (expiredPendingReservations.length > 0) {
+            console.log(`Found ${expiredPendingReservations.length} expired pending reservations to clean up.`);
+        }
+
+        for (const reservation of expiredPendingReservations) {
+            const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : reservation.user;
+            const hallOwner = reservation.hall.owner;
+            const superAdmins = await User.find({ role: { $in: ['super-admin'] } });
+
+            // Delete the reservation
+            await Reservation.findByIdAndDelete(reservation._id);
+            console.log(`Deleted expired pending reservation ${reservation.reservationId}.`);
+
+            // Notify the customer
+            if (customer && customer.email) {
+                sendEmail({
+                    io,
+                    email: customer.email,
+                    subject: `Reservation for ${reservation.hall.name} Cancelled`,
+                    html: generatePendingReservationCancelledEmail({
+                        customerName: customer.fullName,
+                        reservationId: reservation.reservationId,
+                        hallName: reservation.hall.name,
+                        reason: 'The reservation was not paid for within the allowed time.'
+                    }),
+                    // No in-app notification for the user who's reservation is deleted
+                }).catch(err => console.error(`Error sending cancellation email to customer for reservation ${reservation.reservationId}:`, err));
+            }
+
+            // Notify hall owner and super-admins
+            const recipients = [hallOwner, ...superAdmins].filter(Boolean); // Filter out null/undefined
+            for (const recipient of recipients) {
+                if (recipient && recipient.email) {
+                     sendEmail({
+                        io,
+                        email: recipient.email,
+                        subject: `An Unpaid Reservation for ${reservation.hall.name} Has Been Cancelled`,
+                        html: generatePendingReservationCancelledEmail({
+                            customerName: recipient.fullName, // Use recipient's name for their email
+                            reservationId: reservation.reservationId,
+                            hallName: reservation.hall.name,
+                            reason: `The reservation made by ${customer.fullName} was automatically cancelled because it was not paid for within the ${pendingReservationExpiryMinutes}-minute window.`
+                        }),
+                        notification: {
+                           recipient: recipient._id.toString(),
+                           message: `An unpaid reservation (${reservation.reservationId}) for ${reservation.hall.name} has been auto-cancelled.`,
+                           link: `/admin/reservations` // Generic link for admins/owners
+                        }
+                    }).catch(err => console.error(`Error sending cancellation email to ${recipient.email} for reservation ${reservation.reservationId}:`, err));
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error cleaning up expired pending reservations:', error);
+    }
+  });
+
+
+  // Schedule a job to run every hour for other reservation management tasks
   cron.schedule('0 * * * *', async () => {
-    console.log('Running reservation manager cron job...');
+    console.log('Running hourly reservation manager cron job...');
 
     const now = new Date();
 
-    // 1. Handle expired reservations
+    // 1. Handle expired reservations (status: ACTIVE -> EXPIRED)
     try {
       const expiredReservations = await Reservation.find({
         status: 'ACTIVE',

@@ -20,7 +20,12 @@ const seedSettings = async () => {
     { key: 'chargeMethods', value: chargeMethods },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
-  console.log('Charge methods setting seeded.');
+  await Setting.findOneAndUpdate(
+    { key: 'pendingReservationExpiryMinutes' },
+    { key: 'pendingReservationExpiryMinutes', value: 30 },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  console.log('Charge methods and pending reservation expiry settings seeded.');
 };
 
 const importData = async () => {

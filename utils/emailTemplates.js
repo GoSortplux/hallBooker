@@ -711,8 +711,45 @@ export {
   generateNewReservationNotificationForOwner,
   generateReservationExpiredEmail,
   generateReservationReminderEmail,
-  generateNewReservationPendingPaymentEmailForUser
+  generateNewReservationPendingPaymentEmailForUser,
+  generatePendingReservationCancelledEmail
 };
+
+const generatePendingReservationCancelledEmail = (recipientName, reservation) => {
+    return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #d9534f; text-align: center;">Reservation Automatically Cancelled</h2>
+        <p>Hi ${recipientName},</p>
+        <p>This is to inform you that a pending reservation has been automatically cancelled because the reservation fee was not paid within the allowed time frame.</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #d9534f;">Cancelled Reservation Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Reservation ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.reservationId}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.hall.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Reserved On:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${new Date(reservation.createdAt).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="font-size: 14px; color: #555;">No further action is required. The timeslot may now be available for others to book.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
+    </div>
+  `;
+}
 
 const generateNewReservationPendingPaymentEmailForUser = (customerName, reservation) => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -854,6 +891,16 @@ const generateNewReservationNotificationForOwner = (recipient, customer, reserva
   const hallOwnershipText = isSuperAdmin ? `a hall on the platform, <strong>${reservation.hall.name}</strong>` : `your hall, <strong>${reservation.hall.name}</strong>`;
   const paymentStatus = reservation.paymentStatus === 'paid' ? 'Fee Paid' : 'Pending Fee Payment';
   const paymentStatusColor = reservation.paymentStatus === 'paid' ? '#4CAF50' : '#f0ad4e';
+   const reservedOn = new Date(reservation.createdAt).toLocaleString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Africa/Lagos',
+        timeZoneName: 'shortOffset'
+    }).replace('GMT', 'UTC');
 
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
@@ -873,6 +920,10 @@ const generateNewReservationNotificationForOwner = (recipient, customer, reserva
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.reservationId}</td>
                 </tr>
                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Reserved On:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservedOn}</td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall Name:</strong></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${reservation.hall.name}</td>
                 </tr>
