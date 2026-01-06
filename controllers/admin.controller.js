@@ -174,6 +174,29 @@ const removePaymentStatus = asyncHandler(async (req, res) => {
   );
 });
 
+const getUserBankDetails = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select('accountNumber bankCode accountName');
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    if (!user.accountNumber || !user.bankCode || !user.accountName) {
+      throw new ApiError(404, 'User has no bank details saved.');
+    }
+
+    const bankDetails = {
+      accountNumber: user.accountNumber,
+      bankCode: user.bankCode,
+      accountName: user.accountName,
+    };
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, bankDetails, 'User bank details retrieved successfully'));
+  });
+
 export {
   getHallOwnerApplications,
   approveHallOwnerApplication,
@@ -184,6 +207,7 @@ export {
   removePaymentStatus,
   getAllBookings,
   getBookingsForHall,
+  getUserBankDetails,
 };
 
 const getBookingsForHall = asyncHandler(async (req, res) => {

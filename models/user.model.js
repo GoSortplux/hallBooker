@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    bankName: {
+    bankCode: {
       type: String,
       trim: true,
     },

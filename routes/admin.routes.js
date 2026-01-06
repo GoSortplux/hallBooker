@@ -9,6 +9,7 @@ import {
   removePaymentStatus,
   getAllBookings,
   getBookingsForHall,
+  getUserBankDetails,
 } from '../controllers/admin.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -619,5 +620,58 @@ router
 router
     .route('/halls/:hallId/bookings')
     .get(verifyJWT, authorizeRoles('super-admin'), getBookingsForHall);
+
+/**
+ * @swagger
+ * /api/v1/admin/users/{userId}/bank-details:
+ *   get:
+ *     summary: Get a user's bank details (Super Admin only)
+ *     description: Fetches the bank account number, bank code, and account name for a specific user.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose bank details are to be retrieved.
+ *     responses:
+ *       200:
+ *         description: User's bank details retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accountNumber:
+ *                       type: string
+ *                       example: "0123456789"
+ *                     bankCode:
+ *                       type: string
+ *                       example: "058"
+ *                     accountName:
+ *                       type: string
+ *                       example: "John Doe"
+ *                 message:
+ *                   type: string
+ *                   example: "User bank details retrieved successfully"
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User does not have the required 'super-admin' role.
+ *       404:
+ *         description: User not found or user has no bank details.
+ */
+router
+    .route('/users/:userId/bank-details')
+    .get(verifyJWT, authorizeRoles('super-admin'), getUserBankDetails);
 
 export default router;
