@@ -14,18 +14,15 @@ const getSubAccounts = asyncHandler(async (req, res) => {
 });
 
 const createSubAccount = asyncHandler(async (req, res) => {
-  const {
-    userId,
-    bankCode,
-    accountNumber,
-    accountName,
-    currencyCode = 'NGN',
-    defaultSplitPercentage = 100
-  } = req.body;
+  const { userId, defaultSplitPercentage = 100 } = req.body;
 
   const user = await User.findById(userId);
   if (!user || !user.role.includes('hall-owner')) {
     throw new ApiError(404, 'Hall owner not found.');
+  }
+
+  if (!user.accountNumber || !user.bankCode || !user.accountName) {
+    throw new ApiError(400, 'User has no bank details saved. Please ask the hall owner to add their bank details first.');
   }
 
   const existingSubAccount = await SubAccount.findOne({ user: userId });
@@ -34,10 +31,10 @@ const createSubAccount = asyncHandler(async (req, res) => {
   }
 
   const monnifyResponse = await createMonnifySubAccount({
-    accountName,
-    accountNumber,
-    bankCode,
-    currencyCode,
+    accountName: user.accountName,
+    accountNumber: user.accountNumber,
+    bankCode: user.bankCode,
+    currencyCode: 'NGN',
     email: user.email,
     defaultSplitPercentage: String(defaultSplitPercentage),
   });

@@ -44,16 +44,15 @@ const router = Router();
  *     BankAccountInput:
  *       type: object
  *       required:
- *         - bankName
+ *         - bankCode
  *         - accountNumber
- *         - accountName
  *       properties:
- *         bankName:
+ *         bankCode:
  *           type: string
+ *           example: "058"
  *         accountNumber:
  *           type: string
- *         accountName:
- *           type: string
+ *           example: "0123456789"
  *     StaffInput:
  *       type: object
  *       required:
@@ -78,9 +77,10 @@ const router = Router();
 
 /**
  * @swagger
- * /users/bank-account:
+ * /api/v1/users/me/bank-details:
  *   patch:
- *     summary: Update user's bank account
+ *     summary: Add or Update Hall Owner Bank Details (Hall Owner only)
+ *     description: Allows a hall owner to add or update their bank account details. The details are verified with Monnify before being saved.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -92,20 +92,20 @@ const router = Router();
  *             $ref: '#/components/schemas/BankAccountInput'
  *     responses:
  *       200:
- *         description: Bank account updated successfully
+ *         description: Bank account details updated successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *               $ref: '#/components/schemas/ApiResponse'
  *       400:
- *         description: Bad request
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Bad Request - Invalid account details or missing fields.
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a hall owner.
  */
-router.route('/bank-account')
-    .patch(verifyJWT, authorizeRoles('hall-owner', 'user'), updateUserBankAccount);
+router.route('/me/bank-details')
+    .patch(verifyJWT, authorizeRoles('hall-owner'), updateUserBankAccount);
 
 /**
  * @swagger

@@ -6,6 +6,7 @@ import { Hall } from '../models/hall.model.js';
 import Notification from '../models/notification.model.js';
 import mongoose from 'mongoose';
 import {
+    validateBankAccount as validateBankAccountService,
     createSubAccount as createMonnifySubAccount,
     updateSubAccount as updateMonnifySubAccount,
     getBanks,
@@ -53,58 +54,33 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 const updateUserBankAccount = asyncHandler(async (req, res) => {
-    const { bankName, accountNumber, accountName } = req.body;
+    const { accountNumber, bankCode } = req.body;
     const userId = req.user._id;
 
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new ApiError(404, "User not found");
+    if (!accountNumber || !bankCode) {
+        throw new ApiError(400, "Account number and bank code are required.");
     }
 
-    user.bankName = bankName;
-    user.accountNumber = accountNumber;
-    user.accountName = accountName;
-    await user.save();
+    const accountDetails = await validateBankAccountService(accountNumber, bankCode);
 
-    if (user.role === 'hall-owner') {
-        const banks = await getBanks();
-        const bank = banks.find(b => b.name.toLowerCase() === bankName.toLowerCase());
+    if (!accountDetails || !accountDetails.accountName) {
+        throw new ApiError(400, "Invalid account details provided. Please check the account number and bank and try again.");
+    }
 
-        if (!bank) {
-            throw new ApiError(400, "Invalid bank name provided.");
-        }
-
-        const subAccountData = {
-            accountName,
-            accountNumber,
-            bankCode: bank.code,
-            email: user.email,
-            currencyCode: 'NGN'
-        };
-
-        let subAccount = await SubAccount.findOne({ user: userId });
-
-        if (subAccount) {
-            // Update existing sub-account
-            const updatedMonnifySubAccount = await updateMonnifySubAccount(subAccount.subAccountCode, subAccountData);
-            subAccount.bankName = updatedMonnifySubAccount.bankName;
-            subAccount.accountNumber = updatedMonnifySubAccount.accountNumber;
-            subAccount.accountName = updatedMonnifySubAccount.accountName;
-            await subAccount.save();
-        } else {
-            // Create new sub-account
-            const monnifyResponse = await createMonnifySubAccount(subAccountData);
-            if (!monnifyResponse || !monnifyResponse.subAccountCode) {
-                throw new ApiError(500, 'Failed to create sub-account with payment provider.');
+    const user = await User.findByIdAndUpdate(
+        userId,
+        {
+            $set: {
+                accountNumber: accountDetails.accountNumber,
+                accountName: accountDetails.accountName,
+                bankCode: bankCode,
             }
-            subAccount = await SubAccount.create({
-                user: userId,
-                subAccountCode: monnifyResponse.subAccountCode,
-                bankName: monnifyResponse.bankName,
-                accountNumber: monnifyResponse.accountNumber,
-                accountName: monnifyResponse.accountName,
-            });
-        }
+        },
+        { new: true, runValidators: true }
+    );
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
     }
 
     res.status(200).json(new ApiResponse(200, user, "Bank account details updated successfully."));
