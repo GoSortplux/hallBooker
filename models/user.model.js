@@ -46,6 +46,17 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     }],
+    accountStatus: {
+      type: String,
+      enum: ['active', 'deletion-requested', 'deactivated'],
+      default: 'active',
+    },
+    deletionRequestDate: {
+      type: Date,
+    },
+    deactivationDate: {
+      type: Date,
+    },
     refreshToken: { type: String },
     passwordResetToken: String,
     passwordResetExpires: Date,

@@ -111,6 +111,14 @@ const hallSchema = new mongoose.Schema(
       default: 72,
       min: 1,
     },
+    isListed: {
+      type: Boolean,
+      default: true,
+    },
+    unlistedReason: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

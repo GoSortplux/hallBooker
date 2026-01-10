@@ -136,7 +136,7 @@ const createHall = asyncHandler(async (req, res) => {
 });
 
 const getAllHalls = asyncHandler(async (req, res) => {
-    const halls = await Hall.find({}).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
+    const halls = await Hall.find({ isListed: true }).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 

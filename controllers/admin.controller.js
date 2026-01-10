@@ -208,7 +208,134 @@ export {
   getAllBookings,
   getBookingsForHall,
   getUserBankDetails,
+  unlistHall,
+  relistHall,
+  getDeletionRequests,
+  approveDeletionRequest,
+  declineDeletionRequest,
 };
+
+const unlistHall = asyncHandler(async (req, res) => {
+  const { hallId } = req.params;
+  const { reason } = req.body;
+
+  if (!reason) {
+    throw new ApiError(400, 'A reason for unlisting is required.');
+  }
+
+  const hall = await Hall.findById(hallId).populate('owner');
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found');
+  }
+
+  hall.isListed = false;
+  hall.unlistedReason = reason;
+  await hall.save({ validateBeforeSave: false });
+
+  const io = req.app.get('io');
+  const owner = hall.owner;
+  const emailHtml = generateHallUnlistedEmailForOwner(owner.fullName, hall.name, reason);
+  await sendEmail({
+    io,
+    email: owner.email,
+    subject: `Your Hall "${hall.name}" Has Been Unlisted`,
+    html: emailHtml,
+    notification: {
+      recipient: owner._id.toString(),
+      message: `Your hall, ${hall.name}, has been unlisted by an administrator. Reason: ${reason}`,
+    },
+  });
+
+  res.status(200).json(new ApiResponse(200, hall, 'Hall has been unlisted successfully.'));
+});
+
+const relistHall = asyncHandler(async (req, res) => {
+  const { hallId } = req.params;
+
+  const hall = await Hall.findById(hallId);
+  if (!hall) {
+    throw new ApiError(404, 'Hall not found');
+  }
+
+  hall.isListed = true;
+  hall.unlistedReason = undefined;
+  await hall.save({ validateBeforeSave: false });
+
+  res.status(200).json(new ApiResponse(200, hall, 'Hall has been relisted successfully.'));
+});
+
+const getDeletionRequests = asyncHandler(async (req, res) => {
+  const users = await User.find({ accountStatus: 'deletion-requested' }).select(
+    'fullName email phone deletionRequestDate'
+  );
+
+  res.status(200).json(new ApiResponse(200, users, 'Account deletion requests retrieved successfully.'));
+});
+
+const approveDeletionRequest = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  user.accountStatus = 'deactivated';
+  user.deactivationDate = new Date();
+  await user.save({ validateBeforeSave: false });
+
+  // If user is a hall owner, unlist their halls
+  if (user.role.includes('hall-owner')) {
+    await Hall.updateMany({ owner: userId }, { $set: { isListed: false, unlistedReason: 'Owner account has been deactivated.' } });
+  }
+
+  const io = req.app.get('io');
+  const emailHtml = generateAccountDeletionApprovedEmailForUser(user.fullName);
+  await sendEmail({
+    io,
+    email: user.email,
+    subject: 'Your Account Deletion Request Has Been Approved',
+    html: emailHtml,
+    notification: {
+      recipient: user._id.toString(),
+      message: 'Your request to delete your account has been approved. Your account is now deactivated and will be permanently deleted in 7 days.',
+    },
+  });
+
+  res.status(200).json(new ApiResponse(200, {}, 'Account deletion request approved. The account is now deactivated.'));
+});
+
+const declineDeletionRequest = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { reason } = req.body;
+
+  if (!reason) {
+    throw new ApiError(400, 'A reason for declining the request is required.');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  user.accountStatus = 'active';
+  await user.save({ validateBeforeSave: false });
+
+  const io = req.app.get('io');
+  const emailHtml = generateAccountDeletionDeclinedEmailForUser(user.fullName, reason);
+  await sendEmail({
+    io,
+    email: user.email,
+    subject: 'Your Account Deletion Request Has Been Declined',
+    html: emailHtml,
+    notification: {
+      recipient: user._id.toString(),
+      message: `Your request to delete your account has been declined. Reason: ${reason}`,
+    },
+  });
+
+  res.status(200).json(new ApiResponse(200, {}, 'Account deletion request has been declined.'));
+});
 
 const getBookingsForHall = asyncHandler(async (req, res) => {
   const { hallId } = req.params;
