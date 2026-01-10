@@ -197,6 +197,23 @@ const getUserBankDetails = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, bankDetails, 'User bank details retrieved successfully'));
   });
 
+const updateCompanyNameSetting = asyncHandler(async (req, res) => {
+  const { companyName } = req.body;
+  if (!companyName) {
+    throw new ApiError(400, 'Company name is required');
+  }
+
+  const updatedSetting = await Setting.findOneAndUpdate(
+    { key: 'companyName' },
+    { value: companyName },
+    { new: true, upsert: true }
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedSetting, 'Company name updated successfully'));
+});
+
 export {
   getHallOwnerApplications,
   approveHallOwnerApplication,
@@ -213,6 +230,7 @@ export {
   getDeletionRequests,
   approveDeletionRequest,
   declineDeletionRequest,
+  updateCompanyNameSetting,
 };
 
 const unlistHall = asyncHandler(async (req, res) => {

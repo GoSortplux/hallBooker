@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import Setting from '../models/setting.model.js';
 
 dotenv.config();
 
@@ -62,17 +63,39 @@ const deleteFromCloudinary = async (publicUrl) => {
   }
 };
 
-const generateUploadSignature = () => {
+const generateUploadSignature = async () => {
   const timestamp = Math.round(new Date().getTime() / 1000);
 
-  const signature = cloudinary.utils.api_sign_request(
+  const companyNameSetting = await Setting.findOne({ key: 'companyName' });
+  const companyName = companyNameSetting ? companyNameSetting.value : 'Gobokin';
+
+  const watermarkText = ` ${companyName} `;
+
+  const transformation = [
     {
-      timestamp: timestamp,
+      overlay: {
+        font_family: 'Arial',
+        font_size: 40,
+        font_weight: 'bold',
+        text: watermarkText,
+      },
+      color: '#B0B0B0', // Light grey
+      opacity: 30,
+      gravity: 'center',
     },
+  ];
+
+  const paramsToSign = {
+    timestamp: timestamp,
+    transformation: JSON.stringify(transformation),
+  };
+
+  const signature = cloudinary.utils.api_sign_request(
+    paramsToSign,
     process.env.CLOUDINARY_API_SECRET
   );
 
-  return { timestamp, signature };
+  return { timestamp, signature, transformation: JSON.stringify(transformation) };
 };
 
 export { uploadOnCloudinary, deleteFromCloudinary, generateUploadSignature };

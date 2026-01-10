@@ -15,6 +15,7 @@ import {
   getDeletionRequests,
   approveDeletionRequest,
   declineDeletionRequest,
+  updateCompanyNameSetting,
 } from '../controllers/admin.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -859,5 +860,42 @@ router.route('/deletion-requests/:userId/approve').patch(verifyJWT, authorizeRol
  *         description: User not found.
  */
 router.route('/deletion-requests/:userId/decline').patch(verifyJWT, authorizeRoles('super-admin'), declineDeletionRequest);
+
+/**
+ * @swagger
+ * /api/v1/admin/settings/company-name:
+ *   patch:
+ *     summary: Update the company name
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Allows a super-admin to set or update the company name, which is used across the application (e.g., in watermarks).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - companyName
+ *             properties:
+ *               companyName:
+ *                 type: string
+ *                 example: "Gobokin"
+ *     responses:
+ *       200:
+ *         description: Company name updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: Bad Request - Company name is required.
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a super-admin.
+ */
+router.route('/settings/company-name').patch(verifyJWT, authorizeRoles('super-admin'), updateCompanyNameSetting);
 
 export default router;
