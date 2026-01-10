@@ -15,11 +15,12 @@ import mongoose from 'mongoose';
 const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
   const ownerId = req.user._id;
   const { startDate, endDate } = getDateRange(req.query);
+  const { hallId: specificHallId } = req.query;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
 
   // 1. Get all halls for the owner
-  const halls = await Hall.find({ owner: ownerId }).select('_id name');
+  const halls = await Hall.find({ owner: ownerId }).select('_id name openingHour closingHour');
   const hallIds = halls.map((hall) => hall._id);
 
   if (hallIds.length === 0) {
@@ -28,11 +29,14 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, {}, 'No halls found for this owner.'));
   }
 
+  const targetHallIds = specificHallId ? [new mongoose.Types.ObjectId(specificHallId)] : hallIds;
+
+
   // 2. Calculate Overall Stats
   const totalRevenuePromise = Booking.aggregate([
     {
       $match: {
-        hall: { $in: hallIds },
+        hall: { $in: targetHallIds },
         paymentStatus: 'paid',
         createdAt: { $gte: startDate, $lte: endDate },
       },
@@ -46,13 +50,13 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
   ]);
 
   const totalViewsPromise = Analytics.countDocuments({
-    hall: { $in: hallIds },
+    hall: { $in: targetHallIds },
     type: 'view',
     createdAt: { $gte: startDate, $lte: endDate },
   });
 
   const totalDemoBookingsPromise = Analytics.countDocuments({
-    hall: { $in: hallIds },
+    hall: { $in: targetHallIds },
     type: 'demo-booking',
     createdAt: { $gte: startDate, $lte: endDate },
   });
@@ -60,23 +64,25 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
   const bookingCountsPromise = Booking.aggregate([
     {
       $match: {
-        hall: { $in: hallIds },
+        hall: { $in: targetHallIds },
         createdAt: { $gte: startDate, $lte: endDate },
       },
     },
     {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 },
-      },
-    },
+        $group: {
+            _id: null,
+            confirmed: { $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] } },
+            cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+            pending: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'pending'] }, 1, 0] } }
+        }
+    }
   ]);
 
     // 3. Revenue Details
   const revenueByHallPromise = Booking.aggregate([
     {
       $match: {
-        hall: { $in: hallIds },
+        hall: { $in: hallIds }, // Always show for all halls
         paymentStatus: 'paid',
         createdAt: { $gte: startDate, $lte: endDate },
       },
@@ -114,7 +120,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
 
     // 4. Recent Bookings (Paginated)
   const recentBookingsPromise = Booking.find({
-    hall: { $in: hallIds },
+    hall: { $in: targetHallIds },
     createdAt: { $gte: startDate, $lte: endDate },
   })
     .populate('user', 'fullName email')
@@ -124,7 +130,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     .limit(limit);
 
   const totalBookingsCountPromise = Booking.countDocuments({
-    hall: { $in: hallIds },
+    hall: { $in: targetHallIds },
     createdAt: { $gte: startDate, $lte: endDate },
   });
 
@@ -132,7 +138,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
   const busiestDaysPromise = Booking.aggregate([
         {
             $match: {
-                hall: { $in: hallIds },
+                hall: { $in: targetHallIds },
                 status: 'confirmed',
                 createdAt: { $gte: startDate, $lte: endDate }
             }
@@ -153,8 +159,25 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
         }
     ]);
 
-    // Occupancy Rate & Lead Time requires more complex logic, will add in a future iteration if requested.
-    // For now, focusing on the core KPIs.
+    // Repeat Booking Rate
+    const customerBookingCountsPromise = Booking.aggregate([
+        { $match: { hall: { $in: targetHallIds }, status: 'confirmed' } },
+        { $group: { _id: '$user', count: { $sum: 1 } } }
+    ]);
+
+    // Occupancy Rate & Lead Time
+    const confirmedBookingsForKpisPromise = Booking.find({
+        hall: { $in: targetHallIds },
+        status: 'confirmed',
+        $or: [ // Find bookings that overlap with the date range
+            { 'bookingDates.startTime': { $gte: startDate, $lte: endDate } },
+            { 'bookingDates.endTime': { $gte: startDate, $lte: endDate } },
+            { $and: [
+                { 'bookingDates.startTime': { $lte: startDate } },
+                { 'bookingDates.endTime': { $gte: endDate } }
+            ]}
+        ]
+    }).select('bookingDates createdAt');
 
 
   const [
@@ -165,7 +188,9 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     revenueByHall,
     recentBookings,
     totalBookingsCount,
-    busiestDays
+    busiestDays,
+    customerBookingCounts,
+    confirmedBookingsForKpis
   ] = await Promise.all([
     totalRevenuePromise,
     totalViewsPromise,
@@ -174,32 +199,25 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     revenueByHallPromise,
     recentBookingsPromise,
     totalBookingsCountPromise,
-    busiestDaysPromise
+    busiestDaysPromise,
+    customerBookingCountsPromise,
+    confirmedBookingsForKpisPromise
   ]);
 
   const totalRevenue = revenueResult[0]?.total || 0;
-  const bookingCounts = bookingCountsResult.reduce((acc, item) => {
-    acc[item._id] = item.count;
-    return acc;
-  }, {});
+  const bookingCounts = bookingCountsResult[0] || { confirmed: 0, cancelled: 0, pending: 0 };
+
 
   const overallStats = {
     totalRevenue,
     totalViews,
     totalDemoBookings,
     totalBookings: {
-      confirmed: bookingCounts.confirmed || 0,
-      cancelled: bookingCounts.cancelled || 0,
+      confirmed: bookingCounts.confirmed,
+      cancelled: bookingCounts.cancelled,
+      pending: bookingCounts.pending
     },
   };
-
-    const pendingBookings = await Booking.countDocuments({
-        hall: { $in: hallIds },
-        paymentStatus: 'pending',
-        createdAt: { $gte: startDate, $lte: endDate },
-    });
-
-    overallStats.totalBookings.pending = pendingBookings;
 
     const totalConfirmedBookings = overallStats.totalBookings.confirmed;
     const conversionRate = totalViews > 0 ? (totalConfirmedBookings / totalViews) * 100 : 0;
@@ -211,6 +229,47 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
         day: dayMapping[day.day - 1],
         count: day.count
     }));
+
+    // Calculate Repeat Booking Rate
+    const repeatCustomers = customerBookingCounts.filter(c => c.count > 1).length;
+    const totalCustomers = customerBookingCounts.length;
+    const repeatBookingRate = totalCustomers > 0 ? (repeatCustomers / totalCustomers) * 100 : 0;
+
+    // Calculate Occupancy Rate & Lead Time
+    let totalBookedHours = 0;
+    let totalLeadTimeDays = 0;
+    let leadTimeBookingCount = 0;
+
+    confirmedBookingsForKpis.forEach(booking => {
+        let bookingContributesToLeadTime = false;
+        booking.bookingDates.forEach(date => {
+            const effectiveStartTime = Math.max(date.startTime, startDate);
+            const effectiveEndTime = Math.min(date.endTime, endDate);
+
+            if (effectiveEndTime > effectiveStartTime) {
+                totalBookedHours += (effectiveEndTime - effectiveStartTime) / (1000 * 60 * 60);
+                bookingContributesToLeadTime = true;
+            }
+        });
+
+        if (bookingContributesToLeadTime) {
+            const leadTime = (booking.bookingDates[0].startTime - booking.createdAt) / (1000 * 60 * 60 * 24);
+            totalLeadTimeDays += leadTime;
+            leadTimeBookingCount++;
+        }
+    });
+
+    const numberOfDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    let totalAvailableHours = 0;
+
+    const targetHalls = specificHallId ? halls.filter(h => h._id.equals(specificHallId)) : halls;
+    targetHalls.forEach(hall => {
+        const dailyHours = (hall.closingHour || 24) - (hall.openingHour || 0);
+        totalAvailableHours += dailyHours * numberOfDays;
+    });
+
+    const occupancyRate = totalAvailableHours > 0 ? (totalBookedHours / totalAvailableHours) * 100 : 0;
+    const averageLeadTime = leadTimeBookingCount > 0 ? totalLeadTimeDays / leadTimeBookingCount : 0;
 
 
   res
@@ -234,7 +293,10 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
             kpis: {
                 bookingConversionRate: `${conversionRate.toFixed(2)}%`,
                 averageBookingValue: averageBookingValue.toFixed(2),
-                busiestDays: busiestDaysFormatted
+                busiestDays: busiestDaysFormatted,
+                repeatBookingRate: `${repeatBookingRate.toFixed(2)}%`,
+                occupancyRate: `${occupancyRate.toFixed(2)}%`,
+                averageBookingLeadTime: `${averageLeadTime.toFixed(1)} days`
             }
         },
         'Hall owner analytics fetched successfully.'
@@ -248,6 +310,8 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
 const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
     const { startDate, endDate } = getDateRange(req.query);
     const { hallId } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
     // Data comparison logic
     const periodDuration = endDate.getTime() - startDate.getTime();
@@ -307,12 +371,14 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
 
     // Inactive Halls
     const ownersWithActiveSubscriptionPromise = SubscriptionHistory.find({ status: 'active' }).distinct('owner');
-    const hallsWithRecentBookingsPromise = Booking.find({ createdAt: { $gte: thirtyDaysAgo } }).distinct('hall');
+    const hallsWithRecentBookingsPromise = Booking.find({
+        status: 'confirmed',
+        createdAt: { $gte: thirtyDaysAgo }
+    }).distinct('hall');
 
 
     // Most Active Halls (complex logic, handle separately)
     const hallActivityPromise = Hall.aggregate([
-        // Stage 1: Get bookings revenue and count per hall
         {
             $lookup: {
                 from: 'bookings',
@@ -324,7 +390,6 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
                 ]
             }
         },
-        // Stage 2: Get views count per hall
         {
             $lookup: {
                 from: 'analytics',
@@ -336,7 +401,6 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
                 ]
             }
         },
-        // Stage 3: Project the fields and calculate initial scores
         {
             $project: {
                 name: 1,
@@ -346,7 +410,6 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
                 viewCount: { $size: '$views' },
             }
         },
-        // Stage 4: Calculate weighted score
         {
             $project: {
                 name: 1,
@@ -363,10 +426,31 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
                 }
             }
         },
-        // Stage 5: Sort and limit
         { $sort: { score: -1 } },
         { $limit: 10 }
     ]);
+
+    // 4. User Insights
+    const topCustomersPromise = Booking.aggregate([
+        { $match: { paymentStatus: 'paid', createdAt: { $gte: startDate, $lte: endDate } } },
+        { $group: { _id: '$user', totalSpent: { $sum: '$totalPrice' } } },
+        { $sort: { totalSpent: -1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'userDetails' } },
+        { $unwind: '$userDetails' },
+        { $project: { _id: 0, userId: '$_id', fullName: '$userDetails.fullName', email: '$userDetails.email', totalSpent: 1 } }
+    ]);
+
+    const newSubscriptionsPromise = SubscriptionHistory.countDocuments({
+        status: 'active',
+        purchaseDate: { $gte: startDate, $lte: endDate }
+    });
+
+    const expiredSubscriptionsPromise = SubscriptionHistory.countDocuments({
+        status: 'expired',
+        expiryDate: { $gte: startDate, $lte: endDate }
+    });
 
 
 
@@ -374,20 +458,36 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
         commissionResult,
         ownersWithActiveSubscription,
         hallsWithRecentBookings,
-        mostActiveHalls
+        mostActiveHalls,
+        topCustomers,
+        newSubscriptions,
+        expiredSubscriptions
     ] = await Promise.all([
         commissionAnalyticsPromise,
         ownersWithActiveSubscriptionPromise,
         hallsWithRecentBookingsPromise,
-        hallActivityPromise
+        hallActivityPromise,
+        topCustomersPromise,
+        newSubscriptionsPromise,
+        expiredSubscriptionsPromise
     ]);
 
-    const inactiveHalls = await Hall.find({
+    const inactiveHallsData = await Hall.find({
         $or: [
             { owner: { $nin: ownersWithActiveSubscription } },
             { _id: { $nin: hallsWithRecentBookings } }
         ]
-    }).populate('owner', 'fullName email');
+    }).populate('owner', 'fullName');
+
+    const inactiveHalls = inactiveHallsData.map(hall => ({
+        hallId: hall._id,
+        hallName: hall.name,
+        ownerName: hall.owner.fullName,
+        reason: !ownersWithActiveSubscription.some(ownerId => ownerId.equals(hall.owner._id))
+            ? 'No active subscription'
+            : 'No recent bookings'
+    }));
+
 
     await User.populate(mostActiveHalls, { path: 'owner', select: 'fullName email' });
 
@@ -419,6 +519,13 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
         hallPerformance: {
             mostActiveHalls,
             inactiveHalls
+        },
+        userInsights: {
+            topCustomers,
+            subscriptionCounts: {
+                new: newSubscriptions,
+                expired: expiredSubscriptions
+            }
         },
         dataComparison: {
             currentPeriod: {
