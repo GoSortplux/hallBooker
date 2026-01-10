@@ -363,11 +363,14 @@ const verifyConversionPayment = asyncHandler(async (req, res) => {
 
 const getReservationsForHall = asyncHandler(async (req, res) => {
     const { hallId } = req.params;
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status, paymentStatus, page = 1, limit = 10 } = req.query;
 
     const query = { hall: hallId };
     if (status) {
         query.status = status.toUpperCase();
+    }
+    if (paymentStatus) {
+        query.paymentStatus = paymentStatus;
     }
 
     const reservations = await Reservation.find(query)
@@ -412,15 +415,32 @@ const getReservationById = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, reservation, "Reservation details fetched."));
 });
 
-export {
-    createReservation,
-    verifyReservationPayment,
-    convertReservation,
-    verifyConversionPayment,
-    getReservationsForHall,
-    getReservationById,
-    walkInReservation
-};
+const getMyReservations = asyncHandler(async (req, res) => {
+    const { status, paymentStatus, page = 1, limit = 10 } = req.query;
+    const userId = req.user._id;
+
+    const query = { user: userId };
+    if (status) {
+        query.status = status.toUpperCase();
+    }
+    if (paymentStatus) {
+        query.paymentStatus = paymentStatus;
+    }
+
+    const reservations = await Reservation.find(query)
+        .populate('hall', 'name location')
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 });
+
+    const count = await Reservation.countDocuments(query);
+
+    res.status(200).json(new ApiResponse(200, {
+        reservations,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page
+    }, "Your reservations fetched successfully."));
+});
 
 const walkInReservation = asyncHandler(async (req, res) => {
     const { hallId, bookingDates, eventDetails, selectedFacilities: selectedFacilitiesData, walkInUserDetails, paymentMethod } = req.body;
@@ -611,3 +631,14 @@ const walkInReservation = asyncHandler(async (req, res) => {
     }
   }
 });
+
+export {
+    createReservation,
+    verifyReservationPayment,
+    convertReservation,
+    verifyConversionPayment,
+    getReservationsForHall,
+    getReservationById,
+    walkInReservation,
+    getMyReservations
+};
