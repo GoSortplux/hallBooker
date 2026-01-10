@@ -6,11 +6,44 @@ import {
     verifyConversionPayment,
     getReservationsForHall,
     getReservationById,
-    walkInReservation
+    walkInReservation,
+    getMyReservations
 } from '../controllers/reservation.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/v1/reservations/my-reservations:
+ *   get:
+ *     summary: Get all reservations for the currently logged-in user
+ *     tags: [Reservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, CONVERTED, EXPIRED]
+ *       - in: query
+ *         name: paymentStatus
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       '200':
+ *         description: A paginated list of the user's reservations.
+ */
+router.route('/my-reservations').get(verifyJWT, getMyReservations);
 
 /**
  * @swagger
@@ -189,6 +222,10 @@ router.route('/verify-conversion').get(verifyConversionPayment);
  *         schema:
  *           type: string
  *           enum: [ACTIVE, CONVERTED, EXPIRED]
+ *       - in: query
+ *         name: paymentStatus
+ *         schema:
+ *           type: string
  *       - in: query
  *         name: page
  *         schema:
