@@ -10,309 +10,201 @@ import { User } from '../models/user.model.js';
 import { Reservation } from '../models/reservation.model.js';
 import mongoose from 'mongoose';
 
-// @desc    Get analytics for the current hall owner
-// @route   GET /api/v2/analytics/hall-owner
-// @access  Private (Hall Owner)
-const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
-  const ownerId = req.user._id;
-  const { startDate, endDate } = getDateRange(req.query);
-  const { hallId: specificHallId } = req.query;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
 
-  // 1. Get all halls for the owner
-  const halls = await Hall.find({ owner: ownerId }).select('_id name openingHour closingHour');
-  const hallIds = halls.map((hall) => hall._id);
+const calculateHallAnalytics = async (hallIds, startDate, endDate, halls) => {
 
-  if (hallIds.length === 0) {
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, 'No halls found for this owner.'));
-  }
-
-  const targetHallIds = specificHallId ? [new mongoose.Types.ObjectId(specificHallId)] : hallIds;
-
-
-  // 2. Calculate Overall Stats
-  const totalRevenuePromise = Booking.aggregate([
-    {
-      $match: {
-        hall: { $in: targetHallIds },
-        paymentStatus: 'paid',
-        createdAt: { $gte: startDate, $lte: endDate },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        total: { $sum: '$totalPrice' },
-      },
-    },
-  ]);
-
-  const totalViewsPromise = Analytics.countDocuments({
-    hall: { $in: targetHallIds },
-    type: 'view',
-    createdAt: { $gte: startDate, $lte: endDate },
-  });
-
-  const totalDemoBookingsPromise = Analytics.countDocuments({
-    hall: { $in: targetHallIds },
-    type: 'demo-booking',
-    createdAt: { $gte: startDate, $lte: endDate },
-  });
-
-  const bookingCountsPromise = Booking.aggregate([
-    {
-      $match: {
-        hall: { $in: targetHallIds },
-        createdAt: { $gte: startDate, $lte: endDate },
-      },
-    },
-    {
-        $group: {
+      const totalRevenuePromise = Booking.aggregate([
+        {
+          $match: {
+            hall: { $in: hallIds },
+            paymentStatus: 'paid',
+            createdAt: { $gte: startDate, $lte: endDate },
+          },
+        },
+        {
+          $group: {
             _id: null,
-            confirmed: { $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] } },
-            cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
-            pending: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'pending'] }, 1, 0] } }
-        }
-    }
-  ]);
+            total: { $sum: '$totalPrice' },
+          },
+        },
+      ]);
 
-    // 3. Revenue Details
-  const revenueByHallPromise = Booking.aggregate([
-    {
-      $match: {
-        hall: { $in: hallIds }, // Always show for all halls
-        paymentStatus: 'paid',
+      const totalViewsPromise = Analytics.countDocuments({
+        hall: { $in: hallIds },
+        type: 'view',
         createdAt: { $gte: startDate, $lte: endDate },
-      },
-    },
-    {
-      $group: {
-        _id: '$hall',
-        totalRevenue: { $sum: '$totalPrice' },
-        hallRevenue: { $sum: '$hallPrice' },
-        facilityRevenue: { $sum: '$facilitiesPrice' },
-      },
-    },
-    {
-        $lookup: {
-            from: 'halls',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'hallDetails'
-        }
-    },
-    {
-        $unwind: '$hallDetails'
-    },
-    {
-        $project: {
-            _id: 0,
-            hallId: '$_id',
-            hallName: '$hallDetails.name',
-            totalRevenue: 1,
-            hallRevenue: 1,
-            facilityRevenue: 1
-        }
-    }
-  ]);
+      });
 
-    // 4. Recent Bookings (Paginated)
-  const recentBookingsPromise = Booking.find({
-    hall: { $in: targetHallIds },
-    createdAt: { $gte: startDate, $lte: endDate },
-  })
-    .populate('user', 'fullName email')
-    .populate('hall', 'name')
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit);
+      const totalDemoBookingsPromise = Analytics.countDocuments({
+        hall: { $in: hallIds },
+        type: 'demo-booking',
+        createdAt: { $gte: startDate, $lte: endDate },
+      });
 
-  const totalBookingsCountPromise = Booking.countDocuments({
-    hall: { $in: targetHallIds },
-    createdAt: { $gte: startDate, $lte: endDate },
-  });
-
-  // 5. KPIs
-  const busiestDaysPromise = Booking.aggregate([
+      const bookingCountsPromise = Booking.aggregate([
         {
-            $match: {
-                hall: { $in: targetHallIds },
-                status: 'confirmed',
-                createdAt: { $gte: startDate, $lte: endDate }
-            }
-        },
-        {
-            $group: {
-                _id: { $dayOfWeek: '$createdAt' },
-                count: { $sum: 1 }
-            }
-        },
-        { $sort: { count: -1 } },
-        {
-            $project: {
-                _id: 0,
-                day: '$_id',
-                count: 1
-            }
-        }
-    ]);
-
-    // Repeat Booking Rate
-    const customerBookingCountsPromise = Booking.aggregate([
-        { $match: { hall: { $in: targetHallIds }, status: 'confirmed' } },
-        { $group: { _id: '$user', count: { $sum: 1 } } }
-    ]);
-
-    // Occupancy Rate & Lead Time
-    const confirmedBookingsForKpisPromise = Booking.find({
-        hall: { $in: targetHallIds },
-        status: 'confirmed',
-        $or: [ // Find bookings that overlap with the date range
-            { 'bookingDates.startTime': { $gte: startDate, $lte: endDate } },
-            { 'bookingDates.endTime': { $gte: startDate, $lte: endDate } },
-            { $and: [
-                { 'bookingDates.startTime': { $lte: startDate } },
-                { 'bookingDates.endTime': { $gte: endDate } }
-            ]}
-        ]
-    }).select('bookingDates createdAt');
-
-    // 6. Reservation Analytics
-    const reservationAnalyticsPromise = Reservation.aggregate([
-        {
-            $match: {
-                hall: { $in: targetHallIds },
-                createdAt: { $gte: startDate, $lte: endDate }
-            }
+          $match: {
+            hall: { $in: hallIds },
+            createdAt: { $gte: startDate, $lte: endDate },
+          },
         },
         {
             $group: {
                 _id: null,
-                newReservations: { $sum: 1 },
-                converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
-                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } },
-                active: { $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] } }
+                confirmed: { $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] } },
+                cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+                pending: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'pending'] }, 1, 0] } }
             }
         }
-    ]);
+      ]);
+
+      const busiestDaysPromise = Booking.aggregate([
+            {
+                $match: {
+                    hall: { $in: hallIds },
+                    status: 'confirmed',
+                    createdAt: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: { $dayOfWeek: '$createdAt' },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            {
+                $project: {
+                    _id: 0,
+                    day: '$_id',
+                    count: 1
+                }
+            }
+        ]);
+
+        const customerBookingCountsPromise = Booking.aggregate([
+            { $match: { hall: { $in: hallIds }, status: 'confirmed', createdAt: { $gte: startDate, $lte: endDate } } },
+            { $group: { _id: '$user', count: { $sum: 1 } } }
+        ]);
+
+        const confirmedBookingsForKpisPromise = Booking.find({
+            hall: { $in: hallIds },
+            status: 'confirmed',
+            $or: [
+                { 'bookingDates.startTime': { $gte: startDate, $lte: endDate } },
+                { 'bookingDates.endTime': { $gte: startDate, $lte: endDate } },
+                { $and: [
+                    { 'bookingDates.startTime': { $lte: startDate } },
+                    { 'bookingDates.endTime': { $gte: endDate } }
+                ]}
+            ]
+        }).select('bookingDates createdAt');
+
+        const reservationAnalyticsPromise = Reservation.aggregate([
+            {
+                $match: {
+                    hall: { $in: hallIds },
+                    createdAt: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    newReservations: { $sum: 1 },
+                    converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
+                    expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } },
+                    active: { $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] } }
+                }
+            }
+        ]);
 
 
-  const [
-    revenueResult,
-    totalViews,
-    totalDemoBookings,
-    bookingCountsResult,
-    revenueByHall,
-    recentBookings,
-    totalBookingsCount,
-    busiestDays,
-    customerBookingCounts,
-    confirmedBookingsForKpis,
-    reservationAnalyticsResult
-  ] = await Promise.all([
-    totalRevenuePromise,
-    totalViewsPromise,
-    totalDemoBookingsPromise,
-    bookingCountsPromise,
-    revenueByHallPromise,
-    recentBookingsPromise,
-    totalBookingsCountPromise,
-    busiestDaysPromise,
-    customerBookingCountsPromise,
-    confirmedBookingsForKpisPromise,
-    reservationAnalyticsPromise
-  ]);
+      const [
+        revenueResult,
+        totalViews,
+        totalDemoBookings,
+        bookingCountsResult,
+        busiestDays,
+        customerBookingCounts,
+        confirmedBookingsForKpis,
+        reservationAnalyticsResult
+      ] = await Promise.all([
+        totalRevenuePromise,
+        totalViewsPromise,
+        totalDemoBookingsPromise,
+        bookingCountsPromise,
+        busiestDaysPromise,
+        customerBookingCountsPromise,
+        confirmedBookingsForKpisPromise,
+        reservationAnalyticsPromise
+      ]);
 
-  const totalRevenue = revenueResult[0]?.total || 0;
-  const bookingCounts = bookingCountsResult[0] || { confirmed: 0, cancelled: 0, pending: 0 };
+      const totalRevenue = revenueResult[0]?.total || 0;
+      const bookingCounts = bookingCountsResult[0] || { confirmed: 0, cancelled: 0, pending: 0 };
 
+      const overallStats = {
+        totalRevenue,
+        totalViews,
+        totalDemoBookings,
+        totalBookings: {
+          confirmed: bookingCounts.confirmed,
+          cancelled: bookingCounts.cancelled,
+          pending: bookingCounts.pending
+        },
+      };
 
-  const overallStats = {
-    totalRevenue,
-    totalViews,
-    totalDemoBookings,
-    totalBookings: {
-      confirmed: bookingCounts.confirmed,
-      cancelled: bookingCounts.cancelled,
-      pending: bookingCounts.pending
-    },
-  };
+        const totalConfirmedBookings = overallStats.totalBookings.confirmed;
+        const conversionRate = totalViews > 0 ? (totalConfirmedBookings / totalViews) * 100 : 0;
+        const averageBookingValue = totalConfirmedBookings > 0 ? totalRevenue / totalConfirmedBookings : 0;
 
-    const totalConfirmedBookings = overallStats.totalBookings.confirmed;
-    const conversionRate = totalViews > 0 ? (totalConfirmedBookings / totalViews) * 100 : 0;
-    const averageBookingValue = totalConfirmedBookings > 0 ? totalRevenue / totalConfirmedBookings : 0;
+        const dayMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const busiestDaysFormatted = busiestDays.map(day => ({
+            day: dayMapping[day.day - 1],
+            count: day.count
+        }));
 
-    // map day number to day name
-    const dayMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const busiestDaysFormatted = busiestDays.map(day => ({
-        day: dayMapping[day.day - 1],
-        count: day.count
-    }));
+        const repeatCustomers = customerBookingCounts.filter(c => c.count > 1).length;
+        const totalCustomers = customerBookingCounts.length;
+        const repeatBookingRate = totalCustomers > 0 ? (repeatCustomers / totalCustomers) * 100 : 0;
 
-    // Calculate Repeat Booking Rate
-    const repeatCustomers = customerBookingCounts.filter(c => c.count > 1).length;
-    const totalCustomers = customerBookingCounts.length;
-    const repeatBookingRate = totalCustomers > 0 ? (repeatCustomers / totalCustomers) * 100 : 0;
+        let totalBookedHours = 0;
+        let totalLeadTimeDays = 0;
+        let leadTimeBookingCount = 0;
 
-    // Calculate Occupancy Rate & Lead Time
-    let totalBookedHours = 0;
-    let totalLeadTimeDays = 0;
-    let leadTimeBookingCount = 0;
+        confirmedBookingsForKpis.forEach(booking => {
+            let bookingContributesToLeadTime = false;
+            booking.bookingDates.forEach(date => {
+                const effectiveStartTime = Math.max(new Date(date.startTime), startDate);
+                const effectiveEndTime = Math.min(new Date(date.endTime), endDate);
 
-    confirmedBookingsForKpis.forEach(booking => {
-        let bookingContributesToLeadTime = false;
-        booking.bookingDates.forEach(date => {
-            const effectiveStartTime = Math.max(date.startTime, startDate);
-            const effectiveEndTime = Math.min(date.endTime, endDate);
+                if (effectiveEndTime > effectiveStartTime) {
+                    totalBookedHours += (effectiveEndTime - effectiveStartTime) / (1000 * 60 * 60);
+                    bookingContributesToLeadTime = true;
+                }
+            });
 
-            if (effectiveEndTime > effectiveStartTime) {
-                totalBookedHours += (effectiveEndTime - effectiveStartTime) / (1000 * 60 * 60);
-                bookingContributesToLeadTime = true;
+            if (bookingContributesToLeadTime) {
+                const leadTime = (new Date(booking.bookingDates[0].startTime) - new Date(booking.createdAt)) / (1000 * 60 * 60 * 24);
+                totalLeadTimeDays += leadTime;
+                leadTimeBookingCount++;
             }
         });
 
-        if (bookingContributesToLeadTime) {
-            const leadTime = (booking.bookingDates[0].startTime - booking.createdAt) / (1000 * 60 * 60 * 24);
-            totalLeadTimeDays += leadTime;
-            leadTimeBookingCount++;
-        }
-    });
+        const numberOfDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+        let totalAvailableHours = 0;
 
-    const numberOfDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-    let totalAvailableHours = 0;
+        halls.forEach(hall => {
+            const dailyHours = (hall.closingHour || 24) - (hall.openingHour || 0);
+            totalAvailableHours += dailyHours * numberOfDays;
+        });
 
-    const targetHalls = specificHallId ? halls.filter(h => h._id.equals(specificHallId)) : halls;
-    targetHalls.forEach(hall => {
-        const dailyHours = (hall.closingHour || 24) - (hall.openingHour || 0);
-        totalAvailableHours += dailyHours * numberOfDays;
-    });
-
-    const occupancyRate = totalAvailableHours > 0 ? (totalBookedHours / totalAvailableHours) * 100 : 0;
-    const averageLeadTime = leadTimeBookingCount > 0 ? totalLeadTimeDays / leadTimeBookingCount : 0;
-    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0, active: 0 };
+        const occupancyRate = totalAvailableHours > 0 ? (totalBookedHours / totalAvailableHours) * 100 : 0;
+        const averageLeadTime = leadTimeBookingCount > 0 ? totalLeadTimeDays / leadTimeBookingCount : 0;
+        const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0, active: 0 };
 
 
-  res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        {
+        return {
             overallStats,
-            revenueDetails: {
-                breakdownByHall: revenueByHall
-            },
-            recentBookings: {
-                bookings: recentBookings,
-                pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(totalBookingsCount / limit),
-                    totalBookings: totalBookingsCount
-                }
-            },
             kpis: {
                 bookingConversionRate: `${conversionRate.toFixed(2)}%`,
                 averageBookingValue: averageBookingValue.toFixed(2),
@@ -327,6 +219,232 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
                 expired: reservationAnalytics.expired,
                 active: reservationAnalytics.active
             }
+        }
+}
+
+const getPerHallBreakdownAnalytics = async (halls, startDate, endDate) => {
+    const hallIds = halls.map(h => h._id);
+    const numberOfDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (hallIds.length === 0) {
+        return [];
+    }
+
+    const bookingMetricsPromise = Booking.aggregate([
+        { $match: { hall: { $in: hallIds }, createdAt: { $gte: startDate, $lte: endDate } } },
+        {
+            $group: {
+                _id: '$hall',
+                totalRevenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$totalPrice', 0] } },
+                confirmed: { $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] } },
+                cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+                pending: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'pending'] }, 1, 0] } }
+            }
+        }
+    ]);
+
+    const analyticsMetricsPromise = Analytics.aggregate([
+        { $match: { hall: { $in: hallIds }, type: { $in: ['view', 'demo-booking'] }, createdAt: { $gte: startDate, $lte: endDate } } },
+        {
+            $group: {
+                _id: '$hall',
+                totalViews: { $sum: { $cond: [{ $eq: ['$type', 'view'] }, 1, 0] } },
+                totalDemoBookings: { $sum: { $cond: [{ $eq: ['$type', 'demo-booking'] }, 1, 0] } }
+            }
+        }
+    ]);
+
+    const reservationMetricsPromise = Reservation.aggregate([
+        { $match: { hall: { $in: hallIds }, createdAt: { $gte: startDate, $lte: endDate } } },
+        {
+            $group: {
+                _id: '$hall',
+                newReservations: { $sum: 1 },
+                converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
+                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } },
+                active: { $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] } }
+            }
+        }
+    ]);
+
+    const confirmedBookingsForKpisPromise = Booking.find({
+        hall: { $in: hallIds },
+        status: 'confirmed',
+        $or: [
+            { 'bookingDates.startTime': { $gte: startDate, $lte: endDate } },
+            { 'bookingDates.endTime': { $gte: startDate, $lte: endDate } },
+            { $and: [
+                { 'bookingDates.startTime': { $lte: startDate } },
+                { 'bookingDates.endTime': { $gte: endDate } }
+            ]}
+        ]
+    }).select('hall bookingDates createdAt');
+
+
+    const [
+        bookingMetrics,
+        analyticsMetrics,
+        reservationMetrics,
+        confirmedBookingsForKpis
+    ] = await Promise.all([
+        bookingMetricsPromise,
+        analyticsMetricsPromise,
+        reservationMetricsPromise,
+        confirmedBookingsForKpisPromise
+    ]);
+
+    const bookingMap = new Map(bookingMetrics.map(item => [item._id.toString(), item]));
+    const analyticsMap = new Map(analyticsMetrics.map(item => [item._id.toString(), item]));
+    const reservationMap = new Map(reservationMetrics.map(item => [item._id.toString(), item]));
+
+    const kpiBookingsByHall = new Map();
+    confirmedBookingsForKpis.forEach(booking => {
+        const hallId = booking.hall.toString();
+        if (!kpiBookingsByHall.has(hallId)) {
+            kpiBookingsByHall.set(hallId, []);
+        }
+        kpiBookingsByHall.get(hallId).push(booking);
+    });
+
+    const breakdown = halls.map(hall => {
+        const hallIdString = hall._id.toString();
+        const bookings = bookingMap.get(hallIdString) || {};
+        const analytics = analyticsMap.get(hallIdString) || {};
+        const reservations = reservationMap.get(hallIdString) || {};
+        const kpiBookings = kpiBookingsByHall.get(hallIdString) || [];
+
+        const totalRevenue = bookings.totalRevenue || 0;
+        const totalViews = analytics.totalViews || 0;
+        const totalDemoBookings = analytics.totalDemoBookings || 0;
+        const totalConfirmedBookings = bookings.confirmed || 0;
+
+        const conversionRate = totalViews > 0 ? (totalConfirmedBookings / totalViews) * 100 : 0;
+        const averageBookingValue = totalConfirmedBookings > 0 ? totalRevenue / totalConfirmedBookings : 0;
+
+        let totalBookedHours = 0;
+        let totalLeadTimeDays = 0;
+        let leadTimeBookingCount = 0;
+
+        kpiBookings.forEach(booking => {
+            let bookingContributesToLeadTime = false;
+            booking.bookingDates.forEach(date => {
+                const effectiveStartTime = Math.max(new Date(date.startTime), startDate);
+                const effectiveEndTime = Math.min(new Date(date.endTime), endDate);
+
+                if (effectiveEndTime > effectiveStartTime) {
+                    totalBookedHours += (effectiveEndTime - effectiveStartTime) / (1000 * 60 * 60);
+                    bookingContributesToLeadTime = true;
+                }
+            });
+
+            if (bookingContributesToLeadTime) {
+                const leadTime = (new Date(booking.bookingDates[0].startTime) - new Date(booking.createdAt)) / (1000 * 60 * 60 * 24);
+                totalLeadTimeDays += leadTime;
+                leadTimeBookingCount++;
+            }
+        });
+
+        const dailyHours = (hall.closingHour || 24) - (hall.openingHour || 0);
+        const totalAvailableHours = dailyHours * numberOfDays;
+        const occupancyRate = totalAvailableHours > 0 ? (totalBookedHours / totalAvailableHours) * 100 : 0;
+        const averageLeadTime = leadTimeBookingCount > 0 ? totalLeadTimeDays / leadTimeBookingCount : 0;
+
+        return {
+            hallId: hall._id,
+            hallName: hall.name,
+            overallStats: {
+                totalRevenue,
+                totalViews,
+                totalDemoBookings,
+                totalBookings: {
+                    confirmed: totalConfirmedBookings,
+                    cancelled: bookings.cancelled || 0,
+                    pending: bookings.pending || 0
+                },
+            },
+            kpis: {
+                bookingConversionRate: `${conversionRate.toFixed(2)}%`,
+                averageBookingValue: averageBookingValue.toFixed(2),
+                occupancyRate: `${occupancyRate.toFixed(2)}%`,
+                averageBookingLeadTime: `${averageLeadTime.toFixed(1)} days`
+            },
+            reservationAnalytics: {
+                new: reservations.newReservations || 0,
+                converted: reservations.converted || 0,
+                expired: reservations.expired || 0,
+                active: reservations.active || 0
+            }
+        };
+    });
+
+    return breakdown;
+};
+
+
+// @desc    Get analytics for the current hall owner
+// @route   GET /api/v2/analytics/hall-owner
+// @access  Private (Hall Owner)
+const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
+  const ownerId = req.user._id;
+  const { startDate, endDate } = getDateRange(req.query);
+  const { hallId: specificHallId } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  // 1. Get all halls for the owner
+  const allOwnerHalls = await Hall.find({ owner: ownerId }).select('_id name openingHour closingHour');
+
+  if (allOwnerHalls.length === 0) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, 'No halls found for this owner.'));
+  }
+
+  const targetHalls = specificHallId
+    ? allOwnerHalls.filter(h => h._id.toString() === specificHallId)
+    : allOwnerHalls;
+
+  const targetHallIds = targetHalls.map(h => h._id);
+
+  const [
+    combinedAnalytics,
+    breakdownByHall,
+    revenueByHall,
+    recentBookings,
+    totalBookingsCount,
+  ] = await Promise.all([
+    calculateHallAnalytics(targetHallIds, startDate, endDate, targetHalls),
+    getPerHallBreakdownAnalytics(allOwnerHalls, startDate, endDate),
+    Booking.aggregate([
+        { $match: { hall: { $in: targetHallIds }, paymentStatus: 'paid', createdAt: { $gte: startDate, $lte: endDate } } },
+        { $group: { _id: '$hall', totalRevenue: { $sum: '$totalPrice' }, hallRevenue: { $sum: '$hallPrice' }, facilityRevenue: { $sum: '$facilitiesPrice' } } },
+        { $lookup: { from: 'halls', localField: '_id', foreignField: 'id', as: 'hallDetails' } },
+        { $unwind: '$hallDetails' },
+        { $project: { _id: 0, hallId: '$_id', hallName: '$hallDetails.name', totalRevenue: 1, hallRevenue: 1, facilityRevenue: 1 } }
+    ]),
+    Booking.find({ hall: { $in: targetHallIds }, createdAt: { $gte: startDate, $lte: endDate } }).populate('user', 'fullName email').populate('hall', 'name').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    Booking.countDocuments({ hall: { $in: targetHallIds }, createdAt: { $gte: startDate, $lte: endDate } })
+]);
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        {
+            ...combinedAnalytics,
+            revenueDetails: {
+                breakdownByHall: revenueByHall
+            },
+            recentBookings: {
+                bookings: recentBookings,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalBookingsCount / limit),
+                    totalBookings: totalBookingsCount
+                }
+            },
+            breakdownByHall
         },
         'Hall owner analytics fetched successfully.'
       )
