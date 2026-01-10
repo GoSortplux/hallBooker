@@ -274,7 +274,26 @@ const createBooking = asyncHandler(async (req, res) => {
     }
   }
 
-    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+  const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+  const reservationOrQuery = bookingDates.map(date => {
+    const startTime = new Date(date.startTime);
+    const endTime = new Date(date.endTime);
+    const bufferedStartTime = new Date(startTime.getTime() - bufferMilliseconds);
+    const bufferedEndTime = new Date(endTime.getTime() + bufferMilliseconds);
+    return { 'bookingDates.startTime': { $lt: bufferedEndTime }, 'bookingDates.endTime': { $gt: bufferedStartTime } };
+  });
+
+  const reservationConflictQuery = {
+    hall: hallId,
+    $or: reservationOrQuery,
+    status: 'ACTIVE',
+  };
+  const conflictingReservation = await Reservation.findOne(reservationConflictQuery);
+
+  if (conflictingReservation && !overrideReservation) {
+    throw new ApiError(409, "This date is currently blocked by a reservation. To proceed, cancel the existing reservation or send the request again with an 'overrideReservation: true' flag.");
+  }
+
     const orQuery = bookingDates.map(bookingDate => {
         const originalStartTime = new Date(bookingDate.startTime);
         const originalEndTime = new Date(bookingDate.endTime);
@@ -321,6 +340,9 @@ const createBooking = asyncHandler(async (req, res) => {
   session.startTransaction();
 
   try {
+    if (conflictingReservation && overrideReservation) {
+      await Reservation.findByIdAndDelete(conflictingReservation._id, { session });
+    }
     const bookingId = await generateBookingId(hall.name);
     const bookingData = {
       bookingId,
@@ -428,7 +450,7 @@ const createBooking = asyncHandler(async (req, res) => {
 });
 
 const walkInBooking = asyncHandler(async (req, res) => {
-  const { hallId, bookingDates, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilities: selectedFacilitiesData } = req.body;
+  const { hallId, bookingDates, eventDetails, paymentMethod, paymentStatus, walkInUserDetails, selectedFacilities: selectedFacilitiesData, overrideReservation } = req.body;
   const io = req.app.get('io');
 
   if (!walkInUserDetails || !walkInUserDetails.fullName || !walkInUserDetails.phone) {

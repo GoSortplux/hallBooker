@@ -342,6 +342,10 @@ router.route('/')
  * /api/v1/bookings/walk-in:
  *   post:
  *     summary: Create a walk-in booking (Staff/Hall Owner/Admin only)
+ *     description: |
+ *       Creates a booking for a walk-in customer.
+ *       If the selected date conflicts with a previously blocked date (an admin-created reservation), this endpoint will return a 409 Conflict error.
+ *       To proceed, the frontend should confirm with the user if they want to override the block. If confirmed, the request should be sent again with the `overrideReservation` flag set to `true`.
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -350,7 +354,14 @@ router.route('/')
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/WalkInBookingInput'
+ *             allOf:
+ *               - $ref: '#/components/schemas/WalkInBookingInput'
+ *               - type: object
+ *                 properties:
+ *                   overrideReservation:
+ *                     type: boolean
+ *                     description: "Set to true to cancel a conflicting admin reservation and create the booking. If a conflict exists and this is false or omitted, a 409 error will be returned."
+ *                     example: false
  *           example:
  *             hallId: "60d0fe4f5311236168a109ca"
  *             bookingDates:
@@ -363,6 +374,7 @@ router.route('/')
  *               phone: "555-555-5555"
  *             paymentMethod: "pos"
  *             paymentStatus: "paid"
+ *             overrideReservation: false
  *     responses:
  *       201:
  *         description: Walk-in booking created successfully.
@@ -380,7 +392,23 @@ router.route('/')
  *                   type: string
  *                   example: "Walk-in booking created successfully"
  *       400:
- *         description: Bad request. A conflict can occur if the time slot is already booked.
+ *         description: Bad request (e.g., invalid data).
+ *       409:
+ *         description: "Conflict. The requested time slot is blocked by an admin reservation."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 409
+ *                 message:
+ *                   type: string
+ *                   example: "This date is currently blocked by a reservation. To proceed, cancel the existing reservation or send the request again with an 'overrideReservation: true' flag."
+ *                 success:
+ *                   type: boolean
+ *                   example: false
  */
 router.route('/walk-in')
     .post(authorizeRoles('staff', 'hall-owner', 'super-admin'), walkInBooking);
