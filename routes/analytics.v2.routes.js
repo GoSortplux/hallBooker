@@ -53,6 +53,11 @@ router.use(verifyJWT);
  *           type: integer
  *           default: 10
  *         description: "The number of recent bookings to return per page."
+ *       - in: query
+ *         name: hallId
+ *         schema:
+ *           type: string
+ *         description: "Optional. Filter KPIs by a specific hall ID."
  *     responses:
  *       200:
  *         description: Hall owner analytics fetched successfully.
@@ -98,6 +103,18 @@ router
  *         schema:
  *           type: string
  *         description: "Optional. Filter commission analytics by a specific hall ID."
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "The page number for paginating top customers."
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: "The number of top customers to return per page."
  *     responses:
  *       200:
  *         description: Super admin analytics fetched successfully.

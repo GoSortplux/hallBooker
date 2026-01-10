@@ -16,12 +16,13 @@ export const getDateRange = (query) => {
 
   if (!startDate) {
     startDate = new Date(endDate);
-    startDate.setDate(endDate.getDate() - 7); // Default to the last 7 days
+    startDate.setDate(endDate.getDate() - 6); // Default to the last 7 days
   } else {
     startDate = new Date(startDate);
   }
 
-  // to ensure the end date is inclusive
+  // Set time to the beginning of the start day and end of the end day
+  startDate.setHours(0, 0, 0, 0);
   endDate.setHours(23, 59, 59, 999);
 
 
