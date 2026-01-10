@@ -278,24 +278,58 @@ const getPerHallBreakdownAnalytics = async (halls, startDate, endDate) => {
                 { 'bookingDates.endTime': { $gte: endDate } }
             ]}
         ]
-    }).select('hall bookingDates createdAt');
+    }).select('hall bookingDates createdAt user');
+
+    const busiestDaysPromise = Booking.aggregate([
+        { $match: { hall: { $in: hallIds }, status: 'confirmed', createdAt: { $gte: startDate, $lte: endDate } } },
+        {
+            $group: {
+                _id: { hall: '$hall', dayOfWeek: { $dayOfWeek: '$createdAt' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { '_id.hall': 1, count: -1 } },
+        {
+             $group: {
+                _id: '$_id.hall',
+                days: { $push: { day: '$_id.dayOfWeek', count: '$count' } }
+            }
+        }
+    ]);
+
+    const customerBookingCountsPromise = Booking.aggregate([
+        { $match: { hall: { $in: hallIds }, status: 'confirmed', createdAt: { $gte: startDate, $lte: endDate } } },
+        { $group: { _id: { hall: '$hall', user: '$user' }, count: { $sum: 1 } } },
+        {
+            $group: {
+                _id: '$_id.hall',
+                customerBookings: { $push: { customerId: '$_id.user', count: '$count' } }
+            }
+        }
+    ]);
 
 
     const [
         bookingMetrics,
         analyticsMetrics,
         reservationMetrics,
-        confirmedBookingsForKpis
+        confirmedBookingsForKpis,
+        busiestDays,
+        customerBookingCounts
     ] = await Promise.all([
         bookingMetricsPromise,
         analyticsMetricsPromise,
         reservationMetricsPromise,
-        confirmedBookingsForKpisPromise
+        confirmedBookingsForKpisPromise,
+        busiestDaysPromise,
+        customerBookingCountsPromise
     ]);
 
     const bookingMap = new Map(bookingMetrics.map(item => [item._id.toString(), item]));
     const analyticsMap = new Map(analyticsMetrics.map(item => [item._id.toString(), item]));
     const reservationMap = new Map(reservationMetrics.map(item => [item._id.toString(), item]));
+    const busiestDaysMap = new Map(busiestDays.map(item => [item._id.toString(), item.days]));
+    const customerBookingMap = new Map(customerBookingCounts.map(item => [item._id.toString(), item.customerBookings]));
 
     const kpiBookingsByHall = new Map();
     confirmedBookingsForKpis.forEach(booking => {
@@ -313,6 +347,20 @@ const getPerHallBreakdownAnalytics = async (halls, startDate, endDate) => {
         const reservations = reservationMap.get(hallIdString) || {};
         const kpiBookings = kpiBookingsByHall.get(hallIdString) || [];
 
+        // Busiest Days & Repeat Rate
+        const dayMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const hallBusiestDays = busiestDaysMap.get(hallIdString) || [];
+        const busiestDaysFormatted = hallBusiestDays.map(day => ({
+            day: dayMapping[day.day - 1],
+            count: day.count
+        }));
+
+        const hallCustomerBookings = customerBookingMap.get(hallIdString) || [];
+        const repeatCustomers = hallCustomerBookings.filter(c => c.count > 1).length;
+        const totalCustomers = hallCustomerBookings.length;
+        const repeatBookingRate = totalCustomers > 0 ? (repeatCustomers / totalCustomers) * 100 : 0;
+
+
         const totalRevenue = bookings.totalRevenue || 0;
         const totalViews = analytics.totalViews || 0;
         const totalDemoBookings = analytics.totalDemoBookings || 0;
@@ -326,22 +374,20 @@ const getPerHallBreakdownAnalytics = async (halls, startDate, endDate) => {
         let leadTimeBookingCount = 0;
 
         kpiBookings.forEach(booking => {
-            let bookingContributesToLeadTime = false;
+            // Lead time is calculated once per booking that falls in the date range
+            const leadTime = (new Date(booking.bookingDates[0].startTime) - new Date(booking.createdAt)) / (1000 * 60 * 60 * 24);
+            totalLeadTimeDays += leadTime;
+            leadTimeBookingCount++;
+
+            // Occupancy hours are calculated based on the portion of the booking within the date range
             booking.bookingDates.forEach(date => {
                 const effectiveStartTime = Math.max(new Date(date.startTime), startDate);
                 const effectiveEndTime = Math.min(new Date(date.endTime), endDate);
 
                 if (effectiveEndTime > effectiveStartTime) {
                     totalBookedHours += (effectiveEndTime - effectiveStartTime) / (1000 * 60 * 60);
-                    bookingContributesToLeadTime = true;
                 }
             });
-
-            if (bookingContributesToLeadTime) {
-                const leadTime = (new Date(booking.bookingDates[0].startTime) - new Date(booking.createdAt)) / (1000 * 60 * 60 * 24);
-                totalLeadTimeDays += leadTime;
-                leadTimeBookingCount++;
-            }
         });
 
         const dailyHours = (hall.closingHour || 24) - (hall.openingHour || 0);
@@ -365,6 +411,8 @@ const getPerHallBreakdownAnalytics = async (halls, startDate, endDate) => {
             kpis: {
                 bookingConversionRate: `${conversionRate.toFixed(2)}%`,
                 averageBookingValue: averageBookingValue.toFixed(2),
+                busiestDays: busiestDaysFormatted,
+                repeatBookingRate: `${repeatBookingRate.toFixed(2)}%`,
                 occupancyRate: `${occupancyRate.toFixed(2)}%`,
                 averageBookingLeadTime: `${averageLeadTime.toFixed(1)} days`
             },
@@ -417,14 +465,26 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     getPerHallBreakdownAnalytics(allOwnerHalls, startDate, endDate),
     Booking.aggregate([
         { $match: { hall: { $in: targetHallIds }, paymentStatus: 'paid', createdAt: { $gte: startDate, $lte: endDate } } },
-        { $group: { _id: '$hall', totalRevenue: { $sum: '$totalPrice' }, hallRevenue: { $sum: '$hallPrice' }, facilityRevenue: { $sum: '$facilitiesPrice' } } },
-        { $lookup: { from: 'halls', localField: '_id', foreignField: 'id', as: 'hallDetails' } },
-        { $unwind: '$hallDetails' },
-        { $project: { _id: 0, hallId: '$_id', hallName: '$hallDetails.name', totalRevenue: 1, hallRevenue: 1, facilityRevenue: 1 } }
+        { $group: { _id: '$hall', hallRevenue: { $sum: '$hallPrice' }, facilityRevenue: { $sum: '$facilitiesPrice' } } },
     ]),
     Booking.find({ hall: { $in: targetHallIds }, createdAt: { $gte: startDate, $lte: endDate } }).populate('user', 'fullName email').populate('hall', 'name').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
     Booking.countDocuments({ hall: { $in: targetHallIds }, createdAt: { $gte: startDate, $lte: endDate } })
 ]);
+
+  const revenueMap = new Map(revenueByHall.map(item => [item._id.toString(), item]));
+
+  const finalBreakdown = breakdownByHall.map(hall => {
+    const revenueDetails = revenueMap.get(hall.hallId.toString());
+    return {
+        ...hall,
+        overallStats: {
+            ...hall.overallStats,
+            hallRevenue: revenueDetails?.hallRevenue || 0,
+            facilityRevenue: revenueDetails?.facilityRevenue || 0,
+        }
+    };
+  });
+
 
   res
     .status(200)
@@ -433,9 +493,6 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
         200,
         {
             ...combinedAnalytics,
-            revenueDetails: {
-                breakdownByHall: revenueByHall
-            },
             recentBookings: {
                 bookings: recentBookings,
                 pagination: {
@@ -444,7 +501,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
                     totalBookings: totalBookingsCount
                 }
             },
-            breakdownByHall
+            breakdownByHall: finalBreakdown
         },
         'Hall owner analytics fetched successfully.'
       )
