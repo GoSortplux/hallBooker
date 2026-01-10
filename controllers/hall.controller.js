@@ -414,7 +414,7 @@ const getRecommendedHalls = asyncHandler(async (req, res) => {
 });
 
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
-  const { timestamp, signature } = generateUploadSignature();
+  const { timestamp, signature, transformation } = await generateUploadSignature();
 
   res.status(200).json(
     new ApiResponse(
@@ -422,6 +422,7 @@ const generateCloudinarySignature = asyncHandler(async (req, res) => {
       {
         timestamp,
         signature,
+        transformation,
         cloudname: process.env.CLOUDINARY_CLOUD_NAME,
         apikey: process.env.CLOUDINARY_API_KEY,
       },
