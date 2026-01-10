@@ -7,6 +7,7 @@ import { Analytics } from '../models/analytics.model.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
+import { Reservation } from '../models/reservation.model.js';
 import mongoose from 'mongoose';
 
 // @desc    Get analytics for the current hall owner
@@ -179,6 +180,24 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
         ]
     }).select('bookingDates createdAt');
 
+    // 6. Reservation Analytics
+    const reservationAnalyticsPromise = Reservation.aggregate([
+        {
+            $match: {
+                hall: { $in: targetHallIds },
+                createdAt: { $gte: startDate, $lte: endDate }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                newReservations: { $sum: 1 },
+                converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
+                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } }
+            }
+        }
+    ]);
+
 
   const [
     revenueResult,
@@ -190,7 +209,8 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     totalBookingsCount,
     busiestDays,
     customerBookingCounts,
-    confirmedBookingsForKpis
+    confirmedBookingsForKpis,
+    reservationAnalyticsResult
   ] = await Promise.all([
     totalRevenuePromise,
     totalViewsPromise,
@@ -201,7 +221,8 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     totalBookingsCountPromise,
     busiestDaysPromise,
     customerBookingCountsPromise,
-    confirmedBookingsForKpisPromise
+    confirmedBookingsForKpisPromise,
+    reservationAnalyticsPromise
   ]);
 
   const totalRevenue = revenueResult[0]?.total || 0;
@@ -270,6 +291,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
 
     const occupancyRate = totalAvailableHours > 0 ? (totalBookedHours / totalAvailableHours) * 100 : 0;
     const averageLeadTime = leadTimeBookingCount > 0 ? totalLeadTimeDays / leadTimeBookingCount : 0;
+    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0 };
 
 
   res
@@ -297,6 +319,11 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
                 repeatBookingRate: `${repeatBookingRate.toFixed(2)}%`,
                 occupancyRate: `${occupancyRate.toFixed(2)}%`,
                 averageBookingLeadTime: `${averageLeadTime.toFixed(1)} days`
+            },
+            reservationAnalytics: {
+                new: reservationAnalytics.newReservations,
+                converted: reservationAnalytics.converted,
+                expired: reservationAnalytics.expired
             }
         },
         'Hall owner analytics fetched successfully.'
@@ -452,6 +479,25 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
         expiryDate: { $gte: startDate, $lte: endDate }
     });
 
+    const totalActiveSubscriptionsPromise = SubscriptionHistory.countDocuments({ status: 'active' });
+
+    // 5. Reservation Analytics
+    const reservationAnalyticsPromise = Reservation.aggregate([
+        {
+            $match: {
+                createdAt: { $gte: startDate, $lte: endDate }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                newReservations: { $sum: 1 },
+                converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
+                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } }
+            }
+        }
+    ]);
+
 
 
     const [
@@ -461,7 +507,9 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
         mostActiveHalls,
         topCustomers,
         newSubscriptions,
-        expiredSubscriptions
+        expiredSubscriptions,
+        totalActiveSubscriptions,
+        reservationAnalyticsResult
     ] = await Promise.all([
         commissionAnalyticsPromise,
         ownersWithActiveSubscriptionPromise,
@@ -469,7 +517,9 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
         hallActivityPromise,
         topCustomersPromise,
         newSubscriptionsPromise,
-        expiredSubscriptionsPromise
+        expiredSubscriptionsPromise,
+        totalActiveSubscriptionsPromise,
+        reservationAnalyticsPromise
     ]);
 
     const inactiveHallsData = await Hall.find({
@@ -496,6 +546,7 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
     const totalSubscriptionRevenue = currentPeriodRevenue.subscription;
     const commissionableRevenue = commissionResult[0]?.totalRevenue || 0;
     const totalCommission = commissionableRevenue * commissionRate;
+    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0 };
 
     const calculatePercentageChange = (current, previous) => {
         if(previous === 0) return current > 0 ? 100 : 0;
@@ -524,8 +575,14 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
             topCustomers,
             subscriptionCounts: {
                 new: newSubscriptions,
-                expired: expiredSubscriptions
+                expired: expiredSubscriptions,
+                totalActive: totalActiveSubscriptions
             }
+        },
+        reservationAnalytics: {
+            new: reservationAnalytics.newReservations,
+            converted: reservationAnalytics.converted,
+            expired: reservationAnalytics.expired
         },
         dataComparison: {
             currentPeriod: {
