@@ -13,7 +13,8 @@ import {
     createHallOwner,
     approveHallOwner,
     promoteToHallOwner,
-    getMe
+    getMe,
+    requestAccountDeletion
 } from '../controllers/user.controller.js';
 
 const router = Router();
@@ -260,6 +261,28 @@ router.route('/apply-hall-owner')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/me').get(verifyJWT, getMe);
+
+/**
+ * @swagger
+ * /api/v1/users/request-deletion:
+ *   post:
+ *     summary: Request account deletion
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Allows a logged-in user to request that their account be deleted. This will place their account into a 'deletion-requested' state, pending admin approval.
+ *     responses:
+ *       200:
+ *         description: Account deletion request submitted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ */
+router.route('/request-deletion').post(verifyJWT, requestAccountDeletion);
+
 // Admin routes
 router.use(verifyJWT, authorizeRoles('super-admin'));
 

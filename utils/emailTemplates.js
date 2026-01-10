@@ -712,7 +712,91 @@ export {
   generateReservationExpiredEmail,
   generateReservationReminderEmail,
   generateNewReservationPendingPaymentEmailForUser,
-  generatePendingReservationCancelledEmail
+  generatePendingReservationCancelledEmail,
+  generateAccountDeletionRequestEmailForUser,
+  generateAccountDeletionRequestEmailForAdmin,
+  generateAccountDeletionApprovedEmailForUser,
+  generateAccountDeletionDeclinedEmailForUser,
+  generateHallUnlistedEmailForOwner
+};
+
+const generateHallUnlistedEmailForOwner = (ownerName, hallName, reason) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #d9534f;">Your Hall Has Been Unlisted</h2>
+      <p>Hi ${ownerName},</p>
+      <p>This is to inform you that your hall, <strong>${hallName}</strong>, has been unlisted from our platform.</p>
+      <p><strong>Reason for unlisting:</strong></p>
+      <p style="padding: 10px; border-left: 4px solid #d9534f; background-color: #f9f9f9;">
+        ${reason}
+      </p>
+      <p>Your hall will not appear in search results and will not be available for new bookings. Existing bookings are not affected.</p>
+      <p>If you have any questions, please contact our support team.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateAccountDeletionDeclinedEmailForUser = (name, reason) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Account Deletion Request Update</h2>
+      <p>Hi ${name},</p>
+      <p>We are writing to inform you that your request to delete your account has been declined.</p>
+      <p><strong>Reason for decline:</strong></p>
+      <p style="padding: 10px; border-left: 4px solid #f0ad4e; background-color: #f9f9f9;">
+        ${reason}
+      </p>
+      <p>Your account remains active. If you have any questions, please contact our support team.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateAccountDeletionApprovedEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Your Account Has Been Deactivated</h2>
+      <p>Hi ${name},</p>
+      <p>As you requested, your account has been deactivated and will be permanently deleted in 7 days. We are sorry to see you go.</p>
+      <p>If you did not request this, please contact our support team immediately.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+};
+
+const generateAccountDeletionRequestEmailForAdmin = (userName, userEmail) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #d9534f;">User Account Deletion Request</h2>
+      <p>A user has requested to delete their account.</p>
+      <h3>User Details:</h3>
+      <ul>
+        <li><strong>Name:</strong> ${userName}</li>
+        <li><strong>Email:</strong> ${userEmail}</li>
+      </ul>
+      <p>Please review this request in the admin dashboard and take the appropriate action (approve or decline).</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
+    </div>
+  `;
+};
+
+const generateAccountDeletionRequestEmailForUser = (name) => {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Account Deletion Request Received</h2>
+      <p>Hi ${name},</p>
+      <p>We have received your request to delete your account. Your account access has been restricted while we process your request.</p>
+      <p>An administrator will review your request shortly. You will receive another email once a decision has been made.</p>
+      <p>If you did not make this request, please contact our support team immediately.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
 };
 
 const generatePendingReservationCancelledEmail = (recipientName, reservation) => {

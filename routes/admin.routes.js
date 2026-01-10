@@ -10,6 +10,11 @@ import {
   getAllBookings,
   getBookingsForHall,
   getUserBankDetails,
+  unlistHall,
+  relistHall,
+  getDeletionRequests,
+  approveDeletionRequest,
+  declineDeletionRequest,
 } from '../controllers/admin.controller.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -673,5 +678,186 @@ router
 router
     .route('/users/:userId/bank-details')
     .get(verifyJWT, authorizeRoles('super-admin'), getUserBankDetails);
+
+/**
+ * @swagger
+ * /api/v1/admin/halls/{hallId}/unlist:
+ *   patch:
+ *     summary: Unlist a hall
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Allows a super-admin to unlist a hall, making it unavailable for new bookings.
+ *     parameters:
+ *       - in: path
+ *         name: hallId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the hall to unlist.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: "The hall is under renovation."
+ *     responses:
+ *       200:
+ *         description: Hall unlisted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: Bad Request - Reason is required.
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a super-admin.
+ *       404:
+ *         description: Hall not found.
+ */
+router.route('/halls/:hallId/unlist').patch(verifyJWT, authorizeRoles('super-admin'), unlistHall);
+
+/**
+ * @swagger
+ * /api/v1/admin/halls/{hallId}/relist:
+ *   patch:
+ *     summary: Relist a hall
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Allows a super-admin to relist a previously unlisted hall, making it available for new bookings.
+ *     parameters:
+ *       - in: path
+ *         name: hallId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the hall to relist.
+ *     responses:
+ *       200:
+ *         description: Hall relisted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a super-admin.
+ *       404:
+ *         description: Hall not found.
+ */
+router.route('/halls/:hallId/relist').patch(verifyJWT, authorizeRoles('super-admin'), relistHall);
+
+/**
+ * @swagger
+ * /api/v1/admin/deletion-requests:
+ *   get:
+ *     summary: Get all account deletion requests
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Retrieves a list of all users who have requested their accounts to be deleted.
+ *     responses:
+ *       200:
+ *         description: A list of users with pending deletion requests.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a super-admin.
+ *       404:
+ *         description: No pending deletion requests found.
+ */
+router.route('/deletion-requests').get(verifyJWT, authorizeRoles('super-admin'), getDeletionRequests);
+
+/**
+ * @swagger
+ * /api/v1/admin/deletion-requests/{userId}/approve:
+ *   patch:
+ *     summary: Approve an account deletion request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Approves a user's request to delete their account. This deactivates the account, which will be permanently deleted after a grace period.
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose deletion request is being approved.
+ *     responses:
+ *       200:
+ *         description: Account deletion request approved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a super-admin.
+ *       404:
+ *         description: User not found.
+ */
+router.route('/deletion-requests/:userId/approve').patch(verifyJWT, authorizeRoles('super-admin'), approveDeletionRequest);
+
+/**
+ * @swagger
+ * /api/v1/admin/deletion-requests/{userId}/decline:
+ *   patch:
+ *     summary: Decline an account deletion request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Declines a user's request to delete their account. This reactivates the user's account.
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose deletion request is being declined.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: "The user has outstanding bookings."
+ *     responses:
+ *       200:
+ *         description: Account deletion request declined successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: Bad Request - Reason is required.
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a super-admin.
+ *       404:
+ *         description: User not found.
+ */
+router.route('/deletion-requests/:userId/decline').patch(verifyJWT, authorizeRoles('super-admin'), declineDeletionRequest);
 
 export default router;

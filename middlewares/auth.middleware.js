@@ -17,6 +17,10 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
       throw new ApiError(401, 'Invalid Access Token');
     }
 
+    if (user.accountStatus === 'deletion-requested' || user.accountStatus === 'deactivated') {
+      throw new ApiError(401, 'This account is pending deletion or has been deactivated.');
+    }
+
     req.user = user;
     req.user.activeRole = decodedToken.activeRole;
     next();

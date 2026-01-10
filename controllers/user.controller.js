@@ -277,8 +277,55 @@ export {
     createHallOwner,
     approveHallOwner,
     promoteToHallOwner,
-    getMe
+    getMe,
+    requestAccountDeletion
 };
+
+const requestAccountDeletion = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  user.accountStatus = 'deletion-requested';
+  user.deletionRequestDate = new Date();
+  await user.save({ validateBeforeSave: false });
+
+  const io = req.app.get('io');
+
+  // Notify user
+  const userEmailHtml = generateAccountDeletionRequestEmailForUser(user.fullName);
+  await sendEmail({
+    io,
+    email: user.email,
+    subject: 'Account Deletion Request Received',
+    html: userEmailHtml,
+    notification: {
+      recipient: user._id.toString(),
+      message: 'Your account deletion request has been received and is under review.',
+    },
+  });
+
+  // Notify all super-admins
+  const superAdmins = await User.find({ role: 'super-admin' });
+  for (const admin of superAdmins) {
+    const adminEmailHtml = generateAccountDeletionRequestEmailForAdmin(user.fullName, user.email);
+    await sendEmail({
+      io,
+      email: admin.email,
+      subject: 'New Account Deletion Request',
+      html: adminEmailHtml,
+      notification: {
+        recipient: admin._id.toString(),
+        message: `User ${user.fullName} has requested to delete their account.`,
+      },
+    });
+  }
+
+  res.status(200).json(new ApiResponse(200, {}, "Your account deletion request has been submitted."));
+});
 
 const createHallOwner = asyncHandler(async (req, res) => {
     const { fullName, email, phone, password } = req.body;

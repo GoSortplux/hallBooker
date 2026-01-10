@@ -15,6 +15,7 @@ import initializeBookingCronJobs from './cron/bookingManager.js';
 import initializeNotificationCronJobs from './cron/notificationManager.js';
 import initializeReservationCronJobs from './cron/reservationManager.js';
 import { scheduleReviewNotifications } from './cron/reviewNotification.js';
+import initializeUserCleanupCronJob from './cron/userCleanupManager.js';
 
 // Route Imports
 import reservationRoutes from './routes/reservation.routes.js';
@@ -64,6 +65,7 @@ initializeBookingCronJobs(io);
 initializeNotificationCronJobs();
 scheduleReviewNotifications(io);
 initializeReservationCronJobs(io);
+initializeUserCleanupCronJob(io);
 
 // Middleware
 app.use(cors({
