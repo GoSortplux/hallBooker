@@ -193,7 +193,8 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
                 _id: null,
                 newReservations: { $sum: 1 },
                 converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
-                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } }
+                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } },
+                active: { $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] } }
             }
         }
     ]);
@@ -291,7 +292,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
 
     const occupancyRate = totalAvailableHours > 0 ? (totalBookedHours / totalAvailableHours) * 100 : 0;
     const averageLeadTime = leadTimeBookingCount > 0 ? totalLeadTimeDays / leadTimeBookingCount : 0;
-    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0 };
+    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0, active: 0 };
 
 
   res
@@ -323,7 +324,8 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
             reservationAnalytics: {
                 new: reservationAnalytics.newReservations,
                 converted: reservationAnalytics.converted,
-                expired: reservationAnalytics.expired
+                expired: reservationAnalytics.expired,
+                active: reservationAnalytics.active
             }
         },
         'Hall owner analytics fetched successfully.'
@@ -493,7 +495,8 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
                 _id: null,
                 newReservations: { $sum: 1 },
                 converted: { $sum: { $cond: [{ $eq: ['$status', 'CONVERTED'] }, 1, 0] } },
-                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } }
+                expired: { $sum: { $cond: [{ $eq: ['$status', 'EXPIRED'] }, 1, 0] } },
+                active: { $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] } }
             }
         }
     ]);
@@ -546,7 +549,7 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
     const totalSubscriptionRevenue = currentPeriodRevenue.subscription;
     const commissionableRevenue = commissionResult[0]?.totalRevenue || 0;
     const totalCommission = commissionableRevenue * commissionRate;
-    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0 };
+    const reservationAnalytics = reservationAnalyticsResult[0] || { newReservations: 0, converted: 0, expired: 0, active: 0 };
 
     const calculatePercentageChange = (current, previous) => {
         if(previous === 0) return current > 0 ? 100 : 0;
@@ -582,7 +585,8 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
         reservationAnalytics: {
             new: reservationAnalytics.newReservations,
             converted: reservationAnalytics.converted,
-            expired: reservationAnalytics.expired
+            expired: reservationAnalytics.expired,
+            active: reservationAnalytics.active
         },
         dataComparison: {
             currentPeriod: {
