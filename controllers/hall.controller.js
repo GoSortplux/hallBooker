@@ -136,13 +136,40 @@ const createHall = asyncHandler(async (req, res) => {
 });
 
 const getAllHalls = asyncHandler(async (req, res) => {
-    const halls = await Hall.find({ isListed: true }).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
+    const halls = await Hall.find({ $or: [{ isListed: true }, { isListed: { $exists: false } }] }).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 
 const getHallById = asyncHandler(async (req, res) => {
     const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
     if (!hall) throw new ApiError(404, "Hall not found");
+
+    // If the hall is unlisted, verify user authorization
+    if (hall.isListed === false) {
+        const token = req.cookies?.accessToken || req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            throw new ApiError(404, "Hall not found"); // Treat as not found for anonymous users
+        }
+
+        try {
+            const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+            const user = await User.findById(decodedToken?._id);
+
+            if (!user) {
+                throw new ApiError(404, "Hall not found");
+            }
+
+            const isOwner = hall.owner._id.toString() === user._id.toString();
+            const isStaff = hall.staff.some(staffId => staffId.toString() === user._id.toString());
+            const isSuperAdmin = user.role.includes('super-admin');
+
+            if (!isOwner && !isStaff && !isSuperAdmin) {
+                throw new ApiError(404, "Hall not found"); // Not authorized, so treat as not found
+            }
+        } catch (error) {
+            throw new ApiError(404, "Hall not found"); // Invalid token or other error
+        }
+    }
 
     if (!hall.isOnlineBookingEnabled) {
         const hallData = hall.toObject();
@@ -399,6 +426,7 @@ const getRecommendedHalls = asyncHandler(async (req, res) => {
     const maxDistance = (radius || 10) * 1000; // Default to 10km
 
     const halls = await Hall.find({
+        $or: [{ isListed: true }, { isListed: { $exists: false } }],
         geoLocation: {
             $near: {
                 $geometry: {
@@ -527,8 +555,9 @@ const createReservation = asyncHandler(async (req, res) => {
 const bookDemo = asyncHandler(async (req, res) => {
     const hallId = req.params.id;
 
-    const hallExists = await Hall.findById(hallId);
-    if (!hallExists) {
+    const hall = await Hall.findById(hallId);
+    // Ensure the hall exists and is listed (or existed before isListed was introduced)
+    if (!hall || hall.isListed === false) {
         throw new ApiError(404, "Hall not found");
     }
 
