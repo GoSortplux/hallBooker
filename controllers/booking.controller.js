@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
-import { Reservation } from '../models/reservation.model.js';
+import { Reservation } from '../models/reservation.model.js'; // For checking reservations
 import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
 import Setting from '../models/setting.model.js';
