@@ -717,8 +717,50 @@ export {
   generateAccountDeletionRequestEmailForAdmin,
   generateAccountDeletionApprovedEmailForUser,
   generateAccountDeletionDeclinedEmailForUser,
-  generateHallUnlistedEmailForOwner
+  generateHallUnlistedEmailForOwner,
+  generatePaymentFailedEmail
 };
+
+const generatePaymentFailedEmail = (booking) => {
+  // Use a generic customer name if the user details aren't fully populated
+  const customerName = booking.user ? booking.user.fullName : (booking.walkInUserDetails ? booking.walkInUserDetails.fullName : 'Customer');
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
+        <h2 style="color: #d9534f; text-align: center;">Payment Failed</h2>
+        <p>Hi ${customerName},</p>
+        <p>We're sorry, but we were unable to process the payment for your booking. The transaction was either declined or cancelled.</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th colspan="2" style="padding: 12px; text-align: left; border-bottom: 2px solid #d9534f;">Booking Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Booking ID:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.bookingId}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Hall:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${booking.hall.name}</td>
+                </tr>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Total Amount:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>NGN ${booking.totalPrice.toLocaleString()}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="font-size: 14px; color: #555;">No payment has been charged to your account for this transaction.</p>
+        <p style="font-size: 14px; color: #555;">You can attempt to make the payment again from your dashboard. If the problem persists, please try a different payment method or contact your bank.</p>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+    </div>
+  `;
+}
 
 const generateHallUnlistedEmailForOwner = (ownerName, hallName, reason) => {
   return `

@@ -20,7 +20,8 @@ import {
     generateSubscriptionPaymentEmail,
     generatePaymentConfirmationEmail,
     generateRecurringBookingConfirmationEmail,
-    generateNewBookingNotificationEmailForOwner
+    generateNewBookingNotificationEmailForOwner,
+    generatePaymentFailedEmail
 } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
 import { processReservationTransaction, processConversionTransaction } from './reservation.controller.js';
@@ -156,72 +157,29 @@ async function processTransaction(transactionData, io) {
 async function processBookingTransaction(bookingDetails, io) {
     const { paymentStatus, paymentReference: refFromMonnify, paymentMethod } = bookingDetails;
 
+    // Handle different types of transactions (Reservation, Conversion, Recurring, Standard)
     if (refFromMonnify.startsWith('RES_')) {
-        await processReservationTransaction(bookingDetails, io);
-    } else if (refFromMonnify.startsWith('CONV_')) {
-        await processConversionTransaction(bookingDetails, io);
-    } else if (refFromMonnify.startsWith('RECURRING_')) {
+        return processReservationTransaction(bookingDetails, io);
+    }
+    if (refFromMonnify.startsWith('CONV_')) {
+        return processConversionTransaction(bookingDetails, io);
+    }
+
+    let booking;
+    let customerEmail;
+    let customerDetails;
+
+    if (refFromMonnify.startsWith('RECURRING_')) {
         const recurringBookingId = refFromMonnify.split('_')[1];
-        if (paymentStatus === 'PAID') {
-            const bookings = await Booking.find({ recurringBookingId }).populate({
-                path: 'hall',
-                populate: { path: 'owner' }
-            });
-
-            if (!bookings.length || bookings[0].paymentStatus === 'paid') {
-                console.log(`Recurring booking ${recurringBookingId} already processed or not found.`);
-                return;
-            }
-
-            await Booking.updateMany({ recurringBookingId }, { $set: { paymentStatus: 'paid', paymentMethod } });
-
-            const hall = bookings[0].hall;
-            const customer = bookings[0].walkInUserDetails;
-            const hallOwner = hall.owner;
-            const admins = await User.find({ role: 'super-admin' });
-
-            // Send email to customer
-            if (customer.email) {
-                sendEmail({
-                    io,
-                    email: customer.email,
-                    subject: `Your Recurring Booking for ${hall.name} is Confirmed!`,
-                    html: generateRecurringBookingConfirmationEmail(customer.fullName, bookings, hall),
-                }).catch(err => console.error("Recurring booking email error:", err));
-            }
-
-            // Notify hall owner
-            sendEmail({
-                io,
-                email: hallOwner.email,
-                subject: `New Recurring Booking for ${hall.name}`,
-                html: generateRecurringBookingConfirmationEmail(hallOwner.fullName, bookings, hall),
-                notification: {
-                    recipient: hallOwner._id.toString(),
-                    message: `A new recurring booking has been confirmed for ${hall.name}.`,
-                    link: `/hall-owner/bookings?recurringId=${recurringBookingId}`,
-                },
-            }).catch(err => console.error("Recurring booking notification error for owner:", err));
-
-            // Notify admins
-            admins.forEach(admin => {
-                sendEmail({
-                    io,
-                    email: admin.email,
-                    subject: `Admin Alert: New Recurring Booking for ${hall.name}`,
-                    html: generateRecurringBookingConfirmationEmail(admin.fullName, bookings, hall),
-                    notification: {
-                        recipient: admin._id.toString(),
-                        message: `A recurring booking was made for ${hall.name} by ${hallOwner.fullName}.`,
-                        link: `/admin/bookings?recurringId=${recurringBookingId}`,
-                    },
-                }).catch(err => console.error("Recurring booking notification error for admin:", err));
-            });
+        const bookings = await Booking.find({ recurringBookingId }).populate('hall user walkInUserDetails');
+        if (!bookings.length || bookings[0].paymentStatus === 'paid') {
+            console.log(`Recurring booking ${recurringBookingId} already processed or not found.`);
+            return;
         }
+        booking = bookings[0]; // Use the first booking for customer details
     } else {
         const bookingIdFromRef = refFromMonnify.split('_')[0];
-        const booking = await Booking.findOne({ bookingId: bookingIdFromRef });
-
+        booking = await Booking.findOne({ bookingId: bookingIdFromRef }).populate('hall user walkInUserDetails');
         if (!booking) {
             console.log(`No matching booking found for ${refFromMonnify}`);
             return;
@@ -230,77 +188,122 @@ async function processBookingTransaction(bookingDetails, io) {
             console.log(`Booking ${bookingIdFromRef} already paid.`);
             return;
         }
+    }
 
-        if (paymentStatus === 'PAID') {
-            booking.paymentStatus = 'paid';
-            booking.paymentMethod = paymentMethod;
-            await booking.save();
+    // Determine customer details
+    if (booking.bookingType === 'walk-in') {
+        customerEmail = booking.walkInUserDetails.email;
+        customerDetails = booking.walkInUserDetails;
+    } else {
+        customerEmail = booking.user.email;
+        customerDetails = booking.user;
+    }
 
-            const confirmedBooking = await Booking.findById(booking._id)
-                .populate('user')
-                .populate({
-                    path: 'hall',
-                    populate: { path: 'owner' }
-                });
+    const updatePayload = {
+        paymentMethod: paymentMethod || booking.paymentMethod,
+    };
 
-            const hallOwner = confirmedBooking.hall.owner;
-            const admins = await User.find({ role: 'super-admin' });
-            let customerEmail;
-            let customerDetails;
+    switch (paymentStatus) {
+        case 'PAID':
+            updatePayload.paymentStatus = 'paid';
+            if (refFromMonnify.startsWith('RECURRING_')) {
+                await Booking.updateMany({ recurringBookingId: booking.recurringBookingId }, { $set: updatePayload });
+                const allBookings = await Booking.find({ recurringBookingId: booking.recurringBookingId }).populate({ path: 'hall', populate: { path: 'owner' } });
+                // --- Send recurring success emails (logic from original function) ---
+                 const hall = allBookings[0].hall;
+                 const hallOwner = hall.owner;
+                 const admins = await User.find({ role: 'super-admin' });
+                 if (customerEmail) {
+                     sendEmail({
+                         io,
+                         email: customerEmail,
+                         subject: `Your Recurring Booking for ${hall.name} is Confirmed!`,
+                         html: generateRecurringBookingConfirmationEmail(customerDetails.fullName, allBookings, hall),
+                     }).catch(err => console.error("Recurring booking email error:", err));
+                 }
+                 sendEmail({
+                     io,
+                     email: hallOwner.email,
+                     subject: `New Recurring Booking for ${hall.name}`,
+                     html: generateRecurringBookingConfirmationEmail(hallOwner.fullName, allBookings, hall),
+                     notification: { recipient: hallOwner._id.toString(), message: `A new recurring booking has been confirmed for ${hall.name}.`, link: `/hall-owner/bookings?recurringId=${booking.recurringBookingId}` },
+                 }).catch(err => console.error("Recurring booking notification error for owner:", err));
+                 admins.forEach(admin => {
+                     sendEmail({
+                         io,
+                         email: admin.email,
+                         subject: `Admin Alert: New Recurring Booking for ${hall.name}`,
+                         html: generateRecurringBookingConfirmationEmail(admin.fullName, allBookings, hall),
+                         notification: { recipient: admin._id.toString(), message: `A recurring booking was made for ${hall.name} by ${hallOwner.fullName}.`, link: `/admin/bookings?recurringId=${booking.recurringBookingId}` },
+                     }).catch(err => console.error("Recurring booking notification error for admin:", err));
+                 });
 
-            if (confirmedBooking.bookingType === 'walk-in') {
-                customerEmail = confirmedBooking.walkInUserDetails.email;
-                customerDetails = confirmedBooking.walkInUserDetails;
             } else {
-                customerEmail = confirmedBooking.user.email;
-                customerDetails = confirmedBooking.user;
+                booking.set(updatePayload);
+                await booking.save();
+                const confirmedBooking = await Booking.findById(booking._id).populate('user').populate({ path: 'hall', populate: { path: 'owner' } });
+                // --- Send standard success emails (logic from original function) ---
+                 const hallOwner = confirmedBooking.hall.owner;
+                 const admins = await User.find({ role: 'super-admin' });
+                 if (customerEmail) {
+                     const bookingForEmail = { ...confirmedBooking.toObject(), user: customerDetails };
+                     const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
+                     sendEmail({
+                         io,
+                         email: customerEmail,
+                         subject: 'Payment Confirmation and Receipt',
+                         html: generatePaymentConfirmationEmail(bookingForEmail),
+                         attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+                         notification: { recipient: confirmedBooking.user?._id?.toString(), message: `Your booking #${confirmedBooking.bookingId} has been confirmed.`, link: `/bookings/${confirmedBooking._id}` },
+                     }).catch(err => console.error("Email error:", err));
+                 }
+                 sendEmail({
+                     io,
+                     email: hallOwner.email,
+                     subject: `Booking Payment Received for ${confirmedBooking.hall.name}`,
+                     html: generateNewBookingNotificationEmailForOwner(hallOwner, customerDetails, confirmedBooking),
+                     notification: { recipient: hallOwner._id.toString(), message: `Payment for booking #${confirmedBooking.bookingId} has been confirmed.`, link: `/hall-owner/bookings/${confirmedBooking._id}` },
+                 }).catch(err => console.error("Owner notification error:", err));
+                 admins.forEach(admin => {
+                     sendEmail({
+                         io,
+                         email: admin.email,
+                         subject: `Admin Alert: Booking Payment Received for ${confirmedBooking.hall.name}`,
+                         html: generateNewBookingNotificationEmailForOwner(admin, customerDetails, confirmedBooking),
+                         notification: { recipient: admin._id.toString(), message: `Payment confirmed for booking #${confirmedBooking.bookingId} at ${confirmedBooking.hall.name}.`, link: `/admin/bookings/${confirmedBooking._id}` },
+                     }).catch(err => console.error("Admin notification error:", err));
+                 });
+            }
+            break;
+
+        case 'FAILED':
+        case 'CANCELLED':
+            updatePayload.paymentStatus = paymentStatus.toLowerCase(); // 'failed' or 'cancelled'
+            if (refFromMonnify.startsWith('RECURRING_')) {
+                await Booking.updateMany({ recurringBookingId: booking.recurringBookingId }, { $set: updatePayload });
+            } else {
+                booking.set(updatePayload);
+                await booking.save();
             }
 
+            // Send failure email
             if (customerEmail) {
-                const bookingForEmail = { ...confirmedBooking.toObject(), user: customerDetails };
-                const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
+                 const bookingForEmail = {
+                     ...booking.toObject(),
+                     user: customerDetails
+                 };
                 sendEmail({
                     io,
                     email: customerEmail,
-                    subject: 'Payment Confirmation and Receipt',
-                    html: generatePaymentConfirmationEmail(bookingForEmail),
-                    attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
-                    notification: {
-                        recipient: confirmedBooking.user?._id?.toString(),
-                        message: `Your booking #${confirmedBooking.bookingId} has been confirmed.`,
-                        link: `/bookings/${confirmedBooking._id}`,
-                    },
-                }).catch(err => console.error("Email error:", err));
+                    subject: 'Booking Payment Failed',
+                    html: generatePaymentFailedEmail(bookingForEmail),
+                }).catch(err => console.error("Failure email error:", err));
             }
+            break;
 
-            // Notify hall owner
-            sendEmail({
-                io,
-                email: hallOwner.email,
-                subject: `Booking Payment Received for ${confirmedBooking.hall.name}`,
-                html: generateNewBookingNotificationEmailForOwner(hallOwner, customerDetails, confirmedBooking),
-                notification: {
-                    recipient: hallOwner._id.toString(),
-                    message: `Payment for booking #${confirmedBooking.bookingId} has been confirmed.`,
-                    link: `/hall-owner/bookings/${confirmedBooking._id}`,
-                },
-            }).catch(err => console.error("Owner notification error:", err));
-
-            // Notify admins
-            admins.forEach(admin => {
-                sendEmail({
-                    io,
-                    email: admin.email,
-                    subject: `Admin Alert: Booking Payment Received for ${confirmedBooking.hall.name}`,
-                    html: generateNewBookingNotificationEmailForOwner(admin, customerDetails, confirmedBooking),
-                    notification: {
-                        recipient: admin._id.toString(),
-                        message: `Payment confirmed for booking #${confirmedBooking.bookingId} at ${confirmedBooking.hall.name}.`,
-                        link: `/admin/bookings/${confirmedBooking._id}`,
-                    },
-                }).catch(err => console.error("Admin notification error:", err));
-            });
-        }
+        default:
+            console.log(`Unhandled payment status: ${paymentStatus}`);
+            break;
     }
 }
 
@@ -380,21 +383,48 @@ const makePayment = asyncHandler(async (req, res) => {
 
 const verifyPayment = asyncHandler(async (req, res) => {
     const { paymentReference } = req.query;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-    const response = await verifyTransaction(paymentReference);
-    const transaction = response.responseBody;
-
-    const isBookingPayment = transaction.paymentReference.includes('_');
-
-    if (isBookingPayment) {
-        await processBookingTransaction(transaction, req.app.get('io'));
-    } else {
-        await processTransaction(transaction, req.app.get('io'));
+    if (!paymentReference) {
+        return res.redirect(`${frontendUrl}/payment-failed?error=missing_reference`);
     }
 
-    return res.status(200).json(
-        new ApiResponse(200, { status: transaction.paymentStatus, type: isBookingPayment ? 'booking' : 'subscription' }, 'Verification complete')
-    );
+    try {
+        const response = await verifyTransaction(paymentReference);
+        const transaction = response.responseBody;
+
+        // Determine the booking/reservation ID from the reference
+        let idForUrl = '';
+        if (transaction.paymentReference.startsWith('RECURRING_')) {
+            idForUrl = transaction.paymentReference.split('_')[1];
+        } else if (transaction.paymentReference.startsWith('RES_') || transaction.paymentReference.startsWith('CONV_')) {
+            const reservation = await Reservation.findOne({ paymentReference: transaction.paymentReference });
+            idForUrl = reservation?.reservationId || '';
+        } else {
+             const booking = await Booking.findOne({ bookingId: transaction.paymentReference.split('_')[0] });
+             idForUrl = booking?.bookingId || '';
+        }
+
+
+        const isBookingPayment = transaction.paymentReference.includes('_') || transaction.paymentReference.startsWith('RES_') || transaction.paymentReference.startsWith('CONV_');
+
+        if (isBookingPayment) {
+            await processBookingTransaction(transaction, req.app.get('io'));
+        } else {
+            // This is a subscription payment
+            await processTransaction(transaction, req.app.get('io'));
+        }
+
+        // Redirect based on status
+        if (transaction.paymentStatus === 'PAID') {
+            res.redirect(`${frontendUrl}/payment-success?bookingId=${idForUrl}`);
+        } else {
+            res.redirect(`${frontendUrl}/payment-failed?bookingId=${idForUrl}`);
+        }
+    } catch (error) {
+        console.error('Verification Error:', error);
+        res.redirect(`${frontendUrl}/payment-failed?error=verification_failed`);
+    }
 });
 
 
