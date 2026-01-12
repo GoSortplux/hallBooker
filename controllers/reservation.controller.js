@@ -278,7 +278,17 @@ const createReservation = asyncHandler(async (req, res) => {
     // Do not throw an error, as the reservation itself was successful.
   }
 
-  res.status(201).json(new ApiResponse(201, newReservation, 'Reservation created successfully. Pending payment.'));
+  const reservationResponse = {
+    ...newReservation.toObject(),
+    hall: {
+      name: hall.name,
+      location: hall.location,
+      capacity: hall.capacity,
+      pricing: hall.pricing,
+      directionUrl: hall.directionUrl,
+    }
+  };
+  res.status(201).json(new ApiResponse(201, reservationResponse, 'Reservation created successfully. Pending payment.'));
 });
 
 const verifyReservationPayment = asyncHandler(async (req, res) => {
@@ -537,20 +547,18 @@ const walkInReservation = asyncHandler(async (req, res) => {
     const io = req.app.get('io');
     const hallOwner = await User.findById(hall.owner);
     const admins = await User.find({ role: 'super-admin' });
+    let newReservation; // Defined once
 
     if (paymentMethod === 'online') {
         reservationData.paymentStatus = 'pending';
         reservationData.status = 'ACTIVE'; // Remains active until cutoff
-
-        // Create a temporary reservation document to get the _id
         const tempReservation = new Reservation(reservationData);
-
         const uniquePaymentReference = `RES_${tempReservation._id}_${crypto.randomBytes(6).toString('hex')}`;
         tempReservation.paymentReference = uniquePaymentReference;
-
-        const newReservation = await tempReservation.save();
+        newReservation = await tempReservation.save(); // Assigned here
         const reservationForEmail = { ...newReservation.toObject(), hall };
 
+        // --- Notifications ---
         if (walkInUserDetails.email) {
             sendEmail({
                 io,
@@ -559,8 +567,6 @@ const walkInReservation = asyncHandler(async (req, res) => {
                 html: generateNewReservationPendingPaymentEmailForUser(walkInUserDetails.fullName, reservationForEmail),
             }).catch(console.error);
         }
-
-        // Notify hall owner and admins about the pending reservation
         if (hallOwner) {
             sendEmail({
                 io, email: hallOwner.email, subject: `New Walk-in Reservation Pending for ${hall.name}`,
@@ -575,22 +581,16 @@ const walkInReservation = asyncHandler(async (req, res) => {
                 notification: { recipient: admin._id.toString(), message: `A new walk-in reservation for ${hall.name} is pending payment.`, link: `/admin/reservations/${newReservation._id}` }
             }).catch(console.error);
         });
-
-        return res.status(201).json(new ApiResponse(201, newReservation, 'Walk-in reservation created. Payment link will be sent to the customer.'));
-
-    } else {
+    } else { // Offline payment
         reservationData.paymentStatus = 'paid';
         reservationData.status = 'ACTIVE';
         reservationData.paymentMethod = paymentMethod;
-
-        // Generate a unique reference for offline payments
         const uniquePaymentReference = `OFFLINE_${reservationId}_${crypto.randomBytes(6).toString('hex')}`;
         reservationData.paymentReference = uniquePaymentReference;
-
-        const newReservation = await Reservation.create(reservationData);
+        newReservation = await Reservation.create(reservationData); // Assigned here
         const reservationForEmail = { ...newReservation.toObject(), hall };
 
-        // Notify customer
+        // --- Notifications ---
         if (walkInUserDetails.email) {
             sendEmail({
                 io,
@@ -599,8 +599,6 @@ const walkInReservation = asyncHandler(async (req, res) => {
                 html: generateReservationConfirmationEmail(walkInUserDetails.fullName, reservationForEmail),
             }).catch(console.error);
         }
-
-        // Notify hall owner and admins
         if (hallOwner) {
             sendEmail({
                 io, email: hallOwner.email, subject: `New Walk-in Reservation for ${hall.name}`,
@@ -615,9 +613,25 @@ const walkInReservation = asyncHandler(async (req, res) => {
                 notification: { recipient: admin._id.toString(), message: `A new walk-in reservation was made for ${hall.name}.`, link: `/admin/reservations/${newReservation._id}` }
             }).catch(console.error);
         });
-
-        return res.status(201).json(new ApiResponse(201, newReservation, 'Walk-in reservation created and marked as paid.'));
     }
+
+    // Create the response object once, after newReservation has been created/assigned.
+    const reservationResponse = {
+        ...newReservation.toObject(),
+        hall: {
+            name: hall.name,
+            location: hall.location,
+            capacity: hall.capacity,
+            pricing: hall.pricing,
+            directionUrl: hall.directionUrl,
+        }
+    };
+
+    const message = paymentMethod === 'online'
+        ? 'Walk-in reservation created. Payment link will be sent to the customer.'
+        : 'Walk-in reservation created and marked as paid.';
+
+    return res.status(201).json(new ApiResponse(201, reservationResponse, message));
     } catch (error) {
         if (error.code === 11000 && error.keyPattern.reservationId) {
             attempts++;
