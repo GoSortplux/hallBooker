@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
+import { verifyMonnifySignature } from '../middlewares/monnify.middleware.js';
 import { makePayment, makePaymentForRecurring, makePaymentForReservation, verifyPayment, handleMonnifyWebhook } from '../controllers/payment.controller.js';
 
 const router = Router();
@@ -168,6 +169,6 @@ router.route('/verify').get(verifyPayment);
  *       401:
  *         description: Invalid signature (if signature validation is implemented).
  */
-router.route('/webhook').post(handleMonnifyWebhook);
+router.route('/webhook').post(verifyMonnifySignature, handleMonnifyWebhook);
 
 export default router;
