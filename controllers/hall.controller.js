@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
+import { Reservation } from '../models/reservation.model.js';
 import { Hall } from '../models/hall.model.js';
 import { Facility } from '../models/facility.model.js';
 import { User } from '../models/user.model.js';
@@ -624,7 +625,75 @@ export {
     createReservation,
     bookDemo,
     getHallBookings,
+    getUnavailableDates,
 };
+
+const getUnavailableDates = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+        throw new ApiError(400, "Start date and end date are required.");
+    }
+
+    const hall = await Hall.findById(id);
+    if (!hall) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const bookings = await Booking.find({
+        hall: id,
+        status: { $in: ['confirmed', 'pending'] },
+        'bookingDates.startTime': { $lte: end },
+        'bookingDates.endTime': { $gte: start }
+    });
+
+    const reservations = await Reservation.find({
+        hall: id,
+        status: 'ACTIVE',
+        'bookingDates.startTime': { $lte: end },
+        'bookingDates.endTime': { $gte: start }
+    });
+
+    const unavailableDates = new Set();
+    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+
+    const normalizedQueryStart = new Date(startDate);
+    normalizedQueryStart.setUTCHours(0, 0, 0, 0);
+    const normalizedQueryEnd = new Date(endDate);
+    normalizedQueryEnd.setUTCHours(0, 0, 0, 0);
+
+    const addDatesToSet = (item) => {
+        item.bookingDates.forEach(dateRange => {
+            const startTime = new Date(new Date(dateRange.startTime).getTime() - bufferMilliseconds);
+            const endTime = new Date(new Date(dateRange.endTime).getTime() + bufferMilliseconds);
+
+            let currentDate = new Date(startTime);
+            currentDate.setUTCHours(0, 0, 0, 0);
+
+            const finalEndTime = new Date(endTime);
+            finalEndTime.setUTCHours(0,0,0,0);
+
+
+            while (currentDate <= finalEndTime) {
+                // Only add dates within the user's requested range
+                const loopDateOnly = new Date(currentDate.getTime());
+                if (loopDateOnly >= normalizedQueryStart && loopDateOnly <= normalizedQueryEnd) {
+                    unavailableDates.add(currentDate.toISOString().split('T')[0]);
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        });
+    };
+
+    bookings.forEach(addDatesToSet);
+    reservations.forEach(addDatesToSet);
+
+    return res.status(200).json(new ApiResponse(200, Array.from(unavailableDates), "Unavailable dates fetched successfully."));
+});
 
 const getHallBookings = asyncHandler(async (req, res) => {
     const { id } = req.params;
