@@ -17,7 +17,8 @@ import {
     generateReservationConfirmationEmail,
     generateNewReservationNotificationForOwner,
     generatePaymentConfirmationEmail,
-    generateNewReservationPendingPaymentEmailForUser
+    generateNewReservationPendingPaymentEmailForUser,
+    generatePaymentFailedEmail
 } from '../utils/emailTemplates.js';
 
 
@@ -127,7 +128,7 @@ export async function processConversionTransaction(transactionData, io) {
     const { paymentStatus, paymentReference, paymentMethod } = transactionData;
     const reservationId = paymentReference.split('_')[1];
 
-    const reservation = await Reservation.findById(reservationId).populate('hall');
+    const reservation = await Reservation.findById(reservationId).populate('hall').populate('user');
     if (!reservation) {
         console.error(`Reservation ${reservationId} not found for conversion.`);
         return;
@@ -137,6 +138,29 @@ export async function processConversionTransaction(transactionData, io) {
     if (paymentStatus === 'PAID') {
         // Ensure paymentMethod from the transaction is passed to the final booking
         await finalizeConversion(reservation, { paymentMethod: paymentMethod || 'online' }, io);
+    } else {
+        // Handle failed or cancelled conversion payment
+        reservation.status = 'CONVERSION_FAILED';
+        await reservation.save();
+
+        const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : reservation.user;
+        if (customer && customer.email) {
+            // We can reuse the booking failure email, but we need to create a "booking-like" object
+            // for the template, as it expects fields like bookingId and totalPrice.
+            const mockBookingForEmail = {
+                bookingId: `CONV-${reservation.reservationId}`, // Create a reference
+                hall: reservation.hall,
+                totalPrice: reservation.totalPrice,
+                user: customer, // The template will get fullName from here
+            };
+
+            sendEmail({
+                io,
+                email: customer.email,
+                subject: 'Booking Payment Failed',
+                html: generatePaymentFailedEmail(mockBookingForEmail),
+            }).catch(err => console.error("Conversion failure email error:", err));
+        }
     }
 }
 

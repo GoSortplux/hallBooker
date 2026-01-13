@@ -26,7 +26,7 @@ const reservationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['ACTIVE', 'CONVERTED', 'EXPIRED'],
+      enum: ['ACTIVE', 'CONVERTED', 'EXPIRED', 'CONVERSION_FAILED'],
       default: 'ACTIVE',
       index: true,
     },
