@@ -447,7 +447,7 @@ router.route('/my-bookings')
  * @swagger
  * /api/v1/bookings/search/{bookingId}:
  *   get:
- *     summary: Get a booking by its custom booking ID
+ *     summary: Get a booking or reservation by its custom ID
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -457,10 +457,10 @@ router.route('/my-bookings')
  *         schema:
  *           type: string
  *         required: true
- *         description: The custom-generated ID of the booking (e.g., 'BK123456').
+ *         description: The custom-generated ID of the booking (e.g., 'GOH-12-11-25-001') or reservation (e.g., 'RES-SHE-12-01-26-001').
  *     responses:
  *       200:
- *         description: Booking details.
+ *         description: Booking or reservation details.
  *         content:
  *           application/json:
  *             schema:
