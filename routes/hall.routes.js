@@ -17,6 +17,7 @@ import {
     createReservation,
     bookDemo,
     getHallBookings,
+    getUnavailableDates,
 } from '../controllers/hall.controller.js';
 
 const router = Router();
@@ -942,5 +943,61 @@ router.route('/:id/toggle-online-booking')
  */
 router.route('/:id/bookings')
     .get(verifyJWT, authorizeHallAccess, getHallBookings);
+
+/**
+ * @swagger
+ * /api/v1/halls/{id}/unavailable-dates:
+ *   get:
+ *     summary: Get unavailable dates for a hall
+ *     tags: [Halls]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The ID of the hall.
+ *         example: "60d0fe4f5311236168a109ca"
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: true
+ *         description: "The start of the date range to check."
+ *         example: "2026-03-01"
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: true
+ *         description: "The end of the date range to check."
+ *         example: "2026-03-31"
+ *     responses:
+ *       200:
+ *         description: A list of unavailable dates for the hall.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                      type: string
+ *                      format: date
+ *                   example: ["2026-03-15", "2026-03-16", "2026-03-20"]
+ *                 message:
+ *                   type: string
+ *                   example: "Unavailable dates fetched successfully."
+ *       404:
+ *         description: Hall not found.
+ */
+router.route('/:id/unavailable-dates')
+    .get(getUnavailableDates);
 
 export default router;
