@@ -684,12 +684,14 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
                     }
 
                     unavailableSlots.push({
-                        startTime: bufferedStartTime.toISOString(),
-                        endTime: bufferedEndTime.toISOString(),
                         reason: reason,
                         eventTime: {
                             startTime: eventStartTime.toISOString(),
                             endTime: eventEndTime.toISOString()
+                        },
+                        bufferTime: {
+                            startTime: bufferedStartTime.toISOString(),
+                            endTime: bufferedEndTime.toISOString()
                         }
                     });
                 }
