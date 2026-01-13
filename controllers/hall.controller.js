@@ -641,58 +641,66 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Hall not found");
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const queryStartDate = new Date(startDate);
+    const queryEndDate = new Date(endDate);
+    queryEndDate.setUTCHours(23, 59, 59, 999);
+
+    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+
+    // Expand the query range by the buffer to catch all potentially overlapping events
+    const bufferedQueryStartDate = new Date(queryStartDate.getTime() - bufferMilliseconds);
+    const bufferedQueryEndDate = new Date(queryEndDate.getTime() + bufferMilliseconds);
 
     const bookings = await Booking.find({
         hall: id,
         status: { $in: ['confirmed', 'pending'] },
-        'bookingDates.startTime': { $lte: end },
-        'bookingDates.endTime': { $gte: start }
+        'bookingDates.startTime': { $lte: bufferedQueryEndDate },
+        'bookingDates.endTime': { $gte: bufferedQueryStartDate }
     });
 
     const reservations = await Reservation.find({
         hall: id,
         status: 'ACTIVE',
-        'bookingDates.startTime': { $lte: end },
-        'bookingDates.endTime': { $gte: start }
+        'bookingDates.startTime': { $lte: bufferedQueryEndDate },
+        'bookingDates.endTime': { $gte: bufferedQueryStartDate }
     });
 
-    const unavailableDates = new Set();
-    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+    const unavailableSlots = [];
 
-    const normalizedQueryStart = new Date(startDate);
-    normalizedQueryStart.setUTCHours(0, 0, 0, 0);
-    const normalizedQueryEnd = new Date(endDate);
-    normalizedQueryEnd.setUTCHours(0, 0, 0, 0);
+    const processItems = (items, type) => {
+        items.forEach(item => {
+            item.bookingDates.forEach(dateRange => {
+                const eventStartTime = new Date(dateRange.startTime);
+                const eventEndTime = new Date(dateRange.endTime);
 
-    const addDatesToSet = (item) => {
-        item.bookingDates.forEach(dateRange => {
-            const startTime = new Date(new Date(dateRange.startTime).getTime() - bufferMilliseconds);
-            const endTime = new Date(new Date(dateRange.endTime).getTime() + bufferMilliseconds);
+                const bufferedStartTime = new Date(eventStartTime.getTime() - bufferMilliseconds);
+                const bufferedEndTime = new Date(eventEndTime.getTime() + bufferMilliseconds);
 
-            let currentDate = new Date(startTime);
-            currentDate.setUTCHours(0, 0, 0, 0);
+                // Check if the buffered slot overlaps with the query range
+                if (bufferedStartTime <= queryEndDate && bufferedEndTime >= queryStartDate) {
+                    let reason = "Reservation";
+                     if (type === 'booking') {
+                        reason = item.status === 'confirmed' ? 'Confirmed Booking' : 'Pending Booking';
+                    }
 
-            const finalEndTime = new Date(endTime);
-            finalEndTime.setUTCHours(0,0,0,0);
-
-
-            while (currentDate <= finalEndTime) {
-                // Only add dates within the user's requested range
-                const loopDateOnly = new Date(currentDate.getTime());
-                if (loopDateOnly >= normalizedQueryStart && loopDateOnly <= normalizedQueryEnd) {
-                    unavailableDates.add(currentDate.toISOString().split('T')[0]);
+                    unavailableSlots.push({
+                        startTime: bufferedStartTime.toISOString(),
+                        endTime: bufferedEndTime.toISOString(),
+                        reason: reason,
+                        eventTime: {
+                            startTime: eventStartTime.toISOString(),
+                            endTime: eventEndTime.toISOString()
+                        }
+                    });
                 }
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
+            });
         });
     };
 
-    bookings.forEach(addDatesToSet);
-    reservations.forEach(addDatesToSet);
+    processItems(bookings, 'booking');
+    processItems(reservations, 'reservation');
 
-    return res.status(200).json(new ApiResponse(200, Array.from(unavailableDates), "Unavailable dates fetched successfully."));
+    return res.status(200).json(new ApiResponse(200, unavailableSlots, "Unavailable dates fetched successfully."));
 });
 
 const getHallBookings = asyncHandler(async (req, res) => {
