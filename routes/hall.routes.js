@@ -990,30 +990,40 @@ router.route('/:id/bookings')
  *                   items:
  *                      type: object
  *                      properties:
- *                          startTime:
- *                              type: string
- *                              format: date-time
- *                          endTime:
- *                              type: string
- *                              format: date-time
- *                          reason:
- *                              type: string
- *                          eventTime:
- *                              type: object
- *                              properties:
- *                                  startTime:
- *                                      type: string
- *                                      format: date-time
- *                                  endTime:
- *                                      type: string
- *                                      format: date-time
- *                   example:
- *                      - startTime: "2026-03-04T08:00:00.000Z"
- *                        endTime: "2026-03-04T15:00:00.000Z"
- *                        reason: "Confirmed Booking"
+ *                        reason:
+ *                          type: string
+ *                          example: "Confirmed Booking"
  *                        eventTime:
- *                           startTime: "2026-03-04T10:00:00.000Z"
- *                           endTime: "2026-03-04T13:00:00.000Z"
+ *                          type: object
+ *                          properties:
+ *                            startTime:
+ *                              type: string
+ *                              format: date-time
+ *                              example: "2026-03-04T10:00:00.000Z"
+ *                            endTime:
+ *                              type: string
+ *                              format: date-time
+ *                              example: "2026-03-04T13:00:00.000Z"
+ *                        bufferTime:
+ *                          type: object
+ *                          description: "The full unavailable time slot, including the buffer before and after the event."
+ *                          properties:
+ *                            startTime:
+ *                              type: string
+ *                              format: date-time
+ *                              example: "2026-03-04T08:00:00.000Z"
+ *                            endTime:
+ *                              type: string
+ *                              format: date-time
+ *                              example: "2026-03-04T15:00:00.000Z"
+ *                   example:
+ *                     - reason: "Confirmed Booking"
+ *                       eventTime:
+ *                         startTime: "2026-03-04T10:00:00.000Z"
+ *                         endTime: "2026-03-04T13:00:00.000Z"
+ *                       bufferTime:
+ *                         startTime: "2026-03-04T08:00:00.000Z"
+ *                         endTime: "2026-03-04T15:00:00.000Z"
  *                 message:
  *                   type: string
  *                   example: "Unavailable dates fetched successfully."
