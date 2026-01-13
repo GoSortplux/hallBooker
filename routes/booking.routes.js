@@ -498,6 +498,10 @@ router.route('/my-bookings')
  *                               type: string
  *                             fullAddress:
  *                               type: string
+ *                             location:
+ *                               type: string
+ *                             directionUrl:
+ *                               type: string
  *                 message:
  *                   type: string
  *                   example: "Booking retrieved successfully"

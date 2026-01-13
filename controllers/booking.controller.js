@@ -734,7 +734,7 @@ const getBookingByBookingId = asyncHandler(async (req, res) => {
     let item = await Booking.findOne({ bookingId })
         .populate('user', 'fullName email phone')
         .populate('bookedBy', 'fullName email phone')
-        .populate('hall', 'name fullAddress')
+        .populate('hall', 'name fullAddress location directionUrl')
         .populate('selectedFacilities.facility');
 
     let message = "Booking details fetched.";
@@ -743,7 +743,7 @@ const getBookingByBookingId = asyncHandler(async (req, res) => {
         item = await Reservation.findOne({ reservationId: bookingId })
             .populate('user', 'fullName email phone')
             .populate('reservedBy', 'fullName email phone')
-            .populate('hall', 'name fullAddress')
+            .populate('hall', 'name fullAddress location directionUrl')
             .populate('selectedFacilities.facility');
         message = "Reservation details fetched.";
     }
