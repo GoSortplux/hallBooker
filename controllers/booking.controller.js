@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
-import { Reservation } from '../models/reservation.model.js'; // For checking reservations
+import { Reservation } from '../models/reservation.model.js';
 import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
 import Setting from '../models/setting.model.js';
@@ -729,34 +729,56 @@ const cancelBooking = asyncHandler(async (req, res) => {
 });
 
 const getBookingByBookingId = asyncHandler(async (req, res) => {
-    const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId })
+    const { bookingId } = req.params; // This can be a bookingId or a reservationId
+
+    let item = await Booking.findOne({ bookingId })
         .populate('user', 'fullName email phone')
         .populate('bookedBy', 'fullName email phone')
         .populate('hall', 'name fullAddress')
         .populate('selectedFacilities.facility');
 
-    if (!booking) throw new ApiError(404, "Booking not found");
+    let message = "Booking details fetched.";
 
-    if (req.user.activeRole === 'user' && (!booking.user || booking.user._id.toString() !== req.user._id.toString())) {
-        throw new ApiError(403, "You are not authorized to view this booking.");
+    if (!item) {
+        item = await Reservation.findOne({ reservationId: bookingId })
+            .populate('user', 'fullName email phone')
+            .populate('reservedBy', 'fullName email phone')
+            .populate('hall', 'name fullAddress')
+            .populate('selectedFacilities.facility');
+        message = "Reservation details fetched.";
     }
 
+    if (!item) {
+        throw new ApiError(404, "Booking or Reservation not found");
+    }
+
+    // Authorization check
+    if (req.user.activeRole === 'user') {
+        const userId = req.user._id.toString();
+        const entityUserId = item.user ? item.user._id.toString() : null;
+
+        // A user can only see their own bookings/reservations.
+        if (entityUserId !== userId) {
+            throw new ApiError(403, "You are not authorized to view this item.");
+        }
+    }
+    // Hall owners, staff, and super-admins can view it (as per the route's authorizeRoles middleware)
+
+    const itemObject = item.toObject();
+
+    // Calculate duration for both bookings and reservations as they share the bookingDates structure
     let durationInMilliseconds = 0;
-    if (booking.bookingDates && booking.bookingDates.length > 0) {
-      durationInMilliseconds = booking.bookingDates.reduce((total, dateRange) => {
+    if (item.bookingDates && item.bookingDates.length > 0) {
+      durationInMilliseconds = item.bookingDates.reduce((total, dateRange) => {
         const startTime = new Date(dateRange.startTime);
         const endTime = new Date(dateRange.endTime);
         return total + (endTime.getTime() - startTime.getTime());
       }, 0);
     }
-
     const durationInHours = durationInMilliseconds / (1000 * 60 * 60);
+    itemObject.durationInHours = durationInHours;
 
-    const bookingObject = booking.toObject();
-    bookingObject.durationInHours = durationInHours;
-
-    res.status(200).json(new ApiResponse(200, bookingObject, "Booking details fetched."));
+    res.status(200).json(new ApiResponse(200, itemObject, message));
 });
 
 export {
