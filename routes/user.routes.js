@@ -14,7 +14,8 @@ import {
     approveHallOwner,
     promoteToHallOwner,
     getMe,
-    requestAccountDeletion
+    requestAccountDeletion,
+    getUserBankAccount
 } from '../controllers/user.controller.js';
 
 const router = Router();
@@ -104,8 +105,28 @@ const router = Router();
  *         description: Unauthorized - JWT is missing or invalid.
  *       403:
  *         description: Forbidden - User is not a hall owner.
+ *   get:
+ *     summary: Get Hall Owner Bank Details (Hall Owner only)
+ *     description: Allows a hall owner to retrieve their own bank account details.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Bank account details retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized - JWT is missing or invalid.
+ *       403:
+ *         description: Forbidden - User is not a hall owner.
+ *       404:
+ *         description: Not Found - Bank account details not found.
  */
 router.route('/me/bank-details')
+    .get(verifyJWT, authorizeRoles('hall-owner'), getUserBankAccount)
     .patch(verifyJWT, authorizeRoles('hall-owner'), updateUserBankAccount);
 
 /**
