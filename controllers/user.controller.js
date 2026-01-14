@@ -264,6 +264,26 @@ const getMe = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, user, "User fetched successfully."));
 });
 
+const getUserBankAccount = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).select('+accountNumber +accountName +bankCode');
+
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    if (!user.accountNumber || !user.accountName || !user.bankCode) {
+        throw new ApiError(404, 'Bank account details not found for this user.');
+    }
+
+    const bankAccountDetails = {
+        accountNumber: user.accountNumber,
+        accountName: user.accountName,
+        bankCode: user.bankCode,
+    };
+
+    res.status(200).json(new ApiResponse(200, bankAccountDetails, "Bank account details retrieved successfully."));
+});
+
 export { 
     getAllUsers, 
     getUserById, 
@@ -278,7 +298,8 @@ export {
     approveHallOwner,
     promoteToHallOwner,
     getMe,
-    requestAccountDeletion
+    requestAccountDeletion,
+    getUserBankAccount
 };
 
 const requestAccountDeletion = asyncHandler(async (req, res) => {
