@@ -16,7 +16,7 @@ import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails, dates } = req.body;
+  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails, dates, overrideReservation } = req.body;
   const io = req.app.get('io');
 
   const authorizedRoles = ['super-admin', 'hall-owner', 'staff'];
@@ -89,42 +89,80 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'No booking dates could be generated with the provided rule.');
   }
 
-  const canOverrideReservation = ['super-admin', 'hall-owner', 'staff'].includes(req.user.role);
-  const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setHours(0, 0, 0, 0)));
+  const canOverrideReservation = ['super-admin', 'hall-owner', 'staff'].includes(req.user.activeRole);
+  const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0)));
+  const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
 
-  for (const date of bookingDates) {
+  const generatedBookingRanges = bookingDates.map(date => {
     const bookingStart = new Date(date);
     bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
     const bookingEnd = new Date(bookingStart.getTime() + eventDuration);
+    return { startTime: bookingStart, endTime: bookingEnd };
+  });
 
-    // Because the booking can span multiple days, we need to check each day for a reservation.
-    let checkDate = new Date(bookingStart);
-    while (checkDate <= bookingEnd) {
-        if (!canOverrideReservation && blockedDatesSet.has(new Date(checkDate).setHours(0, 0, 0, 0))) {
-            throw new ApiError(409, `The hall is reserved for ${checkDate.toDateString()} and cannot be booked.`);
+  for (const range of generatedBookingRanges) {
+    let checkDate = new Date(range.startTime);
+    while (checkDate <= range.endTime) {
+      if (blockedDatesSet.has(new Date(checkDate).setUTCHours(0, 0, 0, 0))) {
+        if (!canOverrideReservation || !overrideReservation) {
+          throw new ApiError(409, `The hall is reserved for ${checkDate.toDateString()} and cannot be booked. To proceed, an admin must use the 'overrideReservation' flag.`);
         }
-        checkDate.setDate(checkDate.getDate() + 1);
+      }
+      checkDate.setDate(checkDate.getDate() + 1);
     }
+  }
 
-    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
-    const bufferedBookingStart = new Date(bookingStart.getTime() - bufferMilliseconds);
-    const bufferedBookingEnd = new Date(bookingEnd.getTime() + bufferMilliseconds);
+  const isSameCustomer = (item) => {
+    const sameEmail = item.walkInUserDetails?.email && walkInUserDetails.email && item.walkInUserDetails.email === walkInUserDetails.email;
+    const samePhone = item.walkInUserDetails?.phone && walkInUserDetails.phone && item.walkInUserDetails.phone === walkInUserDetails.phone;
+    const sameUser = item.user && req.user._id && item.user.toString() === req.user._id.toString();
+    return sameEmail || samePhone || sameUser;
+  };
 
-    const existingBooking = await Booking.findOne({
-      hall: hallId,
-      $or: [
-            { status: 'confirmed' },
-            { paymentStatus: 'pending' }
-      ],
-        bookingDates: {
-            $elemMatch: {
-                startTime: { $lt: bufferedBookingEnd },
-                endTime: { $gt: bufferedBookingStart },
-            },
-        },
-    });
-    if (existingBooking) {
-        throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
+  const bufferedOrQuery = generatedBookingRanges.map(range => ({
+    bookingDates: {
+      $elemMatch: {
+        startTime: { $lt: new Date(range.endTime.getTime() + bufferMilliseconds) },
+        endTime: { $gt: new Date(range.startTime.getTime() - bufferMilliseconds) },
+      },
+    },
+  }));
+
+  // 1. Bulk Check Reservation Documents
+  const conflictingReservations = await Reservation.find({
+    hall: hallId,
+    status: 'ACTIVE',
+    $or: bufferedOrQuery
+  });
+
+  for (const resv of conflictingReservations) {
+    const hasHardOverlap = resv.bookingDates.some(rd =>
+      generatedBookingRanges.some(gr => gr.startTime < rd.endTime && gr.endTime > rd.startTime)
+    );
+    if (hasHardOverlap) {
+      throw new ApiError(409, "One or more dates conflict with an existing reservation.");
+    }
+    if (!isSameCustomer(resv)) {
+      throw new ApiError(409, "One or more dates are unavailable due to a required buffer period from a reservation.");
+    }
+  }
+
+  // 2. Bulk Check Booking Documents
+  const conflictingBookings = await Booking.find({
+    hall: hallId,
+    $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }],
+    $and: [{ $or: bufferedOrQuery }]
+  });
+
+  for (const book of conflictingBookings) {
+    const hasHardOverlap = book.bookingDates.some(bd =>
+      generatedBookingRanges.some(gr => gr.startTime < bd.endTime && gr.endTime > bd.startTime)
+    );
+    if (hasHardOverlap) {
+      throw new ApiError(409, "One or more dates conflict with an existing booking.");
+    }
+    if (!isSameCustomer(book)) {
+      throw new ApiError(409, "One or more dates are unavailable due to a required buffer period from an existing booking.");
     }
   }
 
@@ -248,15 +286,14 @@ const createBooking = asyncHandler(async (req, res) => {
     const newBookingStartTime = new Date(startTime);
     const newBookingEndTime = new Date(endTime);
 
-    // Check for reservations
-    const canOverrideReservation = ['super-admin', 'hall-owner', 'staff'].includes(req.user.role);
-    if (!canOverrideReservation && hall.blockedDates && hall.blockedDates.length > 0) {
+    // Check for admin blocked dates
+    if (hall.blockedDates && hall.blockedDates.length > 0) {
       const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0)));
       let currentDate = new Date(newBookingStartTime);
       while (currentDate <= newBookingEndTime) {
         const currentDay = new Date(currentDate).setUTCHours(0, 0, 0, 0);
         if (blockedDatesSet.has(currentDay)) {
-          throw new ApiError(400, `The hall is reserved for ${new Date(currentDate).toDateString()} and cannot be booked.`);
+          throw new ApiError(409, `The hall is reserved for ${new Date(currentDate).toDateString()} and cannot be booked.`);
         }
         currentDate.setDate(currentDate.getDate() + 1);
       }
@@ -276,6 +313,14 @@ const createBooking = asyncHandler(async (req, res) => {
   }
 
   const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
+
+  // Helper to check same user
+  const isSameUser = (item) => {
+    return (item.user && item.user.toString() === req.user._id.toString()) ||
+           (item.walkInUserDetails && item.walkInUserDetails.email === req.user.email);
+  };
+
+  // 1. Check Reservation Documents
   const reservationOrQuery = bookingDates.map(date => {
     const startTime = new Date(date.startTime);
     const endTime = new Date(date.endTime);
@@ -284,47 +329,58 @@ const createBooking = asyncHandler(async (req, res) => {
     return { 'bookingDates.startTime': { $lt: bufferedEndTime }, 'bookingDates.endTime': { $gt: bufferedStartTime } };
   });
 
-  const reservationConflictQuery = {
+  const conflictingReservations = await Reservation.find({
     hall: hallId,
     $or: reservationOrQuery,
     status: 'ACTIVE',
-  };
-  const conflictingReservation = await Reservation.findOne(reservationConflictQuery);
+  });
 
-  if (conflictingReservation && !overrideReservation) {
-    throw new ApiError(409, "This date is currently blocked by a reservation. To proceed, cancel the existing reservation or send the request again with an 'overrideReservation: true' flag.");
+  for (const resv of conflictingReservations) {
+    const hasHardOverlap = resv.bookingDates.some(rd =>
+      bookingDates.some(bd => new Date(bd.startTime) < new Date(rd.endTime) && new Date(bd.endTime) > new Date(rd.startTime))
+    );
+    if (hasHardOverlap) {
+      throw new ApiError(409, "This time slot conflicts with an existing reservation.");
+    }
+    if (!isSameUser(resv)) {
+      throw new ApiError(409, "This time slot is unavailable due to a conflicting reservation or its required buffer period.");
+    }
   }
 
-    const orQuery = bookingDates.map(bookingDate => {
-        const originalStartTime = new Date(bookingDate.startTime);
-        const originalEndTime = new Date(bookingDate.endTime);
+  // 2. Check Booking Documents
+  const orQuery = bookingDates.map(bookingDate => {
+    const bufferedStartTime = new Date(new Date(bookingDate.startTime).getTime() - bufferMilliseconds);
+    const bufferedEndTime = new Date(new Date(bookingDate.endTime).getTime() + bufferMilliseconds);
+    return {
+      bookingDates: {
+        $elemMatch: {
+          startTime: { $lt: bufferedEndTime },
+          endTime: { $gt: bufferedStartTime },
+        },
+      },
+    };
+  });
 
-        const bufferedStartTime = new Date(originalStartTime.getTime() - bufferMilliseconds);
-        const bufferedEndTime = new Date(originalEndTime.getTime() + bufferMilliseconds);
-        return {
-            bookingDates: {
-                $elemMatch: {
-                    startTime: { $lt: bufferedEndTime },
-                    endTime: { $gt: bufferedStartTime },
-                },
-            },
-        };
-    });
+  const conflictingBookings = await Booking.find({
+    hall: hallId,
+    $or: [
+      { status: 'confirmed' },
+      { paymentStatus: 'pending' }
+    ],
+    $and: [{ $or: orQuery }]
+  });
 
-    const existingBooking = await Booking.findOne({
-        hall: hallId,
-        $or: [
-            { status: 'confirmed' },
-            { paymentStatus: 'pending' }
-        ],
-        $and: [
-            { $or: orQuery }
-        ]
-    });
-
-    if (existingBooking) {
-        throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
+  for (const book of conflictingBookings) {
+    const hasHardOverlap = book.bookingDates.some(bd1 =>
+      bookingDates.some(bd2 => new Date(bd2.startTime) < new Date(bd1.endTime) && new Date(bd2.endTime) > new Date(bd1.startTime))
+    );
+    if (hasHardOverlap) {
+      throw new ApiError(409, "This time slot conflicts with an existing booking.");
     }
+    if (!isSameUser(book)) {
+      throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
+    }
+  }
 
   // Prepare facilities data for price calculation
   const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
@@ -341,9 +397,6 @@ const createBooking = asyncHandler(async (req, res) => {
   session.startTransaction();
 
   try {
-    if (conflictingReservation && overrideReservation) {
-      await Reservation.findByIdAndDelete(conflictingReservation._id, { session });
-    }
     const bookingId = await generateBookingId(hall.name);
     const bookingData = {
       bookingId,
@@ -498,6 +551,21 @@ const walkInBooking = asyncHandler(async (req, res) => {
     const newBookingStartTime = new Date(startTime);
     const newBookingEndTime = new Date(endTime);
 
+    // Check for admin blocked dates
+    if (hall.blockedDates && hall.blockedDates.length > 0) {
+      const blockedDatesSet = new Set(hall.blockedDates.map(d => new Date(d).setUTCHours(0, 0, 0, 0)));
+      let currentDate = new Date(newBookingStartTime);
+      while (currentDate <= newBookingEndTime) {
+        const currentDay = new Date(currentDate).setUTCHours(0, 0, 0, 0);
+        if (blockedDatesSet.has(currentDay)) {
+          if (!overrideReservation) {
+            throw new ApiError(409, `The hall is reserved for ${new Date(currentDate).toDateString()} and cannot be booked. To proceed, send the request again with an 'overrideReservation: true' flag.`);
+          }
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+
     if (newBookingStartTime < new Date()) {
       throw new ApiError(400, 'Booking must be in the future.');
     }
@@ -510,37 +578,76 @@ const walkInBooking = asyncHandler(async (req, res) => {
     }
   }
 
-    const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
-    const orQuery = bookingDates.map(bookingDate => {
-        const originalStartTime = new Date(bookingDate.startTime);
-        const originalEndTime = new Date(bookingDate.endTime);
+  const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
 
-        const bufferedStartTime = new Date(originalStartTime.getTime() - bufferMilliseconds);
-        const bufferedEndTime = new Date(originalEndTime.getTime() + bufferMilliseconds);
-        return {
-            bookingDates: {
-                $elemMatch: {
-                    startTime: { $lt: bufferedEndTime },
-                    endTime: { $gt: bufferedStartTime },
-                },
-            },
-        };
-    });
+  // Helper to check same customer for walk-in
+  const isSameCustomer = (item) => {
+    const sameEmail = item.walkInUserDetails?.email && walkInUserDetails.email && item.walkInUserDetails.email === walkInUserDetails.email;
+    const samePhone = item.walkInUserDetails?.phone && walkInUserDetails.phone && item.walkInUserDetails.phone === walkInUserDetails.phone;
+    return sameEmail || samePhone;
+  };
 
-    const existingBooking = await Booking.findOne({
-        hall: hallId,
-        $or: [
-            { status: 'confirmed' },
-            { paymentStatus: 'pending' }
-        ],
-        $and: [
-            { $or: orQuery }
-        ]
-    });
+  // 1. Check Reservation Documents
+  const reservationOrQuery = bookingDates.map(date => {
+    const startTime = new Date(date.startTime);
+    const endTime = new Date(date.endTime);
+    const bufferedStartTime = new Date(startTime.getTime() - bufferMilliseconds);
+    const bufferedEndTime = new Date(endTime.getTime() + bufferMilliseconds);
+    return { 'bookingDates.startTime': { $lt: bufferedEndTime }, 'bookingDates.endTime': { $gt: bufferedStartTime } };
+  });
 
-    if (existingBooking) {
-        throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
+  const conflictingReservations = await Reservation.find({
+    hall: hallId,
+    $or: reservationOrQuery,
+    status: 'ACTIVE',
+  });
+
+  for (const resv of conflictingReservations) {
+    const hasHardOverlap = resv.bookingDates.some(rd =>
+      bookingDates.some(bd => new Date(bd.startTime) < new Date(rd.endTime) && new Date(bd.endTime) > new Date(rd.startTime))
+    );
+    if (hasHardOverlap) {
+      throw new ApiError(409, "This time slot conflicts with an existing reservation.");
     }
+    if (!isSameCustomer(resv)) {
+      throw new ApiError(409, "This time slot is unavailable due to a conflicting reservation or its required buffer period.");
+    }
+  }
+
+  // 2. Check Booking Documents
+  const orQuery = bookingDates.map(bookingDate => {
+    const bufferedStartTime = new Date(new Date(bookingDate.startTime).getTime() - bufferMilliseconds);
+    const bufferedEndTime = new Date(new Date(bookingDate.endTime).getTime() + bufferMilliseconds);
+    return {
+      bookingDates: {
+        $elemMatch: {
+          startTime: { $lt: bufferedEndTime },
+          endTime: { $gt: bufferedStartTime },
+        },
+      },
+    };
+  });
+
+  const conflictingBookings = await Booking.find({
+    hall: hallId,
+    $or: [
+      { status: 'confirmed' },
+      { paymentStatus: 'pending' }
+    ],
+    $and: [{ $or: orQuery }]
+  });
+
+  for (const book of conflictingBookings) {
+    const hasHardOverlap = book.bookingDates.some(bd1 =>
+      bookingDates.some(bd2 => new Date(bd2.startTime) < new Date(bd1.endTime) && new Date(bd2.endTime) > new Date(bd1.startTime))
+    );
+    if (hasHardOverlap) {
+      throw new ApiError(409, "This time slot conflicts with an existing booking.");
+    }
+    if (!isSameCustomer(book)) {
+      throw new ApiError(409, "This time slot is unavailable due to a conflicting booking or its required buffer period.");
+    }
+  }
 
   const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
     const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
