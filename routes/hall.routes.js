@@ -992,9 +992,12 @@ router.route('/:id/bookings')
  *                      properties:
  *                        reason:
  *                          type: string
- *                          example: "Confirmed Booking"
+ *                          description: "The reason for the unavailability."
+ *                          enum: ["Confirmed Booking", "Pending Booking", "Pending Reservation", "Blocked Date"]
+ *                          example: "Blocked Date"
  *                        eventTime:
  *                          type: object
+ *                          description: "The actual start and end time of the event. For a 'Blocked Date', this covers the full day."
  *                          properties:
  *                            startTime:
  *                              type: string
@@ -1006,7 +1009,7 @@ router.route('/:id/bookings')
  *                              example: "2026-03-04T13:00:00.000Z"
  *                        bufferTime:
  *                          type: object
- *                          description: "The full unavailable time slot, including the buffer before and after the event."
+ *                          description: "The full unavailable time slot, including the buffer before and after the event. For a 'Blocked Date', this is the same as eventTime."
  *                          properties:
  *                            startTime:
  *                              type: string
@@ -1017,13 +1020,13 @@ router.route('/:id/bookings')
  *                              format: date-time
  *                              example: "2026-03-04T15:00:00.000Z"
  *                   example:
- *                     - reason: "Confirmed Booking"
+ *                     - reason: "Blocked Date"
  *                       eventTime:
- *                         startTime: "2026-03-04T10:00:00.000Z"
- *                         endTime: "2026-03-04T13:00:00.000Z"
+ *                         startTime: "2026-03-05T00:00:00.000Z"
+ *                         endTime: "2026-03-05T23:59:59.999Z"
  *                       bufferTime:
- *                         startTime: "2026-03-04T08:00:00.000Z"
- *                         endTime: "2026-03-04T15:00:00.000Z"
+ *                         startTime: "2026-03-05T00:00:00.000Z"
+ *                         endTime: "2026-03-05T23:59:59.999Z"
  *                 message:
  *                   type: string
  *                   example: "Unavailable dates fetched successfully."
