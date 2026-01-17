@@ -429,28 +429,31 @@ const getPerHallBreakdownAnalytics = async (halls, startDate, endDate) => {
 };
 
 
-// @desc    Get analytics for the current hall owner
+// @desc    Get analytics for the current hall owner or staff
 // @route   GET /api/v2/analytics/hall-owner
-// @access  Private (Hall Owner)
+// @access  Private (Hall Owner, Staff)
 const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
-  const ownerId = req.user._id;
+  const userId = req.user._id;
+  const activeRole = req.user.activeRole;
   const { startDate, endDate } = getDateRange(req.query);
   const { hallId: specificHallId } = req.query;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
 
-  // 1. Get all halls for the owner
-  const allOwnerHalls = await Hall.find({ owner: ownerId }).select('_id name openingHour closingHour');
+  // 1. Get all accessible halls based on role
+  const query = activeRole === 'staff' ? { staff: userId } : { owner: userId };
+  const accessibleHalls = await Hall.find(query).select('_id name openingHour closingHour');
 
-  if (allOwnerHalls.length === 0) {
+  if (accessibleHalls.length === 0) {
+    const roleDisplay = activeRole === 'hall-owner' ? 'owner' : 'staff';
     return res
       .status(200)
-      .json(new ApiResponse(200, {}, 'No halls found for this owner.'));
+      .json(new ApiResponse(200, {}, `No halls found for this ${roleDisplay}.`));
   }
 
   const targetHalls = specificHallId
-    ? allOwnerHalls.filter(h => h._id.toString() === specificHallId)
-    : allOwnerHalls;
+    ? accessibleHalls.filter(h => h._id.toString() === specificHallId)
+    : accessibleHalls;
 
   const targetHallIds = targetHalls.map(h => h._id);
 
@@ -462,7 +465,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
     totalBookingsCount,
   ] = await Promise.all([
     calculateHallAnalytics(targetHallIds, startDate, endDate, targetHalls),
-    getPerHallBreakdownAnalytics(allOwnerHalls, startDate, endDate),
+    getPerHallBreakdownAnalytics(accessibleHalls, startDate, endDate),
     Booking.aggregate([
         { $match: { hall: { $in: targetHallIds }, paymentStatus: 'paid', createdAt: { $gte: startDate, $lte: endDate } } },
         { $group: { _id: '$hall', hallRevenue: { $sum: '$hallPrice' }, facilityRevenue: { $sum: '$facilitiesPrice' } } },
@@ -503,7 +506,7 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
             },
             breakdownByHall: finalBreakdown
         },
-        'Hall owner analytics fetched successfully.'
+        'Analytics fetched successfully.'
       )
     );
 });
