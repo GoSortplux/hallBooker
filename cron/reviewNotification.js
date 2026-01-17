@@ -11,10 +11,16 @@ const scheduleReviewNotifications = (io) => {
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+      // Find bookings where all bookingDates.endTime are older than 24 hours ago
       const bookings = await Booking.find({
-        endTime: { $lt: twentyFourHoursAgo },
+        status: 'confirmed',
         paymentStatus: 'paid',
         reviewNotificationSent: false,
+        bookingDates: {
+          $not: {
+            $elemMatch: { endTime: { $gte: twentyFourHoursAgo } }
+          }
+        }
       })
         .populate('user')
         .populate('hall');
