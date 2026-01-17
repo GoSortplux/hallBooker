@@ -14,16 +14,38 @@ const createReview = asyncHandler(async (req, res) => {
   const booking = await Booking.findOne({
     _id: bookingId,
     user: req.user._id,
-    hall: hallId,
-    paymentStatus: 'paid',
-    endTime: { $lt: new Date() }
+    hall: hallId
   });
-  if (!booking) throw new ApiError(403, "You can only review halls you have booked and attended.");
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found or you are not authorized to review it.");
+  }
+
+  if (booking.status !== 'confirmed') {
+    throw new ApiError(403, "You can only review confirmed bookings.");
+  }
+
+  if (booking.paymentStatus !== 'paid') {
+    throw new ApiError(403, "You can only review bookings that have been fully paid.");
+  }
+
+  // Get the latest endTime from bookingDates
+  const lastBookingDate = booking.bookingDates.reduce((latest, current) => {
+    return (new Date(current.endTime) > new Date(latest.endTime)) ? current : latest;
+  }, booking.bookingDates[0]);
+
+  if (new Date(lastBookingDate.endTime) > new Date()) {
+    throw new ApiError(403, "You can only review halls after the event has ended.");
+  }
 
   const existingReview = await Review.findOne({ booking: bookingId });
   if (existingReview) throw new ApiError(400, "You have already submitted a review for this booking.");
 
   const review = await Review.create({ rating, comment, hall: hallId, user: req.user._id, booking: bookingId });
+
+  // Mark review notification as sent to prevent automated emails
+  booking.reviewNotificationSent = true;
+  await booking.save();
 
   const hall = await Hall.findById(hallId);
   const io = req.app.get('io');
