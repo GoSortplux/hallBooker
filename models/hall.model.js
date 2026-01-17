@@ -119,6 +119,18 @@ const hallSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    suitableFor: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Suitability',
+      },
+    ],
+    rules: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
   },
   {
     timestamps: true,
