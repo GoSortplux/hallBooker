@@ -678,7 +678,7 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
 
                 // Check if the buffered slot overlaps with the query range
                 if (bufferedStartTime <= queryEndDate && bufferedEndTime >= queryStartDate) {
-                    let reason = "Reservation";
+                    let reason = "Pending Reservation"; // Set a default reason for reservations
                      if (type === 'booking') {
                         reason = item.status === 'confirmed' ? 'Confirmed Booking' : 'Pending Booking';
                     }
@@ -701,6 +701,31 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
 
     processItems(bookings, 'booking');
     processItems(reservations, 'reservation');
+
+    // Process admin-blocked dates from the Hall model
+    hall.blockedDates.forEach(blockedDate => {
+        const date = new Date(blockedDate);
+
+        // Ensure the date is treated as UTC
+        const eventStartTime = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+        const eventEndTime = new Date(eventStartTime.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+        // Check if the blocked date is within the query range
+        if (eventStartTime <= queryEndDate && eventEndTime >= queryStartDate) {
+            unavailableSlots.push({
+                reason: 'Blocked Date',
+                eventTime: {
+                    startTime: eventStartTime.toISOString(),
+                    endTime: eventEndTime.toISOString(),
+                },
+                // For a full-day block, buffer time is the same as event time
+                bufferTime: {
+                    startTime: eventStartTime.toISOString(),
+                    endTime: eventEndTime.toISOString(),
+                },
+            });
+        }
+    });
 
     return res.status(200).json(new ApiResponse(200, unavailableSlots, "Unavailable dates fetched successfully."));
 });
