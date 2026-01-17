@@ -21,9 +21,10 @@ router.use(verifyJWT);
  * @swagger
  * /api/v2/analytics/hall-owner:
  *   get:
- *     summary: Get enhanced analytics for the current hall owner
+ *     summary: Get enhanced analytics for the current hall owner or staff
  *     description: |
- *       Retrieves a comprehensive analytics dashboard for the currently authenticated hall owner.
+ *       Retrieves a comprehensive analytics dashboard for the currently authenticated hall owner or staff member.
+ *       Hall owners see analytics for all their halls, while staff see analytics for halls they are assigned to.
  *       The data can be filtered by a date range. If no date range is provided, it defaults to the last 7 days.
  *     tags: [Analytics V2]
  *     security:
@@ -60,7 +61,7 @@ router.use(verifyJWT);
  *         description: "Optional. Filter KPIs by a specific hall ID."
  *     responses:
  *       200:
- *         description: Hall owner analytics fetched successfully.
+ *         description: Analytics fetched successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -68,11 +69,11 @@ router.use(verifyJWT);
  *       401:
  *         description: Unauthorized - JWT is missing or invalid.
  *       403:
- *         description: Forbidden - User is not a hall-owner.
+ *         description: Forbidden - User is not a hall-owner or staff.
  */
 router
   .route('/hall-owner')
-  .get(authorizeRoles('hall-owner'), getHallOwnerAnalytics);
+  .get(authorizeRoles('hall-owner', 'staff'), getHallOwnerAnalytics);
 
 /**
  * @swagger
