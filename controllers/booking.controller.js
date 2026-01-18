@@ -4,6 +4,7 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { Reservation } from '../models/reservation.model.js';
+import { Review } from '../models/review.model.js';
 import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
 import Setting from '../models/setting.model.js';
@@ -765,8 +766,36 @@ const walkInBooking = asyncHandler(async (req, res) => {
 });
 
 const getMyBookings = asyncHandler(async (req, res) => {
-    const bookings = await Booking.find({ user: req.user._id }).populate('hall', 'name location').populate('selectedFacilities.facility');
-    res.status(200).json(new ApiResponse(200, bookings, "User bookings fetched successfully."));
+    const bookings = await Booking.find({ user: req.user._id })
+        .populate('hall', 'name location')
+        .populate('selectedFacilities.facility');
+
+    const bookingIds = bookings.map((b) => b._id);
+    const reviews = await Review.find({ booking: { $in: bookingIds } }).select(
+        'rating comment booking'
+    );
+
+    const reviewMap = reviews.reduce((acc, review) => {
+        acc[review.booking.toString()] = {
+            rating: review.rating,
+            comment: review.comment,
+        };
+        return acc;
+    }, {});
+
+    const bookingsWithReviews = bookings.map((booking) => {
+        const bookingObj = booking.toObject();
+        bookingObj.review = reviewMap[booking._id.toString()] || null;
+        return bookingObj;
+    });
+
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            bookingsWithReviews,
+            'User bookings fetched successfully.'
+        )
+    );
 });
 
 const getBookingById = asyncHandler(async (req, res) => {
