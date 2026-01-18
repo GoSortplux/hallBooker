@@ -435,7 +435,18 @@ router.route('/walk-in')
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Booking'
+ *                     allOf:
+ *                       - $ref: '#/components/schemas/Booking'
+ *                       - type: object
+ *                         properties:
+ *                           review:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               rating:
+ *                                 type: number
+ *                               comment:
+ *                                 type: string
  *                 message:
  *                   type: string
  *                   example: "Bookings retrieved successfully"
