@@ -66,28 +66,8 @@ const deleteFromCloudinary = async (publicUrl) => {
 const generateUploadSignature = async () => {
   const timestamp = Math.round(new Date().getTime() / 1000);
 
-  const companyNameSetting = await Setting.findOne({ key: 'companyName' });
-  const companyName = companyNameSetting ? companyNameSetting.value : 'Gobokin';
-
-  const watermarkText = ` ${companyName} `;
-
-  const transformation = [
-    {
-      overlay: {
-        font_family: 'Arial',
-        font_size: 40,
-        font_weight: 'bold',
-        text: watermarkText,
-      },
-      color: '#B0B0B0', // Light grey
-      opacity: 30,
-      gravity: 'center',
-    },
-  ];
-
   const paramsToSign = {
     timestamp: timestamp,
-    transformation: JSON.stringify(transformation),
   };
 
   const signature = cloudinary.utils.api_sign_request(
@@ -95,7 +75,36 @@ const generateUploadSignature = async () => {
     process.env.CLOUDINARY_API_SECRET
   );
 
-  return { timestamp, signature, transformation: JSON.stringify(transformation) };
+  return { timestamp, signature };
 };
 
-export { uploadOnCloudinary, deleteFromCloudinary, generateUploadSignature };
+const applyWatermark = async (publicUrl, resourceType = 'image') => {
+  try {
+    if (!publicUrl) return null;
+
+    const urlParts = publicUrl.split('/');
+    const uploadIndex = urlParts.indexOf('upload');
+    if (uploadIndex === -1) return publicUrl;
+
+    const companyNameSetting = await Setting.findOne({ key: 'companyName' });
+    const companyName = companyNameSetting ? companyNameSetting.value : 'Gobokin';
+
+    // Cloudinary transformation string for text overlay
+    // Format: l_text:font_size_style:text,co_rgb:color,o_opacity,g_gravity
+    const watermarkText = encodeURIComponent(companyName);
+    const transformation = `l_text:Arial_40_bold:${watermarkText},co_rgb:B0B0B0,o_30,g_center`;
+
+    urlParts.splice(uploadIndex + 1, 0, transformation);
+    return urlParts.join('/');
+  } catch (error) {
+    console.error('Cloudinary watermark error:', error);
+    return publicUrl;
+  }
+};
+
+export {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+  generateUploadSignature,
+  applyWatermark,
+};
