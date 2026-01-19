@@ -71,7 +71,7 @@ const toggleOnlineBooking = asyncHandler(async (req, res) => {
 
 
 const createHall = asyncHandler(async (req, res) => {
-    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules } = req.body;
+    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules, images, videos } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
@@ -91,7 +91,10 @@ const createHall = asyncHandler(async (req, res) => {
 
     const geocodedData = await geocoder.geocode(location);
 
-    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules };
+    const watermarkedImages = images ? await applyWatermark(images, 'image') : [];
+    const watermarkedVideos = videos ? await applyWatermark(videos, 'video') : [];
+
+    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules, images: watermarkedImages, videos: watermarkedVideos };
 
     if (geocodedData.length > 0) {
         hallData.geoLocation = {
@@ -226,6 +229,15 @@ const updateHall = asyncHandler(async (req, res) => {
     // Separate facility details from the rest of the body.
     // This allows for adding/updating a single facility via the PATCH endpoint.
     const { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit, ...otherDetails } = req.body;
+
+    if (otherDetails.images) {
+        otherDetails.images = await applyWatermark(otherDetails.images, 'image');
+    }
+
+    if (otherDetails.videos) {
+        otherDetails.videos = await applyWatermark(otherDetails.videos, 'video');
+    }
+
     const { location, allowRecurringBookings, recurringBookingDiscount, facilities, suitableFor, rules } = otherDetails;
 
     // Prevent owner field from being updated
