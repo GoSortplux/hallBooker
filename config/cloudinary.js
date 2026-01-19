@@ -78,9 +78,15 @@ const generateUploadSignature = async () => {
   return { timestamp, signature };
 };
 
-const applyWatermark = async (publicUrl, resourceType = 'image') => {
+const applyWatermark = async (input, resourceType = 'image') => {
   try {
-    if (!publicUrl) return null;
+    if (!input) return input;
+
+    if (Array.isArray(input)) {
+      return Promise.all(input.map((url) => applyWatermark(url, resourceType)));
+    }
+
+    const publicUrl = input;
 
     // Check if the URL is from Cloudinary and not already watermarked
     const urlParts = publicUrl.split('/');
@@ -98,7 +104,8 @@ const applyWatermark = async (publicUrl, resourceType = 'image') => {
 
     // We use a slightly larger font and higher opacity for visibility
     // while keeping it in the corner (south_east) to avoid distraction.
-    let transformation = `l_text:Arial_60_bold:${watermarkText},co_rgb:B0B0B0,o_50,g_south_east,x_20,y_20`;
+    // Adding a black border (bo_2px_solid_black) ensures visibility on any background.
+    let transformation = `l_text:Arial_60_bold:${watermarkText},co_white,bo_2px_solid_black,o_90,g_south_east,x_20,y_20`;
 
     // For videos, we need fl_layer_apply to correctly place the overlay
     if (resourceType === 'video') {
