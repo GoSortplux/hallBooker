@@ -82,19 +82,33 @@ const applyWatermark = async (publicUrl, resourceType = 'image') => {
   try {
     if (!publicUrl) return null;
 
+    // Check if the URL is from Cloudinary and not already watermarked
     const urlParts = publicUrl.split('/');
     const uploadIndex = urlParts.indexOf('upload');
-    if (uploadIndex === -1) return publicUrl;
+    if (uploadIndex === -1 || publicUrl.includes('l_text:')) {
+      return publicUrl;
+    }
 
     const companyNameSetting = await Setting.findOne({ key: 'companyName' });
     const companyName = companyNameSetting ? companyNameSetting.value : 'Gobokin';
 
     // Cloudinary transformation string for text overlay
-    // Format: l_text:font_size_style:text,co_rgb:color,o_opacity,g_gravity
+    // Format: l_text:font_family_size_style:text,co_rgb:color,o_opacity,g_gravity,x,y
     const watermarkText = encodeURIComponent(companyName);
-    const transformation = `l_text:Arial_40_bold:${watermarkText},co_rgb:B0B0B0,o_30,g_center`;
 
-    urlParts.splice(uploadIndex + 1, 0, transformation);
+    // We use a slightly larger font and higher opacity for visibility
+    // while keeping it in the corner (south_east) to avoid distraction.
+    let transformation = `l_text:Arial_60_bold:${watermarkText},co_rgb:B0B0B0,o_50,g_south_east,x_20,y_20`;
+
+    // For videos, we need fl_layer_apply to correctly place the overlay
+    if (resourceType === 'video') {
+      transformation += '/fl_layer_apply';
+    }
+
+    // Insert optimization (f_auto, q_auto) and the watermark transformation
+    // We add them as separate segments after 'upload'
+    urlParts.splice(uploadIndex + 1, 0, 'f_auto,q_auto', transformation);
+
     return urlParts.join('/');
   } catch (error) {
     console.error('Cloudinary watermark error:', error);
