@@ -104,8 +104,7 @@ const applyWatermark = async (input, resourceType = 'image') => {
 
     // We use a slightly larger font and higher opacity for visibility
     // while keeping it in the corner (south_east) to avoid distraction.
-    // Adding a black border (bo_2px_solid_black) ensures visibility on any background.
-    let transformation = `l_text:Arial_60_bold:${watermarkText},co_white,bo_2px_solid_black,o_90,g_south_east,x_20,y_20`;
+    let transformation = `l_text:Arial_60_bold:${watermarkText},co_white,o_90,g_south_east,x_20,y_20`;
 
     // For videos, we need fl_layer_apply to correctly place the overlay
     if (resourceType === 'video') {
