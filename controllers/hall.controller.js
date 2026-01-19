@@ -14,6 +14,7 @@ import {
   uploadOnCloudinary,
   deleteFromCloudinary,
   generateUploadSignature,
+  applyWatermark,
 } from '../config/cloudinary.js';
 
 import sendEmail from '../services/email.service.js';
@@ -399,11 +400,13 @@ const addHallMedia = asyncHandler(async (req, res) => {
     if (hall.images.length >= 6) {
       throw new ApiError(400, 'Cannot add more than 6 images.');
     }
-    hall.images.push(imageUrl);
+    const watermarkedUrl = await applyWatermark(imageUrl, 'image');
+    hall.images.push(watermarkedUrl || imageUrl);
   }
 
   if (videoUrl) {
-    hall.videos.push(videoUrl);
+    const watermarkedUrl = await applyWatermark(videoUrl, 'video');
+    hall.videos.push(watermarkedUrl || videoUrl);
   }
 
   await hall.save({ validateBeforeSave: true });
@@ -496,7 +499,7 @@ const getRecommendedHalls = asyncHandler(async (req, res) => {
 });
 
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
-  const { timestamp, signature, transformation } = await generateUploadSignature();
+  const { timestamp, signature } = await generateUploadSignature();
 
   res.status(200).json(
     new ApiResponse(
@@ -504,7 +507,6 @@ const generateCloudinarySignature = asyncHandler(async (req, res) => {
       {
         timestamp,
         signature,
-        transformation,
         cloudname: process.env.CLOUDINARY_CLOUD_NAME,
         apikey: process.env.CLOUDINARY_API_KEY,
       },
