@@ -17,7 +17,7 @@ import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
-  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails, dates, overrideReservation } = req.body;
+  const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails, dates, overrideReservation, selectedFacilities: selectedFacilitiesData } = req.body;
   const io = req.app.get('io');
 
   const authorizedRoles = ['super-admin', 'hall-owner', 'staff'];
@@ -167,15 +167,34 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice } = calculateBookingPriceAndValidate([{ startTime: initialStartTime, endTime: initialEndTime }], hall.pricing);
+  // Prepare facilities data for price calculation
+  const facilitiesToPrice = selectedFacilitiesData?.map(sf => {
+    const hallFacility = hall.facilities.find(f => f.facility._id.toString() === sf.facilityId);
+    if (!hallFacility) {
+      throw new ApiError(404, `Facility with ID ${sf.facilityId} not found in this hall.`);
+    }
+    return { ...hallFacility.toObject(), requestedQuantity: sf.quantity };
+  }) || [];
+
+  const { totalPrice: singleBookingPrice, hallPrice: singleBookingHallPrice, facilitiesPrice: singleBookingFacilitiesPrice, facilitiesWithCalculatedCosts } = calculateBookingPriceAndValidate([{ startTime: initialStartTime, endTime: initialEndTime }], hall.pricing, facilitiesToPrice);
   let finalPricePerBooking = singleBookingPrice;
   let finalHallPricePerBooking = singleBookingHallPrice;
   let finalFacilitiesPricePerBooking = singleBookingFacilitiesPrice;
 
   if (hall.recurringBookingDiscount.percentage > 0 && bookingDates.length >= hall.recurringBookingDiscount.minBookings) {
-    finalPricePerBooking = singleBookingPrice * (1 - hall.recurringBookingDiscount.percentage / 100);
-    finalHallPricePerBooking = singleBookingHallPrice * (1 - hall.recurringBookingDiscount.percentage / 100);
-    finalFacilitiesPricePerBooking = singleBookingFacilitiesPrice * (1 - hall.recurringBookingDiscount.percentage / 100);
+    const discountFactor = (1 - hall.recurringBookingDiscount.percentage / 100);
+
+    finalHallPricePerBooking = Math.round((singleBookingHallPrice * discountFactor) * 100) / 100;
+
+    // Apply discount to each facility cost and ensure the sum matches finalFacilitiesPricePerBooking
+    let totalDiscountedFacilitiesPrice = 0;
+    facilitiesWithCalculatedCosts.forEach(facility => {
+      facility.cost = Math.round((facility.cost * discountFactor) * 100) / 100;
+      totalDiscountedFacilitiesPrice += facility.cost;
+    });
+
+    finalFacilitiesPricePerBooking = Math.round(totalDiscountedFacilitiesPrice * 100) / 100;
+    finalPricePerBooking = Math.round((finalHallPricePerBooking + finalFacilitiesPricePerBooking) * 100) / 100;
   }
 
   const session = await mongoose.startSession();
@@ -212,6 +231,10 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
         },
         isRecurring: true,
         recurringBookingId,
+        selectedFacilities: facilitiesWithCalculatedCosts.map((cf, idx) => ({
+          ...cf,
+          facility: selectedFacilitiesData[idx].facilityId,
+        })),
       };
       createdBookings.push(bookingData);
     }
