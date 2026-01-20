@@ -37,6 +37,7 @@ import locationRoutes from './routes/location.routes.js';
 import facilityRoutes from './routes/facility.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import monnifyRoutes from './routes/monnify.routes.js';
+import suitabilityRoutes from './routes/suitability.routes.js';
 
 
 // Load environment variables
@@ -110,6 +111,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1', recommendationRoutes);
 app.use('/api/v1/monnify', monnifyRoutes);
 app.use('/api/v1/reservations', reservationRoutes);
+app.use('/api/v1/suitabilities', suitabilityRoutes);
 
 
 

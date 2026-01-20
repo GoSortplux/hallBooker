@@ -14,6 +14,7 @@ import {
   uploadOnCloudinary,
   deleteFromCloudinary,
   generateUploadSignature,
+  applyWatermark,
 } from '../config/cloudinary.js';
 
 import sendEmail from '../services/email.service.js';
@@ -70,7 +71,7 @@ const toggleOnlineBooking = asyncHandler(async (req, res) => {
 
 
 const createHall = asyncHandler(async (req, res) => {
-    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount } = req.body;
+    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules, images, videos } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
@@ -90,7 +91,10 @@ const createHall = asyncHandler(async (req, res) => {
 
     const geocodedData = await geocoder.geocode(location);
 
-    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount };
+    const watermarkedImages = images ? await applyWatermark(images, 'image') : [];
+    const watermarkedVideos = videos ? await applyWatermark(videos, 'video') : [];
+
+    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules, images: watermarkedImages, videos: watermarkedVideos };
 
     if (geocodedData.length > 0) {
         hallData.geoLocation = {
@@ -137,12 +141,12 @@ const createHall = asyncHandler(async (req, res) => {
 });
 
 const getAllHalls = asyncHandler(async (req, res) => {
-    const halls = await Hall.find({ $or: [{ isListed: true }, { isListed: { $exists: false } }] }).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
+    const halls = await Hall.find({ $or: [{ isListed: true }, { isListed: { $exists: false } }] }).populate('owner', 'fullName').populate('country').populate('state').populate('localGovernment').populate('facilities.facility').populate('suitableFor');
     return res.status(200).json(new ApiResponse(200, halls, "Halls fetched successfully"));
 });
 
 const getHallById = asyncHandler(async (req, res) => {
-    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility');
+    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility').populate('suitableFor');
     if (!hall) throw new ApiError(404, "Hall not found");
 
     // If the hall is unlisted, verify user authorization
@@ -225,7 +229,16 @@ const updateHall = asyncHandler(async (req, res) => {
     // Separate facility details from the rest of the body.
     // This allows for adding/updating a single facility via the PATCH endpoint.
     const { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit, ...otherDetails } = req.body;
-    const { location, allowRecurringBookings, recurringBookingDiscount, facilities } = otherDetails;
+
+    if (otherDetails.images) {
+        otherDetails.images = await applyWatermark(otherDetails.images, 'image');
+    }
+
+    if (otherDetails.videos) {
+        otherDetails.videos = await applyWatermark(otherDetails.videos, 'video');
+    }
+
+    const { location, allowRecurringBookings, recurringBookingDiscount, facilities, suitableFor, rules } = otherDetails;
 
     // Prevent owner field from being updated
     if (otherDetails.owner) {
@@ -316,9 +329,62 @@ const updateHall = asyncHandler(async (req, res) => {
     // Apply other non-facility updates
     Object.assign(hall, otherDetails);
 
-    const updatedHall = await hall.save({ validateBeforeSave: true });
+    const updatedHall = await (await hall.save({ validateBeforeSave: true })).populate('suitableFor');
 
     return res.status(200).json(new ApiResponse(200, updatedHall, "Hall updated successfully"));
+});
+
+const getHallRules = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const hall = await Hall.findById(id).select('rules');
+
+    if (!hall) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, hall.rules, "Hall rules fetched successfully"));
+});
+
+const updateHallRules = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { rules } = req.body;
+
+    if (!Array.isArray(rules)) {
+        throw new ApiError(400, "Rules must be an array of strings");
+    }
+
+    const hall = await Hall.findByIdAndUpdate(
+        id,
+        { rules },
+        { new: true, runValidators: true }
+    ).select('rules');
+
+    if (!hall) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, hall.rules, "Hall rules updated successfully"));
+});
+
+const updateHallSuitability = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { suitableFor } = req.body;
+
+    if (!Array.isArray(suitableFor)) {
+        throw new ApiError(400, "suitabilityFor must be an array of category IDs");
+    }
+
+    const hall = await Hall.findByIdAndUpdate(
+        id,
+        { suitableFor },
+        { new: true, runValidators: true }
+    ).populate('suitableFor');
+
+    if (!hall) {
+        throw new ApiError(404, "Hall not found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, hall.suitableFor, "Hall suitability updated successfully"));
 });
 
 const deleteHall = asyncHandler(async (req, res) => {
@@ -346,11 +412,13 @@ const addHallMedia = asyncHandler(async (req, res) => {
     if (hall.images.length >= 6) {
       throw new ApiError(400, 'Cannot add more than 6 images.');
     }
-    hall.images.push(imageUrl);
+    const watermarkedUrl = await applyWatermark(imageUrl, 'image');
+    hall.images.push(watermarkedUrl || imageUrl);
   }
 
   if (videoUrl) {
-    hall.videos.push(videoUrl);
+    const watermarkedUrl = await applyWatermark(videoUrl, 'video');
+    hall.videos.push(watermarkedUrl || videoUrl);
   }
 
   await hall.save({ validateBeforeSave: true });
@@ -443,7 +511,7 @@ const getRecommendedHalls = asyncHandler(async (req, res) => {
 });
 
 const generateCloudinarySignature = asyncHandler(async (req, res) => {
-  const { timestamp, signature, transformation } = await generateUploadSignature();
+  const { timestamp, signature } = await generateUploadSignature();
 
   res.status(200).json(
     new ApiResponse(
@@ -451,7 +519,6 @@ const generateCloudinarySignature = asyncHandler(async (req, res) => {
       {
         timestamp,
         signature,
-        transformation,
         cloudname: process.env.CLOUDINARY_CLOUD_NAME,
         apikey: process.env.CLOUDINARY_API_KEY,
       },
@@ -626,6 +693,9 @@ export {
     bookDemo,
     getHallBookings,
     getUnavailableDates,
+    getHallRules,
+    updateHallRules,
+    updateHallSuitability,
 };
 
 const getUnavailableDates = asyncHandler(async (req, res) => {

@@ -173,6 +173,10 @@ const router = Router();
  *             format: date
  *           description: "An array of specific dates to book."
  *           example: ["2025-10-05", "2025-10-12", "2025-10-19"]
+ *         selectedFacilities:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/BookingFacilityInput'
  *
  *     WalkInBookingInput:
  *       type: object
@@ -257,6 +261,23 @@ router.use(verifyJWT);
  *                     description: "The current payment status."
  *                   walkInUserDetails:
  *                     $ref: '#/components/schemas/WalkInUserDetails'
+ *           example:
+ *             hallId: "60d0fe4f5311236168a109ca"
+ *             startTime: "2025-12-01T10:00:00.000Z"
+ *             endTime: "2025-12-01T14:00:00.000Z"
+ *             eventDetails: "Weekly Team Sync"
+ *             recurrenceRule:
+ *               frequency: "weekly"
+ *               daysOfWeek: [1]
+ *               endDate: "2026-01-01"
+ *             paymentMethod: "cash"
+ *             paymentStatus: "paid"
+ *             walkInUserDetails:
+ *               fullName: "John Doe"
+ *               phone: "08012345678"
+ *             selectedFacilities:
+ *               - facilityId: "60c72b2f9b1d8c001f8e4c6a"
+ *                 quantity: 2
  *     responses:
  *       201:
  *         description: Recurring booking created successfully.

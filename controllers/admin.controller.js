@@ -3,9 +3,15 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { Booking } from '../models/booking.model.js';
-
 import { Hall } from '../models/hall.model.js';
+import Setting from '../models/setting.model.js';
 import { createNotification } from '../services/notification.service.js';
+import sendEmail from '../services/email.service.js';
+import {
+  generateHallUnlistedEmailForOwner,
+  generateAccountDeletionApprovedEmailForUser,
+  generateAccountDeletionDeclinedEmailForUser,
+} from '../utils/emailTemplates.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
   const users = await User.find({ 'hallOwnerApplication.status': 'pending' }).select(
@@ -99,8 +105,6 @@ const rejectHallOwnerApplication = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, {}, 'Hall owner application rejected successfully'));
   });
-
-import Setting from '../models/setting.model.js';
 
 // Controller to add a new payment method
 const addPaymentMethod = asyncHandler(async (req, res) => {
@@ -284,7 +288,7 @@ const relistHall = asyncHandler(async (req, res) => {
 
 const getDeletionRequests = asyncHandler(async (req, res) => {
   const users = await User.find({ accountStatus: 'deletion-requested' }).select(
-    'fullName email phone deletionRequestDate'
+    'fullName email phone role deletionRequestDate'
   );
 
   res.status(200).json(new ApiResponse(200, users, 'Account deletion requests retrieved successfully.'));

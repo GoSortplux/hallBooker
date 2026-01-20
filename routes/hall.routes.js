@@ -18,6 +18,9 @@ import {
     bookDemo,
     getHallBookings,
     getUnavailableDates,
+    getHallRules,
+    updateHallRules,
+    updateHallSuitability,
 } from '../controllers/hall.controller.js';
 
 const router = Router();
@@ -144,6 +147,10 @@ const router = Router();
  *           type: number
  *           description: "Buffer period in hours before and after a booking."
  *           example: 2
+ *         suitableFor:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Suitability'
  *         rules:
  *           type: array
  *           items:
@@ -190,6 +197,12 @@ const router = Router();
  *           type: number
  *           description: "Buffer period in hours before and after a booking. Defaults to 5 if not provided."
  *           example: 2
+ *         suitableFor:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: "An array of Suitability IDs."
+ *           example: ["60c72b2f9b1d8c001f8e4c6a"]
  *         rules:
  *           type: array
  *           items:
@@ -296,6 +309,12 @@ const router = Router();
  *         hallSize:
  *           type: string
  *           example: "100 sqm"
+ *         suitableFor:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: "An array of Suitability IDs."
+ *           example: ["60c72b2f9b1d8c001f8e4c6a"]
  *         rules:
  *           type: array
  *           items:
@@ -660,7 +679,142 @@ router.route('/media/generate-signature')
 router.route('/:id')
     .get(getHallById)
     .patch(verifyJWT, authorizeHallAccess, checkActiveLicense, updateHall)
-    .delete(verifyJWT, authorizeHallAccess, checkActiveLicense, deleteHall);
+    .delete(verifyJWT, authorizeRoles('super-admin'), deleteHall);
+
+/**
+ * @swagger
+ * /api/v1/halls/{id}/rules:
+ *   get:
+ *     summary: Get rules for a specific hall
+ *     tags: [Halls]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
+ *     responses:
+ *       200:
+ *         description: Hall rules fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 message:
+ *                   type: string
+ *                   example: "Hall rules fetched successfully"
+ *       404:
+ *         description: Hall not found
+ *   patch:
+ *     summary: Add or update rules for a specific hall
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rules]
+ *             properties:
+ *               rules:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["No smoking", "No pets"]
+ *     responses:
+ *       200:
+ *         description: Hall rules updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 message:
+ *                   type: string
+ *                   example: "Hall rules updated successfully"
+ *       404:
+ *         description: Hall not found
+ */
+router.route('/:id/rules')
+    .get(getHallRules)
+    .patch(verifyJWT, authorizeHallAccess, checkActiveLicense, updateHallRules);
+
+/**
+ * @swagger
+ * /api/v1/halls/{id}/suitability:
+ *   patch:
+ *     summary: Update suitability categories for a specific hall
+ *     tags: [Halls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         example: "60d0fe4f5311236168a109ca"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [suitableFor]
+ *             properties:
+ *               suitableFor:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["60c72b2f9b1d8c001f8e4c6a"]
+ *     responses:
+ *       200:
+ *         description: Hall suitability updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Suitability'
+ *                 message:
+ *                   type: string
+ *                   example: "Hall suitability updated successfully"
+ *       404:
+ *         description: Hall not found
+ */
+router.route('/:id/suitability')
+    .patch(verifyJWT, authorizeHallAccess, checkActiveLicense, updateHallSuitability);
 
 /**
  * @swagger
