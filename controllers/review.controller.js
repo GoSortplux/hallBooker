@@ -16,9 +16,25 @@ const createReview = asyncHandler(async (req, res) => {
     user: req.user._id,
     hall: hallId,
     paymentStatus: 'paid',
-    endTime: { $lt: new Date() }
   });
   if (!booking) throw new ApiError(403, "You can only review halls you have booked and attended.");
+
+  // Check if the booking has ended
+  const now = new Date();
+  let isCompleted = false;
+
+  if (booking.endTime && new Date(booking.endTime) < now) {
+    isCompleted = true;
+  } else if (booking.bookingDates && booking.bookingDates.length > 0) {
+    const maxEndTime = new Date(Math.max(...booking.bookingDates.map(d => new Date(d.endTime).getTime())));
+    if (maxEndTime < now) {
+      isCompleted = true;
+    }
+  }
+
+  if (!isCompleted) {
+    throw new ApiError(403, "You can only review halls for bookings that have ended.");
+  }
 
   const existingReview = await Review.findOne({ booking: bookingId });
   if (existingReview) throw new ApiError(400, "You have already submitted a review for this booking.");
