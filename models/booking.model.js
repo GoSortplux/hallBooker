@@ -35,6 +35,15 @@ const bookingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    paymentReference: {
+      type: String,
+      index: true,
+      sparse: true,
+    },
+    transactionReference: {
+      type: String,
+      index: true,
+    },
     bookingId: {
       type: String,
       required: true,

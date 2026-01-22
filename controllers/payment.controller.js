@@ -1,9 +1,11 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
+import crypto from 'crypto';
 import { Booking } from '../models/booking.model.js';
 import { Reservation } from '../models/reservation.model.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
+import { Transaction } from '../models/transaction.model.js';
 import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
@@ -63,7 +65,14 @@ const parseMonnifyDate = (dateString) => {
 // ---------------------- SUBSCRIPTION PROCESSING ----------------------
 
 async function processTransaction(transactionData, io) {
-    const { paymentStatus, paymentReference: refFromMonnify, transactionReference, paymentMethod } = transactionData;
+    const { paymentStatus, paymentReference: refFromMonnify, transactionReference, paymentMethod, amountPaid } = transactionData;
+
+    // Check if this transaction has already been recorded
+    const existingTx = await Transaction.findOne({ transactionReference });
+    if (existingTx) {
+        console.log(`Transaction ${transactionReference} already recorded.`);
+        return;
+    }
 
     const subscription = await SubscriptionHistory.findById(refFromMonnify)
         .populate('owner')
@@ -74,7 +83,21 @@ async function processTransaction(transactionData, io) {
         return;
     }
 
-    if (subscription.status !== 'pending') {
+    const isDuplicate = subscription.status !== 'pending';
+
+    // Record the transaction
+    await Transaction.create({
+        transactionReference,
+        paymentReference: refFromMonnify,
+        amount: parseFloat(amountPaid),
+        paymentStatus,
+        targetType: 'Subscription',
+        targetId: subscription._id,
+        isDuplicate,
+        metadata: transactionData
+    });
+
+    if (isDuplicate) {
         console.log(`Subscription ${subscription._id} already processed. Status: ${subscription.status}`);
         return;
     }
@@ -155,14 +178,21 @@ async function processTransaction(transactionData, io) {
 // ---------------------- BOOKING PROCESSING (KEEP THIS) ----------------------
 
 async function processBookingTransaction(bookingDetails, io) {
-    const { paymentStatus, paymentReference: refFromMonnify, paymentMethod } = bookingDetails;
+    const { paymentStatus, paymentReference: refFromMonnify, transactionReference, paymentMethod, amountPaid } = bookingDetails;
 
-    // Handle different types of transactions (Reservation, Conversion, Recurring, Standard)
+    // Handle different types of transactions (Reservation, Conversion)
     if (refFromMonnify.startsWith('RES_')) {
         return processReservationTransaction(bookingDetails, io);
     }
     if (refFromMonnify.startsWith('CONV_')) {
         return processConversionTransaction(bookingDetails, io);
+    }
+
+    // Check if this transaction has already been recorded
+    const existingTx = await Transaction.findOne({ transactionReference });
+    if (existingTx) {
+        console.log(`Transaction ${transactionReference} already recorded.`);
+        return;
     }
 
     let booking;
@@ -172,20 +202,59 @@ async function processBookingTransaction(bookingDetails, io) {
     if (refFromMonnify.startsWith('RECURRING_')) {
         const recurringBookingId = refFromMonnify.split('_')[1];
         const bookings = await Booking.find({ recurringBookingId }).populate('hall user walkInUserDetails');
-        if (!bookings.length || bookings[0].paymentStatus === 'paid') {
-            console.log(`Recurring booking ${recurringBookingId} already processed or not found.`);
+        if (!bookings.length) {
+            console.log(`Recurring booking ${recurringBookingId} not found.`);
             return;
         }
         booking = bookings[0]; // Use the first booking for customer details
+
+        const isDuplicate = booking.paymentStatus === 'paid';
+
+        // Record the transaction
+        await Transaction.create({
+            transactionReference,
+            paymentReference: refFromMonnify,
+            amount: parseFloat(amountPaid),
+            paymentStatus,
+            targetType: 'Booking',
+            targetId: booking._id,
+            isDuplicate,
+            metadata: { recurringBookingId, ...bookingDetails }
+        });
+
+        if (isDuplicate) {
+            console.log(`Recurring booking ${recurringBookingId} already processed.`);
+            return;
+        }
     } else {
-        const bookingIdFromRef = refFromMonnify.split('_')[0];
-        booking = await Booking.findOne({ bookingId: bookingIdFromRef }).populate('hall user walkInUserDetails');
+        booking = await Booking.findOne({ paymentReference: refFromMonnify }).populate('hall user walkInUserDetails');
+        if (!booking) {
+            // Fallback for legacy bookings or if we didn't store the reference correctly
+            const bookingIdFromRef = refFromMonnify.split('_')[0];
+            booking = await Booking.findOne({ bookingId: bookingIdFromRef }).populate('hall user walkInUserDetails');
+        }
+
         if (!booking) {
             console.log(`No matching booking found for ${refFromMonnify}`);
             return;
         }
-        if (booking.paymentStatus === 'paid') {
-            console.log(`Booking ${bookingIdFromRef} already paid.`);
+
+        const isDuplicate = booking.paymentStatus === 'paid';
+
+        // Record the transaction
+        await Transaction.create({
+            transactionReference,
+            paymentReference: refFromMonnify,
+            amount: parseFloat(amountPaid),
+            paymentStatus,
+            targetType: 'Booking',
+            targetId: booking._id,
+            isDuplicate,
+            metadata: bookingDetails
+        });
+
+        if (isDuplicate) {
+            console.log(`Booking ${booking._id} already paid.`);
             return;
         }
     }
@@ -207,7 +276,7 @@ async function processBookingTransaction(bookingDetails, io) {
         case 'PAID':
             updatePayload.paymentStatus = 'paid';
             if (refFromMonnify.startsWith('RECURRING_')) {
-                await Booking.updateMany({ recurringBookingId: booking.recurringBookingId }, { $set: updatePayload });
+                await Booking.updateMany({ recurringBookingId: booking.recurringBookingId }, { $set: { ...updatePayload, transactionReference } });
                 const allBookings = await Booking.find({ recurringBookingId: booking.recurringBookingId }).populate({ path: 'hall', populate: { path: 'owner' } });
                 // --- Send recurring success emails (logic from original function) ---
                  const hall = allBookings[0].hall;
@@ -239,7 +308,7 @@ async function processBookingTransaction(bookingDetails, io) {
                  });
 
             } else {
-                booking.set(updatePayload);
+                booking.set({ ...updatePayload, transactionReference });
                 await booking.save();
                 const confirmedBooking = await Booking.findById(booking._id).populate('user').populate({ path: 'hall', populate: { path: 'owner' } });
                 // --- Send standard success emails (logic from original function) ---
@@ -352,7 +421,13 @@ const makePayment = asyncHandler(async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const redirectUrl = `${frontendUrl}/payment/verify`;
-    const uniquePaymentReference = `${bookingId}_${Date.now()}`;
+
+    let uniquePaymentReference = booking.paymentReference;
+    if (!uniquePaymentReference) {
+        uniquePaymentReference = `${bookingId}_${crypto.randomBytes(4).toString('hex')}`;
+        booking.paymentReference = uniquePaymentReference;
+        await booking.save();
+    }
 
     const data = {
         amount: booking.totalPrice,
@@ -517,7 +592,13 @@ const makePaymentForRecurring = asyncHandler(async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const redirectUrl = `${frontendUrl}/payment/verify`;
-    const uniquePaymentReference = `RECURRING_${recurringBookingId}_${Date.now()}`;
+
+    let uniquePaymentReference = firstBooking.paymentReference;
+    if (!uniquePaymentReference || !uniquePaymentReference.startsWith('RECURRING_')) {
+        uniquePaymentReference = `RECURRING_${recurringBookingId}_${crypto.randomBytes(4).toString('hex')}`;
+        // Store it on all bookings in the series
+        await Booking.updateMany({ recurringBookingId }, { $set: { paymentReference: uniquePaymentReference } });
+    }
 
     const data = {
         amount: totalAmount,

@@ -19,6 +19,8 @@ const reservationSchema = new mongoose.Schema(
     facilitiesPrice: { type: Number, required: true },
     reservationFee: { type: Number, required: true },
     paymentReference: { type: String, required: true, unique: true },
+    conversionPaymentReference: { type: String, unique: true, index: true, sparse: true },
+    transactionReference: { type: String, index: true },
     paymentMethod: { type: String },
     paymentStatus: {
       type: String,
