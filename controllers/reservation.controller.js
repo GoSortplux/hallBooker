@@ -7,6 +7,7 @@ import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import { SubAccount } from '../models/subaccount.model.js';
 import Setting from '../models/setting.model.js';
+import { Transaction } from '../models/transaction.model.js';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
@@ -23,15 +24,40 @@ import {
 
 
 export async function processReservationTransaction(transactionData, io) {
-    const { paymentStatus, paymentReference, transactionReference } = transactionData;
+    const { paymentStatus, paymentReference, transactionReference, amountPaid } = transactionData;
     const reservationId = paymentReference.split('_')[1];
+
+    // Check if this transaction has already been recorded
+    const existingTx = await Transaction.findOne({ transactionReference });
+    if (existingTx) {
+        console.log(`Transaction ${transactionReference} already recorded.`);
+        return;
+    }
 
     const reservation = await Reservation.findById(reservationId).populate('hall').populate('user');
     if (!reservation) {
         console.error(`Reservation with ID ${reservationId} not found.`);
         return;
     }
-    if (reservation.paymentStatus === 'paid') return;
+
+    const isDuplicate = reservation.paymentStatus === 'paid';
+
+    // Record the transaction
+    await Transaction.create({
+        transactionReference,
+        paymentReference,
+        amount: parseFloat(amountPaid),
+        paymentStatus,
+        targetType: 'Reservation',
+        targetId: reservation._id,
+        isDuplicate,
+        metadata: transactionData
+    });
+
+    if (isDuplicate) {
+        console.log(`Reservation ${reservationId} already paid.`);
+        return;
+    }
 
     if (paymentStatus === 'PAID') {
         reservation.paymentStatus = 'paid';
@@ -83,6 +109,7 @@ async function finalizeConversion(reservation, paymentDetails, io) {
         facilitiesPrice: reservation.facilitiesPrice,
         paymentMethod: paymentDetails.paymentMethod,
         paymentStatus: 'paid',
+        transactionReference: reservation.transactionReference,
         status: 'confirmed',
         bookingType: reservation.reservationType,
         bookedBy: reservation.reservedBy,
@@ -125,18 +152,44 @@ async function finalizeConversion(reservation, paymentDetails, io) {
 }
 
 export async function processConversionTransaction(transactionData, io) {
-    const { paymentStatus, paymentReference, paymentMethod } = transactionData;
+    const { paymentStatus, paymentReference, transactionReference, paymentMethod, amountPaid } = transactionData;
     const reservationId = paymentReference.split('_')[1];
+
+    // Check if this transaction has already been recorded
+    const existingTx = await Transaction.findOne({ transactionReference });
+    if (existingTx) {
+        console.log(`Transaction ${transactionReference} already recorded.`);
+        return;
+    }
 
     const reservation = await Reservation.findById(reservationId).populate('hall').populate('user');
     if (!reservation) {
         console.error(`Reservation ${reservationId} not found for conversion.`);
         return;
     }
-    if (reservation.status === 'CONVERTED') return;
+
+    const isDuplicate = reservation.status === 'CONVERTED';
+
+    // Record the transaction
+    await Transaction.create({
+        transactionReference,
+        paymentReference,
+        amount: parseFloat(amountPaid),
+        paymentStatus,
+        targetType: 'Reservation',
+        targetId: reservation._id,
+        isDuplicate,
+        metadata: { conversion: true, ...transactionData }
+    });
+
+    if (isDuplicate) {
+        console.log(`Reservation ${reservationId} already converted.`);
+        return;
+    }
 
     if (paymentStatus === 'PAID') {
         // Ensure paymentMethod from the transaction is passed to the final booking
+        reservation.transactionReference = transactionReference; // Store the conversion transaction ref
         await finalizeConversion(reservation, { paymentMethod: paymentMethod || 'online' }, io);
     } else {
         // Handle failed or cancelled conversion payment
@@ -361,7 +414,13 @@ const convertReservation = asyncHandler(async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const redirectUrl = `${frontendUrl}/payment/verify`;
-    const uniquePaymentReference = `CONV_${reservation._id}_${crypto.randomBytes(6).toString('hex')}`;
+
+    let uniquePaymentReference = reservation.conversionPaymentReference;
+    if (!uniquePaymentReference) {
+        uniquePaymentReference = `CONV_${reservation._id}_${crypto.randomBytes(4).toString('hex')}`;
+        reservation.conversionPaymentReference = uniquePaymentReference;
+        await reservation.save();
+    }
 
     const transactionData = {
         amount: remainingBalance,
