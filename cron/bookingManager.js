@@ -68,10 +68,12 @@ const deletePendingBookings = async (io) => {
                     let recipientId;
                     if (booking.user && email === booking.user.email) {
                         recipientId = booking.user._id;
-                    } else if (booking.hall.owner && email === booking.hall.owner.email) {
+                    } else if (booking.hall && booking.hall.owner && email === booking.hall.owner.email) {
                         recipientId = booking.hall.owner._id;
                     } else {
-                        const staffMember = booking.hall.staff.find(staff => staff.email === email);
+                        const staffMember = (booking.hall && booking.hall.staff)
+                            ? booking.hall.staff.find(staff => staff.email === email)
+                            : null;
                         if (staffMember) {
                             recipientId = staffMember._id;
                         } else {
