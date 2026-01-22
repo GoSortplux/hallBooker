@@ -38,12 +38,31 @@ const applyWatermarkToImage = async (buffer) => {
     const width = metadata.width;
     const height = metadata.height;
 
-    // Create an SVG for the watermark
+    // Create an SVG for the watermark with a gold shadow for visibility on white backgrounds
     const fontSize = Math.max(20, Math.floor(width / 20));
     const svgText = `
       <svg width="${width}" height="${height}">
+        <defs>
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+            <feOffset dx="1" dy="1" result="offsetblur" />
+            <feFlood flood-color="#D4AF37" result="color" />
+            <feComposite in="color" in2="offsetblur" operator="in" />
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         <style>
-          .title { fill: white; font-size: ${fontSize}px; font-weight: bold; font-family: Arial; opacity: 0.9; }
+          .title {
+            fill: white;
+            font-size: ${fontSize}px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            opacity: 0.95;
+            filter: url(#shadow);
+          }
         </style>
         <text x="98%" y="95%" text-anchor="end" class="title">${companyName}</text>
       </svg>
@@ -65,7 +84,10 @@ const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null
   try {
     if (!localFilePath) return null;
 
-    const fileName = path.basename(localFilePath);
+    const originalFileName = path.basename(localFilePath);
+    // Sanitize filename: replace spaces and non-alphanumeric chars (except dots/hyphens) with underscores
+    const sanitizedFileName = originalFileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9.-]/g, '_');
+
     const resolvedMimeType = mimeType || (resourceType === 'video' ? 'video/mp4' : 'image/jpeg');
     let body;
 
@@ -80,7 +102,7 @@ const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null
 
     const uploadParams = {
       Bucket: process.env.R2_BUCKET_NAME,
-      Key: `${resourceType}s/${Date.now()}-${fileName}`,
+      Key: `${resourceType}s/${Date.now()}-${sanitizedFileName}`,
       Body: body,
       ContentType: resolvedMimeType,
     };

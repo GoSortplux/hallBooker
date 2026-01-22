@@ -475,9 +475,14 @@ const deleteHall = asyncHandler(async (req, res) => {
 });
 
 const uploadMedia = asyncHandler(async (req, res) => {
-  const files = req.files;
-  if (!files || files.length === 0) {
-    throw new ApiError(400, 'Media files are required.');
+  const files = [];
+  if (req.files) {
+    if (req.files.file) files.push(...req.files.file);
+    if (req.files.files) files.push(...req.files.files);
+  }
+
+  if (files.length === 0) {
+    throw new ApiError(400, 'Media files are required. Use field name "file" or "files".');
   }
 
   const uploadPromises = files.map(async (file) => {

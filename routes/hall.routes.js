@@ -592,14 +592,19 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
  *           schema:
  *             type: object
  *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Single file upload."
  *               files:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: binary
+ *                 description: "Multiple files upload (up to 10)."
  *     responses:
  *       200:
- *         description: Media uploaded successfully
+ *         description: Media upload process completed.
  *         content:
  *           application/json:
  *             schema:
@@ -615,12 +620,21 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
  *                       type: array
  *                       items:
  *                         type: string
+ *                     errors:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           error:
+ *                             type: string
+ *                           fileName:
+ *                             type: string
  *                 message:
  *                   type: string
- *                   example: "Media uploaded successfully"
+ *                   example: "Media upload process completed."
  */
 router.route('/media/upload')
-    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), upload.array('files', 10), uploadMedia);
+    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), upload.fields([{ name: 'file', maxCount: 1 }, { name: 'files', maxCount: 10 }]), uploadMedia);
 
 
 /**
