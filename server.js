@@ -43,6 +43,10 @@ import suitabilityRoutes from './routes/suitability.routes.js';
 // Load environment variables
 dotenv.config();
 
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : [];
+
 // Connect to MongoDB
 connectDB();
 
@@ -50,10 +54,30 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   },
 });
+
+// WebSocket handshake validation here
+io.use((socket, next) => {
+  const origin = socket.handshake.headers.origin;
+
+  if (!origin || allowedOrigins.includes(origin)) {
+    next();
+  } else {
+    next(new Error('Forbidden WebSocket origin'));
+  }
+});
+
 
 // Make io accessible to our router
 app.set('io', io);
@@ -69,10 +93,23 @@ initializeReservationCronJobs(io);
 initializeUserCleanupCronJob(io);
 
 // Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN,
-  credentials: true,
-}));
+
+// CORS Configuration for multi-origin
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json({
   limit: '16kb',
   verify: (req, res, buf) => {
