@@ -21,6 +21,18 @@ import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
 import Setting from '../models/setting.model.js';
 
+// Helper to parse hour from input (handles "HH:mm" strings or integers)
+const parseHour = (hourInput) => {
+    if (typeof hourInput === 'number') {
+        return Math.floor(hourInput);
+    }
+    if (typeof hourInput === 'string') {
+        const [hour] = hourInput.split(':');
+        return parseInt(hour, 10);
+    }
+    return undefined;
+};
+
 
 const toggleOnlineBooking = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -71,7 +83,31 @@ const toggleOnlineBooking = asyncHandler(async (req, res) => {
 
 
 const createHall = asyncHandler(async (req, res) => {
-    const { name, location, capacity, description, pricing, ownerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules, images, videos } = req.body;
+    const {
+        name,
+        location,
+        capacity,
+        description,
+        pricing,
+        ownerId,
+        facilities,
+        carParkCapacity,
+        hallSize,
+        country,
+        state,
+        localGovernment,
+        allowRecurringBookings,
+        recurringBookingDiscount,
+        suitableFor,
+        rules,
+        images,
+        videos,
+        openingHour,
+        closingHour,
+        bookingBufferInHours,
+        reservationFeePercentage,
+        reservationCutoffHours
+    } = req.body;
     const resolvedOwnerId = req.user.role === 'super-admin' ? ownerId : req.user._id;
     if (!resolvedOwnerId) throw new ApiError(400, "Hall owner must be specified.");
 
@@ -94,7 +130,31 @@ const createHall = asyncHandler(async (req, res) => {
     const watermarkedImages = images ? await applyWatermark(images, 'image') : [];
     const watermarkedVideos = videos ? await applyWatermark(videos, 'video') : [];
 
-    const hallData = { name, location, capacity, description, pricing, owner: resolvedOwnerId, facilities, carParkCapacity, hallSize, country, state, localGovernment, allowRecurringBookings, recurringBookingDiscount, suitableFor, rules, images: watermarkedImages, videos: watermarkedVideos };
+    const hallData = {
+        name,
+        location,
+        capacity,
+        description,
+        pricing,
+        owner: resolvedOwnerId,
+        facilities,
+        carParkCapacity,
+        hallSize,
+        country,
+        state,
+        localGovernment,
+        allowRecurringBookings,
+        recurringBookingDiscount,
+        suitableFor,
+        rules,
+        images: watermarkedImages,
+        videos: watermarkedVideos,
+        openingHour: parseHour(openingHour),
+        closingHour: parseHour(closingHour),
+        bookingBufferInHours,
+        reservationFeePercentage,
+        reservationCutoffHours
+    };
 
     if (geocodedData.length > 0) {
         hallData.geoLocation = {
@@ -228,7 +288,18 @@ const updateHall = asyncHandler(async (req, res) => {
     const { id } = req.params;
     // Separate facility details from the rest of the body.
     // This allows for adding/updating a single facility via the PATCH endpoint.
-    const { facility: facilityId, available, chargeable, chargeMethod, cost, quantity, chargePerUnit, ...otherDetails } = req.body;
+    const {
+        facility: facilityId,
+        available,
+        chargeable,
+        chargeMethod,
+        cost,
+        quantity,
+        chargePerUnit,
+        openingHour,
+        closingHour,
+        ...otherDetails
+    } = req.body;
 
     if (otherDetails.images) {
         otherDetails.images = await applyWatermark(otherDetails.images, 'image');
@@ -324,6 +395,14 @@ const updateHall = asyncHandler(async (req, res) => {
             }
             hall.recurringBookingDiscount.minBookings = minBookings;
         }
+    }
+
+    // Handle opening and closing hours
+    if (openingHour !== undefined) {
+        hall.openingHour = parseHour(openingHour);
+    }
+    if (closingHour !== undefined) {
+        hall.closingHour = parseHour(closingHour);
     }
 
     // Apply other non-facility updates

@@ -92,11 +92,13 @@ const router = Router();
  *         capacity:
  *           type: number
  *         openingHour:
- *           type: string
- *           example: "09:00"
+ *           type: integer
+ *           description: "Opening hour in 24-hour format (0-23)."
+ *           example: 9
  *         closingHour:
- *           type: string
- *           example: "23:00"
+ *           type: integer
+ *           description: "Closing hour in 24-hour format (0-23)."
+ *           example: 23
  *         location:
  *           type: string
  *         geoLocation:
@@ -147,6 +149,14 @@ const router = Router();
  *           type: number
  *           description: "Buffer period in hours before and after a booking."
  *           example: 2
+ *         reservationFeePercentage:
+ *           type: number
+ *           description: "Percentage of the total cost required as a reservation fee."
+ *           example: 40
+ *         reservationCutoffHours:
+ *           type: number
+ *           description: "Number of hours before the event start time after which a reservation expires if not paid in full."
+ *           example: 72
  *         suitableFor:
  *           type: array
  *           items:
@@ -172,11 +182,13 @@ const router = Router();
  *         capacity:
  *           type: number
  *         openingHour:
- *           type: string
- *           example: "09:00"
+ *           type: integer
+ *           description: "Opening hour in 24-hour format (0-23)."
+ *           example: 9
  *         closingHour:
- *           type: string
- *           example: "23:00"
+ *           type: integer
+ *           description: "Closing hour in 24-hour format (0-23)."
+ *           example: 23
  *         location:
  *           type: string
  *           description: "The full address of the hall. If a precise location cannot be found, a Google Maps search URL will be generated instead."
@@ -197,6 +209,14 @@ const router = Router();
  *           type: number
  *           description: "Buffer period in hours before and after a booking. Defaults to 5 if not provided."
  *           example: 2
+ *         reservationFeePercentage:
+ *           type: number
+ *           description: "Percentage of the total cost required as a reservation fee."
+ *           example: 40
+ *         reservationCutoffHours:
+ *           type: number
+ *           description: "Number of hours before the event start time after which a reservation expires if not paid in full."
+ *           example: 72
  *         suitableFor:
  *           type: array
  *           items:
@@ -281,11 +301,13 @@ const router = Router();
  *           type: number
  *           example: 200
  *         openingHour:
- *           type: string
- *           example: "09:00"
+ *           type: integer
+ *           description: "Opening hour in 24-hour format (0-23)."
+ *           example: 9
  *         closingHour:
- *           type: string
- *           example: "23:00"
+ *           type: integer
+ *           description: "Closing hour in 24-hour format (0-23)."
+ *           example: 23
  *         location:
  *           type: string
  *           description: "The full address of the hall. If a precise location cannot be found, a Google Maps search URL will be generated instead."
@@ -320,6 +342,18 @@ const router = Router();
  *           items:
  *             type: string
  *           example: ["No smoking", "No pets"]
+ *         bookingBufferInHours:
+ *           type: number
+ *           description: "Buffer period in hours before and after a booking. Defaults to 5 if not provided."
+ *           example: 2
+ *         reservationFeePercentage:
+ *           type: number
+ *           description: "Percentage of the total cost required as a reservation fee. Defaults to 40."
+ *           example: 40
+ *         reservationCutoffHours:
+ *           type: number
+ *           description: "Number of hours before the event start time after which a reservation expires if not paid in full. Defaults to 72."
+ *           example: 72
  *         allowRecurringBookings:
  *           type: boolean
  *           description: "Set to true to enable recurring bookings for this hall."
