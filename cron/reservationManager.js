@@ -37,6 +37,14 @@ const reservationManager = (io) => {
 
         for (const reservation of expiredPendingReservations) {
             const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : reservation.user;
+
+            // If the hall has been deleted, just remove the reservation and move on.
+            if (!reservation.hall) {
+                await Reservation.findByIdAndDelete(reservation._id);
+                console.log(`Deleted expired pending reservation ${reservation.reservationId} for non-existent hall.`);
+                continue;
+            }
+
             const hallOwner = reservation.hall.owner;
             const superAdmins = await User.find({ role: { $in: ['super-admin'] } });
 
@@ -108,6 +116,11 @@ const reservationManager = (io) => {
 
         console.log(`Reservation ${reservation._id} has expired.`);
 
+        // If hall is deleted, we can't send a proper notification with hall details.
+        if (!reservation.hall) {
+            continue;
+        }
+
         const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : reservation.user;
         if (customer && customer.email) {
             sendEmail({
@@ -150,6 +163,11 @@ const reservationManager = (io) => {
             }).populate('user').populate('hall');
 
             for (const reservation of reservationsToRemind) {
+                // If hall is deleted, skip reminders.
+                if (!reservation.hall) {
+                    continue;
+                }
+
                 const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : reservation.user;
                 if (customer && customer.email) {
                     sendEmail({

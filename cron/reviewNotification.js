@@ -28,6 +28,14 @@ const scheduleReviewNotifications = (io) => {
       for (const booking of bookings) {
         const { user, hall } = booking;
 
+        // If the hall has been deleted, we can't send a review notification.
+        // Mark as sent and skip to avoid re-processing.
+        if (!hall) {
+          booking.reviewNotificationSent = true;
+          await booking.save();
+          continue;
+        }
+
         // If there's no user associated with the booking (e.g., a walk-in), skip.
         if (!user) {
           continue;
