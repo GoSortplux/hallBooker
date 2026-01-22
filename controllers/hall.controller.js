@@ -11,11 +11,10 @@ import { Analytics } from '../models/analytics.model.js';
 import { createNotification } from '../services/notification.service.js';
 import geocoder from '../utils/geocoder.js';
 import {
-  uploadOnCloudinary,
-  deleteFromCloudinary,
-  generateUploadSignature,
+  uploadToR2,
+  deleteFromR2,
   applyWatermark,
-} from '../config/cloudinary.js';
+} from '../config/storage.js';
 
 import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
@@ -474,6 +473,34 @@ const deleteHall = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, {}, "Hall deleted successfully"));
 });
 
+const uploadMedia = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(400, 'Media file is required.');
+  }
+
+  const isImage = req.file.mimetype.startsWith('image/');
+  const isVideo = req.file.mimetype.startsWith('video/');
+
+  if (!isImage && !isVideo) {
+    // Cleanup local file if it's not a valid type (though multer filter should catch this)
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    throw new ApiError(400, 'Only images and videos are allowed.');
+  }
+
+  const resourceType = isVideo ? 'video' : 'image';
+  const url = await uploadToR2(req.file.path, resourceType, req.file.mimetype);
+
+  if (!url) {
+    throw new ApiError(500, 'Failed to upload media. It may have timed out or encountered an error.');
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, { url }, 'Media uploaded successfully.')
+  );
+});
+
 const addHallMedia = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { imageUrl, videoUrl } = req.body;
@@ -491,13 +518,12 @@ const addHallMedia = asyncHandler(async (req, res) => {
     if (hall.images.length >= 6) {
       throw new ApiError(400, 'Cannot add more than 6 images.');
     }
-    const watermarkedUrl = await applyWatermark(imageUrl, 'image');
-    hall.images.push(watermarkedUrl || imageUrl);
+    // Watermarking is now handled during upload to R2
+    hall.images.push(imageUrl);
   }
 
   if (videoUrl) {
-    const watermarkedUrl = await applyWatermark(videoUrl, 'video');
-    hall.videos.push(watermarkedUrl || videoUrl);
+    hall.videos.push(videoUrl);
   }
 
   await hall.save({ validateBeforeSave: true });
@@ -525,9 +551,8 @@ const deleteHallMedia = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Cannot delete the last video.');
   }
 
-  // This will attempt to delete from Cloudinary.
-  // It will not throw an error if the deletion fails, but it will log the error.
-  await deleteFromCloudinary(mediaUrl);
+  // This will attempt to delete from R2.
+  await deleteFromR2(mediaUrl);
 
   const updateResult = await Hall.findByIdAndUpdate(
     id,
@@ -589,22 +614,6 @@ const getRecommendedHalls = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, halls, "Recommended halls fetched successfully"));
 });
 
-const generateCloudinarySignature = asyncHandler(async (req, res) => {
-  const { timestamp, signature } = await generateUploadSignature();
-
-  res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        timestamp,
-        signature,
-        cloudname: process.env.CLOUDINARY_CLOUD_NAME,
-        apikey: process.env.CLOUDINARY_API_KEY,
-      },
-      'Cloudinary signature generated successfully.'
-    )
-  );
-});
 
 const createReservation = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -767,7 +776,7 @@ export {
     deleteHallMedia,
     getHallsByOwner,
     getRecommendedHalls,
-    generateCloudinarySignature,
+    uploadMedia,
     createReservation,
     bookDemo,
     getHallBookings,
