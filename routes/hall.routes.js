@@ -592,9 +592,11 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
  *           schema:
  *             type: object
  *             properties:
- *               file:
- *                 type: string
- *                 format: binary
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
  *     responses:
  *       200:
  *         description: Media uploaded successfully
@@ -609,14 +611,16 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
  *                 data:
  *                   type: object
  *                   properties:
- *                     url:
- *                       type: string
+ *                     urls:
+ *                       type: array
+ *                       items:
+ *                         type: string
  *                 message:
  *                   type: string
  *                   example: "Media uploaded successfully"
  */
 router.route('/media/upload')
-    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), upload.single('file'), uploadMedia);
+    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), upload.array('files', 10), uploadMedia);
 
 
 /**

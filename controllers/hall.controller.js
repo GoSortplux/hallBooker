@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
@@ -474,30 +475,40 @@ const deleteHall = asyncHandler(async (req, res) => {
 });
 
 const uploadMedia = asyncHandler(async (req, res) => {
-  if (!req.file) {
-    throw new ApiError(400, 'Media file is required.');
+  const files = req.files;
+  if (!files || files.length === 0) {
+    throw new ApiError(400, 'Media files are required.');
   }
 
-  const isImage = req.file.mimetype.startsWith('image/');
-  const isVideo = req.file.mimetype.startsWith('video/');
+  const uploadPromises = files.map(async (file) => {
+    const isImage = file.mimetype.startsWith('image/');
+    const isVideo = file.mimetype.startsWith('video/');
 
-  if (!isImage && !isVideo) {
-    // Cleanup local file if it's not a valid type (though multer filter should catch this)
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    if (!isImage && !isVideo) {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return { error: 'Invalid file type', fileName: file.originalname };
     }
-    throw new ApiError(400, 'Only images and videos are allowed.');
-  }
 
-  const resourceType = isVideo ? 'video' : 'image';
-  const url = await uploadToR2(req.file.path, resourceType, req.file.mimetype);
+    const resourceType = isVideo ? 'video' : 'image';
+    const url = await uploadToR2(file.path, resourceType, file.mimetype);
 
-  if (!url) {
-    throw new ApiError(500, 'Failed to upload media. It may have timed out or encountered an error.');
+    if (!url) {
+      return { error: 'Upload failed', fileName: file.originalname };
+    }
+
+    return { url };
+  });
+
+  const results = await Promise.all(uploadPromises);
+  const urls = results.filter(r => r.url).map(r => r.url);
+  const errors = results.filter(r => r.error);
+
+  if (urls.length === 0 && errors.length > 0) {
+    throw new ApiError(500, 'Failed to upload media files. Check logs for details.');
   }
 
   return res.status(200).json(
-    new ApiResponse(200, { url }, 'Media uploaded successfully.')
+    new ApiResponse(200, { urls, errors: errors.length > 0 ? errors : undefined }, 'Media upload process completed.')
   );
 });
 
