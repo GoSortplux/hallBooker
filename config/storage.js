@@ -3,7 +3,6 @@ import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
-
 import dotenv from 'dotenv';
 import Setting from '../models/setting.model.js';
 
@@ -35,8 +34,6 @@ const applyWatermarkToImage = async (buffer) => {
   try {
     const companyLogoSetting = await Setting.findOne({ key: 'companyLogoUrl' });
     const companyLogoUrl = companyLogoSetting ? companyLogoSetting.value : null;
-    const companyNameSetting = await Setting.findOne({ key: 'companyName' });
-    const companyName = escapeXml(companyNameSetting ? companyNameSetting.value : 'Gobokin');
 
     const metadata = await sharp(buffer).metadata();
     const width = metadata.width;
@@ -99,8 +96,8 @@ const applyWatermarkToImage = async (buffer) => {
     }
 
     // Text Watermark Fallback
-    const companyNameSetting = await Setting.findOne({ key: 'companyName' });
-    const companyName = escapeXml(companyNameSetting ? companyNameSetting.value : 'Gobokin');
+    const fallbackSetting = await Setting.findOne({ key: 'companyName' });
+    const companyName = escapeXml(fallbackSetting ? fallbackSetting.value : 'Gobokin');
 
     // Create an SVG for the watermark with a gold shadow for visibility on white backgrounds
     const fontSize = Math.max(20, Math.floor(width / 20));
@@ -141,7 +138,7 @@ const applyWatermarkToImage = async (buffer) => {
   }
 };
 
-const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null) => {
+const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null, shouldWatermark = true) => {
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 60000); // 60 seconds timeout
 
@@ -155,10 +152,12 @@ const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null
     const resolvedMimeType = mimeType || (resourceType === 'video' ? 'video/mp4' : 'image/jpeg');
     let body;
 
-    // Apply watermark only for images
-    if (resourceType === 'image') {
+    // Apply watermark only for images and if requested
+    if (resourceType === 'image' && shouldWatermark) {
       const originalBuffer = fs.readFileSync(localFilePath);
       body = await applyWatermarkToImage(originalBuffer);
+    } else if (resourceType === 'image' && !shouldWatermark) {
+      body = fs.readFileSync(localFilePath);
     } else {
       // For videos and other types, use stream to avoid OOM
       body = fs.createReadStream(localFilePath);
