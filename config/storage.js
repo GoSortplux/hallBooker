@@ -2,6 +2,8 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
+
 import dotenv from 'dotenv';
 import Setting from '../models/setting.model.js';
 
@@ -31,12 +33,74 @@ const escapeXml = (unsafe) => {
 
 const applyWatermarkToImage = async (buffer) => {
   try {
+    const companyLogoSetting = await Setting.findOne({ key: 'companyLogoUrl' });
+    const companyLogoUrl = companyLogoSetting ? companyLogoSetting.value : null;
     const companyNameSetting = await Setting.findOne({ key: 'companyName' });
     const companyName = escapeXml(companyNameSetting ? companyNameSetting.value : 'Gobokin');
 
     const metadata = await sharp(buffer).metadata();
     const width = metadata.width;
     const height = metadata.height;
+
+    if (companyLogoUrl) {
+      try {
+        const response = await axios.get(companyLogoUrl, { responseType: 'arraybuffer' });
+        const logoBuffer = Buffer.from(response.data);
+
+        // Calculate logo size (e.g., 15% of image width)
+        const logoWidth = Math.floor(width * 0.15);
+        const resizedLogoBuffer = await sharp(logoBuffer)
+          .resize({ width: logoWidth })
+          .toBuffer();
+
+        // Create versions with different opacities
+        const logoMid = await sharp(resizedLogoBuffer)
+          .ensureAlpha()
+          .composite([{
+            input: Buffer.from([255, 255, 255, 76]), // ~0.3 opacity
+            raw: { width: 1, height: 1, channels: 4 },
+            tile: true,
+            blend: 'dest-in'
+          }])
+          .toBuffer();
+
+        const logoCorner = await sharp(resizedLogoBuffer)
+          .ensureAlpha()
+          .composite([{
+            input: Buffer.from([255, 255, 255, 178]), // ~0.7 opacity
+            raw: { width: 1, height: 1, channels: 4 },
+            tile: true,
+            blend: 'dest-in'
+          }])
+          .toBuffer();
+
+        const logoMetadata = await sharp(resizedLogoBuffer).metadata();
+
+        return await sharp(buffer)
+          .composite([
+            {
+              input: logoMid,
+              top: Math.floor(height / 2 - logoMetadata.height / 2),
+              left: Math.floor(width / 2 - logoMetadata.width / 2),
+              blend: 'over'
+            },
+            {
+              input: logoCorner,
+              top: height - logoMetadata.height - Math.floor(height * 0.05),
+              left: width - logoMetadata.width - Math.floor(width * 0.02),
+              blend: 'over'
+            }
+          ])
+          .toBuffer();
+      } catch (logoError) {
+        console.error('Failed to fetch or apply logo watermark, falling back to text:', logoError);
+        // Fall through to text watermark
+      }
+    }
+
+    // Text Watermark Fallback
+    const companyNameSetting = await Setting.findOne({ key: 'companyName' });
+    const companyName = escapeXml(companyNameSetting ? companyNameSetting.value : 'Gobokin');
 
     // Create an SVG for the watermark with a gold shadow for visibility on white backgrounds
     const fontSize = Math.max(20, Math.floor(width / 20));

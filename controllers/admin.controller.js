@@ -5,6 +5,7 @@ import { User } from '../models/user.model.js';
 import { Booking } from '../models/booking.model.js';
 import { Hall } from '../models/hall.model.js';
 import Setting from '../models/setting.model.js';
+import { uploadToR2 } from '../config/storage.js';
 import { createNotification } from '../services/notification.service.js';
 import sendEmail from '../services/email.service.js';
 import {
@@ -218,6 +219,28 @@ const updateCompanyNameSetting = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedSetting, 'Company name updated successfully'));
 });
 
+const uploadCompanyLogo = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(400, 'Company logo file is required');
+  }
+
+  const logoUrl = await uploadToR2(req.file.path, 'image', req.file.mimetype, false);
+
+  if (!logoUrl) {
+    throw new ApiError(500, 'Failed to upload company logo to R2');
+  }
+
+  const updatedSetting = await Setting.findOneAndUpdate(
+    { key: 'companyLogoUrl' },
+    { value: logoUrl },
+    { new: true, upsert: true }
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { companyLogoUrl: updatedSetting.value }, 'Company logo uploaded successfully'));
+});
+
 export {
   getHallOwnerApplications,
   approveHallOwnerApplication,
@@ -235,6 +258,7 @@ export {
   approveDeletionRequest,
   declineDeletionRequest,
   updateCompanyNameSetting,
+  uploadCompanyLogo,
 };
 
 const unlistHall = asyncHandler(async (req, res) => {
