@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { verifyJWT, authorizeRoles, authorizeHallAccess } from '../middlewares/auth.middleware.js';
 import { checkActiveLicense } from '../middlewares/license.middleware.js';
 import { checkHallCreationLimit } from '../middlewares/subscription.middleware.js';
+import { upload } from '../middlewares/multer.middleware.js';
 import {
     toggleOnlineBooking,
     createHall,
@@ -13,7 +14,7 @@ import {
     deleteHallMedia,
     getHallsByOwner,
     getRecommendedHalls,
-    generateCloudinarySignature,
+    uploadMedia,
     createReservation,
     bookDemo,
     getHallBookings,
@@ -593,16 +594,47 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
 
 /**
  * @swagger
- * /api/v1/halls/media/generate-signature:
+ * /api/v1/halls/media/upload:
  *   post:
- *     summary: Generate a Cloudinary signature for media upload
- *     description: "Generates the necessary signature and timestamp for direct client-side uploads to Cloudinary, ensuring the request is authentic."
+ *     summary: Batch Upload media (Images/Videos) to Cloudflare R2
+ *     description: |
+ *       Uploads images or videos to Cloudflare R2 storage.
+ *
+ *       **Watermarking:**
+ *       - Images (JPEG, PNG, etc.) are automatically watermarked with the company logo (or company name if logo is not set).
+ *       - Videos are uploaded directly without watermarking.
+ *
+ *       **Usage Instructions:**
+ *       - This endpoint requires `Content-Type: multipart/form-data`.
+ *       - You can use the `file` field for a single file upload.
+ *       - You can use the `files` field for multiple file uploads (up to 10 files at once).
+ *       - You can even combine both fields in a single request.
+ *
+ *       **Allowed File Types:** Images (jpeg, jpg, png, gif) and Videos (mp4, mov, avi).
+ *       **Max File Size:** 100MB per file.
  *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Field for a single file upload."
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: "Field for multiple files upload. Accepts an array of files."
  *     responses:
  *       200:
- *         description: Signature generated successfully
+ *         description: Media upload process completed. Returns an array of successful URLs and a list of any errors.
  *         content:
  *           application/json:
  *             schema:
@@ -614,18 +646,36 @@ router.route('/by-owner').get(verifyJWT, authorizeRoles('hall-owner', 'staff'), 
  *                 data:
  *                   type: object
  *                   properties:
- *                     signature:
- *                       type: string
- *                     timestamp:
- *                       type: integer
- *                     api_key:
- *                       type: string
+ *                     urls:
+ *                       type: array
+ *                       description: "Array of successfully uploaded media URLs."
+ *                       items:
+ *                         type: string
+ *                         example: "https://r2-pub-url.com/images/1737550000000-hall_image.jpg"
+ *                     errors:
+ *                       type: array
+ *                       description: "Array of error objects for files that failed to upload."
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           error:
+ *                             type: string
+ *                             example: "Invalid file type"
+ *                           fileName:
+ *                             type: string
+ *                             example: "unsupported_file.txt"
  *                 message:
  *                   type: string
- *                   example: "Signature generated successfully"
+ *                   example: "Media upload process completed."
+ *       400:
+ *         description: Bad Request - No files provided or invalid input.
+ *       401:
+ *         description: Unauthorized - Valid JWT token required.
+ *       500:
+ *         description: Server Error - Upload failed for all files.
  */
-router.route('/media/generate-signature')
-    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), generateCloudinarySignature);
+router.route('/media/upload')
+    .post(verifyJWT, authorizeRoles('hall-owner', 'staff', 'super-admin'), upload.fields([{ name: 'file', maxCount: 1 }, { name: 'files', maxCount: 10 }]), uploadMedia);
 
 
 /**

@@ -12,9 +12,9 @@
   "author": "HallBooker Dev Team",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.972.0",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -27,6 +27,7 @@
     "multer": "^2.0.2",
     "node-cron": "^3.0.2",
     "nodemailer": "^7.0.9",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
