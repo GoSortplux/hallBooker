@@ -20,6 +20,7 @@ import {
 import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
 import Setting from '../models/setting.model.js';
+import generateBookingId from '../utils/bookingIdGenerator.js';
 
 // Helper to parse hour from input (handles "HH:mm" strings or integers)
 const parseHour = (hourInput) => {
@@ -608,95 +609,155 @@ const generateCloudinarySignature = asyncHandler(async (req, res) => {
 
 const createReservation = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { reservationPattern, startDate, endDate, year, month, week, days, dates } = req.body;
+  const {
+    reservationPattern,
+    startDate,
+    endDate,
+    year,
+    month,
+    week,
+    days,
+    dates,
+    bookingDates,
+    eventDetails,
+  } = req.body;
 
   const hall = await Hall.findById(id);
   if (!hall) {
     throw new ApiError(404, 'Hall not found.');
   }
 
-  let datesToBlock = [];
+  let finalBookingDates = [];
 
-  switch (reservationPattern) {
-    case 'date-range':
-      if (!startDate || !endDate) {
-        throw new ApiError(400, 'Start date and end date are required for a date range reservation.');
-      }
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      let currentDate = new Date(start);
-      while (currentDate <= end) {
-        datesToBlock.push(new Date(currentDate.setUTCHours(0, 0, 0, 0)));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      break;
-
-    case 'full-week':
-      if (!year || !month || !week) {
-        throw new ApiError(400, 'Year, month, and week are required for a full week reservation.');
-      }
-      const firstDayOfMonth = new Date(Date.UTC(year, month - 1, 1));
-      const firstDayOfWeek = new Date(firstDayOfMonth);
-      firstDayOfWeek.setUTCDate(firstDayOfWeek.getUTCDate() + (week - 1) * 7);
-
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(firstDayOfWeek);
-        day.setUTCDate(day.getUTCDate() + i);
-        datesToBlock.push(day);
-      }
-      break;
-
-    case 'full-month':
-      if (!year || !month) {
-        throw new ApiError(400, 'Year and month are required for a full month reservation.');
-      }
-      const firstDay = new Date(Date.UTC(year, month - 1, 1));
-      const lastDay = new Date(Date.UTC(year, month, 0));
-      let currentMonthDay = new Date(firstDay);
-      while (currentMonthDay <= lastDay) {
-        datesToBlock.push(new Date(currentMonthDay));
-        currentMonthDay.setUTCDate(currentMonthDay.getUTCDate() + 1);
-      }
-      break;
-
-    case 'specific-days':
-      if (!year || !month || !days || !Array.isArray(days) || days.length === 0) {
-        throw new ApiError(400, 'Year, month, and an array of days are required for this reservation type.');
-      }
-      const firstDayInMonth = new Date(Date.UTC(year, month - 1, 1));
-      const lastDayInMonth = new Date(Date.UTC(year, month, 0));
-      let currentDay = new Date(firstDayInMonth);
-      while (currentDay <= lastDayInMonth) {
-        if (days.includes(currentDay.getUTCDay())) {
-          datesToBlock.push(new Date(currentDay));
+  if (bookingDates && Array.isArray(bookingDates) && bookingDates.length > 0) {
+    finalBookingDates = bookingDates.map((d) => ({
+      startTime: new Date(d.startTime),
+      endTime: new Date(d.endTime),
+    }));
+  } else if (reservationPattern) {
+    let datesToBlock = [];
+    switch (reservationPattern) {
+      case 'date-range':
+        if (!startDate || !endDate) {
+          throw new ApiError(
+            400,
+            'Start date and end date are required for a date range reservation.'
+          );
         }
-        currentDay.setUTCDate(currentDay.getUTCDate() + 1);
-      }
-      break;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        let currentDate = new Date(start);
+        while (currentDate <= end) {
+          datesToBlock.push(new Date(currentDate.setUTCHours(0, 0, 0, 0)));
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        break;
 
-    case 'specific-dates':
+      case 'full-week':
+        if (!year || !month || !week) {
+          throw new ApiError(
+            400,
+            'Year, month, and week are required for a full week reservation.'
+          );
+        }
+        const firstDayOfMonth = new Date(Date.UTC(year, month - 1, 1));
+        const firstDayOfWeek = new Date(firstDayOfMonth);
+        firstDayOfWeek.setUTCDate(firstDayOfWeek.getUTCDate() + (week - 1) * 7);
+
+        for (let i = 0; i < 7; i++) {
+          const day = new Date(firstDayOfWeek);
+          day.setUTCDate(day.getUTCDate() + i);
+          datesToBlock.push(day);
+        }
+        break;
+
+      case 'full-month':
+        if (!year || !month) {
+          throw new ApiError(
+            400,
+            'Year and month are required for a full month reservation.'
+          );
+        }
+        const firstDay = new Date(Date.UTC(year, month - 1, 1));
+        const lastDay = new Date(Date.UTC(year, month, 0));
+        let currentMonthDay = new Date(firstDay);
+        while (currentMonthDay <= lastDay) {
+          datesToBlock.push(new Date(currentMonthDay));
+          currentMonthDay.setUTCDate(currentMonthDay.getUTCDate() + 1);
+        }
+        break;
+
+      case 'specific-days':
+        if (
+          !year ||
+          !month ||
+          !days ||
+          !Array.isArray(days) ||
+          days.length === 0
+        ) {
+          throw new ApiError(
+            400,
+            'Year, month, and an array of days are required for this reservation type.'
+          );
+        }
+        const firstDayInMonth = new Date(Date.UTC(year, month - 1, 1));
+        const lastDayInMonth = new Date(Date.UTC(year, month, 0));
+        let currentDay = new Date(firstDayInMonth);
+        while (currentDay <= lastDayInMonth) {
+          if (days.includes(currentDay.getUTCDay())) {
+            datesToBlock.push(new Date(currentDay));
+          }
+          currentDay.setUTCDate(currentDay.getUTCDate() + 1);
+        }
+        break;
+
+      case 'specific-dates':
         if (!dates || !Array.isArray(dates) || dates.length === 0) {
-            throw new ApiError(400, 'An array of dates is required for this reservation type.');
+          throw new ApiError(
+            400,
+            'An array of dates is required for this reservation type.'
+          );
         }
-        dates.forEach(dateStr => {
-            const date = new Date(dateStr);
-            datesToBlock.push(new Date(date.setUTCHours(0, 0, 0, 0)));
+        dates.forEach((dateStr) => {
+          const date = new Date(dateStr);
+          datesToBlock.push(new Date(date.setUTCHours(0, 0, 0, 0)));
         });
         break;
 
-    default:
-      throw new ApiError(400, 'Invalid reservation pattern provided.');
+      default:
+        throw new ApiError(400, 'Invalid reservation pattern provided.');
+    }
+
+    // For patterns, we block the full day
+    finalBookingDates = datesToBlock.map((d) => ({
+      startTime: new Date(new Date(d).setUTCHours(0, 0, 0, 0)),
+      endTime: new Date(new Date(d).setUTCHours(23, 59, 59, 999)),
+    }));
+  } else {
+    throw new ApiError(
+      400,
+      'Invalid reservation request. Provide either bookingDates or a reservationPattern.'
+    );
   }
 
-  const existingBlockedDates = new Set(hall.blockedDates.map(d => d.getTime()));
-  const newDatesToBlock = datesToBlock.filter(d => !existingBlockedDates.has(d.getTime()));
+  const bookingId = await generateBookingId(hall.name);
 
-  if (newDatesToBlock.length > 0) {
-    hall.blockedDates.push(...newDatesToBlock);
-    await hall.save({ validateBeforeSave: true });
-  }
+  const adminBlock = await Booking.create({
+    bookingId,
+    hall: id,
+    bookingDates: finalBookingDates,
+    eventDetails: eventDetails || 'Blocked Date',
+    totalPrice: 0,
+    paymentMethod: 'admin',
+    paymentStatus: 'paid',
+    status: 'confirmed',
+    bookingType: 'admin-block',
+    bookedBy: req.user._id,
+  });
 
-  return res.status(200).json(new ApiResponse(200, hall, 'Reservation created successfully.'));
+  return res
+    .status(201)
+    .json(new ApiResponse(201, adminBlock, 'Hall dates blocked successfully.'));
 });
 
 const bookDemo = asyncHandler(async (req, res) => {
@@ -828,8 +889,12 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
                 // Check if the buffered slot overlaps with the query range
                 if (bufferedStartTime <= queryEndDate && bufferedEndTime >= queryStartDate) {
                     let reason = "Pending Reservation"; // Set a default reason for reservations
-                     if (type === 'booking') {
-                        reason = item.status === 'confirmed' ? 'Confirmed Booking' : 'Pending Booking';
+                    if (type === 'booking') {
+                        if (item.bookingType === 'admin-block') {
+                            reason = item.eventDetails || 'Blocked Date';
+                        } else {
+                            reason = item.status === 'confirmed' ? 'Confirmed Booking' : 'Pending Booking';
+                        }
                     }
 
                     unavailableSlots.push({
