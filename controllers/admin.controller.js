@@ -220,14 +220,17 @@ const updateCompanyNameSetting = asyncHandler(async (req, res) => {
 });
 
 const uploadCompanyLogo = asyncHandler(async (req, res) => {
-  if (!req.file) {
-    throw new ApiError(400, 'Company logo file is required');
+  let logoUrl = req.body.companyLogoUrl;
+
+  if (req.file) {
+    logoUrl = await uploadToR2(req.file.path, 'image', req.file.mimetype, false);
+    if (!logoUrl) {
+      throw new ApiError(500, 'Failed to upload company logo to R2');
+    }
   }
 
-  const logoUrl = await uploadToR2(req.file.path, 'image', req.file.mimetype, false);
-
   if (!logoUrl) {
-    throw new ApiError(500, 'Failed to upload company logo to R2');
+    throw new ApiError(400, 'Company logo file or URL is required');
   }
 
   const updatedSetting = await Setting.findOneAndUpdate(
@@ -238,7 +241,7 @@ const uploadCompanyLogo = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { companyLogoUrl: updatedSetting.value }, 'Company logo uploaded successfully'));
+    .json(new ApiResponse(200, { companyLogoUrl: updatedSetting.value }, 'Company logo updated successfully'));
 });
 
 export {

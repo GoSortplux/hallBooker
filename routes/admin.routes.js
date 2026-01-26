@@ -908,7 +908,10 @@ router.route('/settings/company-name').patch(verifyJWT, authorizeRoles('super-ad
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
- *     description: Allows a super-admin to upload a company logo. This logo is used as a watermark for hall media.
+ *     description: |
+ *       Allows a super-admin to set the company logo.
+ *       You can either upload a file directly OR provide a URL of a logo already uploaded to R2.
+ *       This logo is used as a watermark for all hall media images.
  *     requestBody:
  *       required: true
  *       content:
@@ -919,10 +922,19 @@ router.route('/settings/company-name').patch(verifyJWT, authorizeRoles('super-ad
  *               file:
  *                 type: string
  *                 format: binary
- *                 description: "The logo image file."
+ *                 description: "The logo image file to upload."
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               companyLogoUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: "The URL of an existing logo image."
+ *                 example: "https://pub-url.r2.dev/images/logo.png"
  *     responses:
  *       200:
- *         description: Company logo uploaded successfully.
+ *         description: Company logo updated successfully.
  *         content:
  *           application/json:
  *             schema:
