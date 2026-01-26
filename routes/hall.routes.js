@@ -386,8 +386,24 @@ const router = Router();
  *           example: "https://example.com/video.mp4"
  *     ReservationInput:
  *       type: object
- *       required: [reservationPattern]
+ *       description: "Input for blocking dates on a hall. Provide either `bookingDates` for specific time ranges OR a `reservationPattern` for automated date generation (which blocks full days)."
  *       properties:
+ *         bookingDates:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
+ *           example: [{startTime: "2026-01-29T08:00:00.000Z", endTime: "2026-01-29T22:00:00.000Z"}]
+ *         eventDetails:
+ *           type: string
+ *           description: "The reason or label for the block."
+ *           example: "Owner Reservation (Blocked)"
  *         reservationPattern:
  *           type: string
  *           enum: [date-range, full-week, full-month, specific-days, specific-dates]
@@ -978,7 +994,8 @@ router.route('/:id/media')
  * @swagger
  * /api/v1/halls/{id}/reservations:
  *   post:
- *     summary: Create a reservation (block dates) for a hall
+ *     summary: Create an admin block (block dates/times) for a hall
+ *     description: "Allows hall owners and admins to block specific dates or time ranges. These blocks are stored as internal bookings and will show up as unavailable slots in the calendar."
  *     tags: [Halls]
  *     security:
  *       - bearerAuth: []
@@ -994,6 +1011,23 @@ router.route('/:id/media')
  *       content:
  *         application/json:
  *           schema:
+ *             $ref: '#/components/schemas/ReservationInput'
+ *     responses:
+ *       201:
+ *         description: Hall dates blocked successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *                 message:
+ *                   type: string
+ *                   example: "Hall dates blocked successfully."
  */
 router.route('/:id/reservations')
     .post(verifyJWT, authorizeHallAccess, checkActiveLicense, createReservation);

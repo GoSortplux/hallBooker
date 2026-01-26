@@ -56,7 +56,7 @@ const bookingSchema = new mongoose.Schema(
     },
     bookingType: {
       type: String,
-      enum: ['online', 'walk-in'],
+      enum: ['online', 'walk-in', 'admin-block'],
       default: 'online'
     },
     walkInUserDetails: {
@@ -91,6 +91,11 @@ const bookingSchema = new mongoose.Schema(
 
 // Pre-save middleware for dynamic validation
 bookingSchema.pre('save', async function (next) {
+  // Skip dynamic validation for admin blocks
+  if (this.bookingType === 'admin-block') {
+    return next();
+  }
+
   if (this.isModified('paymentMethod') || this.isModified('paymentStatus')) {
     const paymentMethodsSetting = await Setting.findOne({ key: 'paymentMethods' });
     const paymentStatusesSetting = await Setting.findOne({ key: 'paymentStatuses' });
