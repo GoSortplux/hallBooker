@@ -16,7 +16,9 @@ import {
   approveDeletionRequest,
   declineDeletionRequest,
   updateCompanyNameSetting,
+  uploadCompanyLogo,
 } from '../controllers/admin.controller.js';
+import { upload } from '../middlewares/multer.middleware.js';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -897,5 +899,48 @@ router.route('/deletion-requests/:userId/decline').patch(verifyJWT, authorizeRol
  *         description: Forbidden - User is not a super-admin.
  */
 router.route('/settings/company-name').patch(verifyJWT, authorizeRoles('super-admin'), updateCompanyNameSetting);
+
+/**
+ * @swagger
+ * /api/v1/admin/settings/company-logo:
+ *   post:
+ *     summary: Upload or update the company logo
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Allows a super-admin to upload a company logo. This logo is used as a watermark for hall media.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: "The logo image file."
+ *     responses:
+ *       200:
+ *         description: Company logo uploaded successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     companyLogoUrl:
+ *                       type: string
+ *                 message:
+ *                   example: "Company logo uploaded successfully"
+ *       400:
+ *         description: Bad Request - Logo file is required.
+ */
+router.route('/settings/company-logo').post(verifyJWT, authorizeRoles('super-admin'), upload.single('file'), uploadCompanyLogo);
 
 export default router;
