@@ -17,6 +17,15 @@ import initializeReservationCronJobs from './cron/reservationManager.js';
 import { scheduleReviewNotifications } from './cron/reviewNotification.js';
 import initializeUserCleanupCronJob from './cron/userCleanupManager.js';
 
+// Worker Imports
+import './jobs/workers/email.worker.js';
+import createNotificationWorker from './jobs/workers/notification.worker.js';
+import './jobs/workers/analytics.worker.js';
+import './jobs/workers/pdf.worker.js';
+import './jobs/workers/booking.worker.js';
+import './jobs/workers/media.worker.js';
+import redisConnection from './config/redis.js';
+
 // Route Imports
 import reservationRoutes from './routes/reservation.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -91,6 +100,9 @@ initializeNotificationCronJobs();
 scheduleReviewNotifications(io);
 initializeReservationCronJobs(io);
 initializeUserCleanupCronJob(io);
+
+// Initialize Workers that need IO
+createNotificationWorker(io);
 
 // Middleware
 
@@ -178,3 +190,26 @@ io.on('connection', (socket) => {
 httpServer.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
+// Graceful Shutdown
+const gracefulShutdown = async (signal) => {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+
+  httpServer.close(async () => {
+    console.log('HTTP server closed.');
+
+    console.log('Closing Redis connection...');
+    await redisConnection.quit();
+
+    process.exit(0);
+  });
+
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
