@@ -26,8 +26,8 @@ import {
     generateNewBookingNotificationEmailForOwner,
     generatePaymentFailedEmail
 } from '../utils/emailTemplates.js';
-import { generatePdfReceipt, generateSubscriptionPdfReceipt } from '../utils/pdfGenerator.js';
 import { processReservationTransaction, processConversionTransaction } from './reservation.controller.js';
+import pdfQueue from '../jobs/queues/pdf.queue.js';
 
 
 // Helper function to parse Monnify's custom date format
@@ -122,20 +122,17 @@ async function processTransaction(transactionData, io) {
             await Hall.updateMany({ owner: subscription.owner._id }, { $set: { isActive: true } });
 
             try {
-                const pdfBuffer = Buffer.from(generateSubscriptionPdfReceipt(subscription));
-
-                await sendEmail({
-                    io,
-                    email: subscription.owner.email,
-                    subject: 'Your Subscription Payment Receipt',
-                    html: generateSubscriptionPaymentEmail(subscription),
-                    attachments: [
-                        { filename: `receipt-${subscription._id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }
-                    ],
+                await pdfQueue.add('generateSubscriptionPdf', {
+                    type: 'subscription',
+                    data: { subscription },
+                    emailOptions: {
+                        email: subscription.owner.email,
+                        subject: 'Your Subscription Payment Receipt',
+                        html: generateSubscriptionPaymentEmail(subscription),
+                    }
                 });
 
                 await sendEmail({
-                    io,
                     email: subscription.owner.email,
                     subject: 'Your Subscription is Confirmed!',
                     html: generateSubscriptionConfirmationEmail(
@@ -148,7 +145,6 @@ async function processTransaction(transactionData, io) {
 
                 if (admin) {
                     await sendEmail({
-                        io,
                         email: admin.email,
                         subject: 'New Subscription Purchase',
                         html: generateAdminLicenseNotificationEmail(
@@ -284,15 +280,17 @@ async function processBookingTransaction(bookingDetails, io) {
                  const hallOwner = hall.owner;
                  const admins = await User.find({ role: 'super-admin' });
                  if (customerEmail) {
-                     sendEmail({
-                         io,
-                         email: customerEmail,
-                         subject: `Your Recurring Booking for ${hall.name} is Confirmed!`,
-                         html: generateRecurringBookingConfirmationEmail(customerDetails.fullName, allBookings, hall),
-                 }).catch(err => logger.error(`Recurring booking email error: ${err}`));
+                    pdfQueue.add('generateRecurringPdf', {
+                        type: 'recurring',
+                        data: { customerDetails, bookings: allBookings, hall },
+                        emailOptions: {
+                            email: customerEmail,
+                            subject: `Your Recurring Booking for ${hall.name} is Confirmed!`,
+                            html: generateRecurringBookingConfirmationEmail(customerDetails.fullName, allBookings, hall),
+                        }
+                    }).catch(err => console.error("Recurring booking PDF error:", err));
                  }
                  sendEmail({
-                     io,
                      email: hallOwner.email,
                      subject: `New Recurring Booking for ${hall.name}`,
                      html: generateRecurringBookingConfirmationEmail(hallOwner.fullName, allBookings, hall),
@@ -300,7 +298,6 @@ async function processBookingTransaction(bookingDetails, io) {
                  }).catch(err => logger.error(`Recurring booking notification error for owner: ${err}`));
                  admins.forEach(admin => {
                      sendEmail({
-                         io,
                          email: admin.email,
                          subject: `Admin Alert: New Recurring Booking for ${hall.name}`,
                          html: generateRecurringBookingConfirmationEmail(admin.fullName, allBookings, hall),
@@ -317,18 +314,18 @@ async function processBookingTransaction(bookingDetails, io) {
                  const admins = await User.find({ role: 'super-admin' });
                  if (customerEmail) {
                      const bookingForEmail = { ...confirmedBooking.toObject(), user: customerDetails };
-                     const pdfBuffer = Buffer.from(generatePdfReceipt(bookingForEmail));
-                     sendEmail({
-                         io,
-                         email: customerEmail,
-                         subject: 'Payment Confirmation and Receipt',
-                         html: generatePaymentConfirmationEmail(bookingForEmail),
-                         attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
-                         notification: { recipient: confirmedBooking.user?._id?.toString(), message: `Your booking #${confirmedBooking.bookingId} has been confirmed.`, link: `/bookings/${confirmedBooking._id}` },
-                     }).catch(err => logger.error(`Email error: ${err}`));
+                     pdfQueue.add('generateBookingPdf', {
+                        type: 'booking',
+                        data: { booking: bookingForEmail },
+                        emailOptions: {
+                            email: customerEmail,
+                            subject: 'Payment Confirmation and Receipt',
+                            html: generatePaymentConfirmationEmail(bookingForEmail),
+                            notification: { recipient: confirmedBooking.user?._id?.toString(), message: `Your booking #${confirmedBooking.bookingId} has been confirmed.`, link: `/bookings/${confirmedBooking._id}` },
+                        }
+                     }).catch(err => console.error("Booking PDF error:", err));
                  }
                  sendEmail({
-                     io,
                      email: hallOwner.email,
                      subject: `Booking Payment Received for ${confirmedBooking.hall.name}`,
                      html: generateNewBookingNotificationEmailForOwner(hallOwner, customerDetails, confirmedBooking),
@@ -336,7 +333,6 @@ async function processBookingTransaction(bookingDetails, io) {
                  }).catch(err => logger.error(`Owner notification error: ${err}`));
                  admins.forEach(admin => {
                      sendEmail({
-                         io,
                          email: admin.email,
                          subject: `Admin Alert: Booking Payment Received for ${confirmedBooking.hall.name}`,
                          html: generateNewBookingNotificationEmailForOwner(admin, customerDetails, confirmedBooking),
@@ -537,7 +533,6 @@ const handleMonnifyWebhook = asyncHandler(async (req, res) => {
                 const admin = await User.findOne({ role: 'super-admin' });
                 if (admin) {
                     await sendEmail({
-                        io,
                         email: admin.email,
                         subject: 'Disbursement Failure Alert',
                         html: generateAdminDisbursementFailureEmail(parsedData),
@@ -553,7 +548,6 @@ const handleMonnifyWebhook = asyncHandler(async (req, res) => {
                         subscription.mandateStatus = 'CANCELLED';
                         await subscription.save();
                         await sendEmail({
-                            io,
                             email: subscription.owner.email,
                             subject: 'Your Subscription Auto-Renewal Was Cancelled',
                             html: generateMandateCancellationEmail(subscription.owner.fullName, subscription.expiryDate),

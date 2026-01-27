@@ -1,8 +1,7 @@
+import './config/env.js';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -22,6 +21,8 @@ import initializeNotificationCronJobs from './cron/notificationManager.js';
 import initializeReservationCronJobs from './cron/reservationManager.js';
 import { scheduleReviewNotifications } from './cron/reviewNotification.js';
 import initializeUserCleanupCronJob from './cron/userCleanupManager.js';
+
+import redisConnection from './config/redis.js';
 
 // Route Imports
 import reservationRoutes from './routes/reservation.routes.js';
@@ -44,10 +45,8 @@ import facilityRoutes from './routes/facility.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import monnifyRoutes from './routes/monnify.routes.js';
 import suitabilityRoutes from './routes/suitability.routes.js';
-
-
-// Load environment variables
-dotenv.config();
+import { verifyJWT, authorizeRoles } from './middlewares/auth.middleware.js';
+import bullBoardAdapter from './config/bullboard.js';
 
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
@@ -166,6 +165,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Bull Board Monitoring (Super Admin Only)
+app.use('/admin/queues', verifyJWT, authorizeRoles('super-admin'), bullBoardAdapter.getRouter());
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/pending-hallowner-request', adminRoutes);
@@ -219,23 +221,21 @@ const server = httpServer.listen(port, () => {
 });
 
 // Graceful Shutdown
-const gracefulShutdown = (signal) => {
-  logger.info(`${signal} signal received: closing HTTP server`);
-  server.close(async () => {
-    logger.info('HTTP server closed');
-    try {
-      await mongoose.connection.close();
-      logger.info('MongoDB connection closed');
-      process.exit(0);
-    } catch (err) {
-      logger.error(`Error during MongoDB connection close: ${err}`);
-      process.exit(1);
-    }
+const gracefulShutdown = async (signal) => {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+
+  httpServer.close(async () => {
+    console.log('HTTP server closed.');
+
+    console.log('Closing Redis connection...');
+    await redisConnection.quit();
+
+    process.exit(0);
   });
 
-  // Force close after 10s if graceful shutdown fails
+  // Force exit after 10 seconds if graceful shutdown fails
   setTimeout(() => {
-    logger.error('Could not close connections in time, forcefully shutting down');
+    console.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
   }, 10000);
 };

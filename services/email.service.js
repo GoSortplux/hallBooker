@@ -1,40 +1,26 @@
-import nodemailer from 'nodemailer';
-import { ApiError } from '../utils/apiError.js';
-import logger from '../utils/logger.js';
+import emailQueue from '../jobs/queues/email.queue.js';
 
+/**
+ * Pushes an email job to the queue.
+ * @param {Object} options - Email options including recipient, subject, html, attachments, and optional notification data.
+ */
 const sendEmail = async (options) => {
   const { io, notification, ...emailOptions } = options;
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      secure: process.env.EMAIL_SECURE === 'true',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
-      to: emailOptions.email,
+  try {
+    // emailOptions typically contains: email, subject, html, attachments
+    await emailQueue.add('sendEmail', {
+      email: emailOptions.email,
       subject: emailOptions.subject,
       html: emailOptions.html,
       attachments: emailOptions.attachments,
-    };
-
-    logger.debug('Attempting to send email...');
-    await transporter.sendMail(mailOptions);
-    logger.info(`Email sent to ${emailOptions.email}`);
-    if (io && notification) {
-      io.to(notification.recipient).emit('notification', {
-        message: notification.message,
-        link: notification.link
-      });
-    }
+      notification,
+    });
+    console.log(`[EmailService] Email job queued for ${emailOptions.email}`);
   } catch (error) {
-    logger.error(`Email sending failed: ${error}`);
-    throw new ApiError(500, "The email could not be sent.");
+    console.error("[EmailService] Failed to queue email:", error);
+    // We don't throw ApiError here to avoid breaking the request-response cycle
+    // for something that should be backgrounded.
   }
 };
 
