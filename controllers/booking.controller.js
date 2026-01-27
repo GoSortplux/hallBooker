@@ -15,6 +15,7 @@ import { generatePdfReceipt, generateRecurringBookingPdfReceipt } from '../utils
 import generateBookingId from '../utils/bookingIdGenerator.js';
 import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
+import { bookingQueue } from '../jobs/queues/index.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
   const { hallId, startTime, endTime, eventDetails, recurrenceRule, paymentMethod, paymentStatus, walkInUserDetails, dates, overrideReservation, selectedFacilities: selectedFacilitiesData } = req.body;
@@ -197,102 +198,38 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     finalPricePerBooking = Math.round((finalHallPricePerBooking + finalFacilitiesPricePerBooking) * 100) / 100;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const firstBookingId = await generateBookingId(hall.name, 0);
+  const recurringBookingId = `REC-${firstBookingId}`;
 
-  try {
-    const firstBookingId = await generateBookingId(hall.name, 0);
-    const recurringBookingId = `REC-${firstBookingId}`;
-    const createdBookings = [];
+  const bookingDateRanges = bookingDates.map(date => {
+    const bookingStart = new Date(date);
+    bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
+    const bookingEnd = new Date(bookingStart.getTime() + eventDuration);
+    return { startTime: bookingStart, endTime: bookingEnd };
+  });
 
-    for (let i = 0; i < bookingDates.length; i++) {
-      const date = bookingDates[i];
-      const bookingId = (i === 0) ? firstBookingId : await generateBookingId(hall.name, i);
-      const bookingStart = new Date(date);
-      bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
-      const bookingEnd = new Date(bookingStart.getTime() + eventDuration);
+  // Queue bulk booking creation
+  await bookingQueue.add('createRecurringBookings', {
+    hallId,
+    bookingDates: bookingDateRanges,
+    eventDetails,
+    finalPaymentMethod,
+    paymentStatus,
+    bookedBy: req.user._id,
+    walkInUserDetails: {
+      fullName: walkInUserDetails.fullName,
+      email: walkInUserDetails.email,
+      phone: walkInUserDetails.phone,
+    },
+    recurringBookingId,
+    finalPricePerBooking,
+    finalHallPricePerBooking,
+    finalFacilitiesPricePerBooking,
+    facilitiesWithCalculatedCosts,
+    selectedFacilitiesData
+  });
 
-      const bookingData = {
-        bookingId,
-        hall: hallId,
-        bookingDates: [{ startTime: bookingStart, endTime: bookingEnd }],
-        eventDetails,
-        totalPrice: finalPricePerBooking,
-        hallPrice: finalHallPricePerBooking,
-        facilitiesPrice: finalFacilitiesPricePerBooking,
-        paymentMethod: finalPaymentMethod,
-        paymentStatus: paymentStatus,
-        bookingType: 'walk-in',
-        bookedBy: req.user._id,
-        walkInUserDetails: {
-          fullName: walkInUserDetails.fullName,
-          email: walkInUserDetails.email,
-          phone: walkInUserDetails.phone,
-        },
-        isRecurring: true,
-        recurringBookingId,
-        selectedFacilities: facilitiesWithCalculatedCosts.map((cf, idx) => ({
-          ...cf,
-          facility: selectedFacilitiesData[idx].facilityId,
-        })),
-      };
-      createdBookings.push(bookingData);
-    }
-
-    const newBookings = await Booking.create(createdBookings, { session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    // Notifications are sent only after the transaction is successful
-    try {
-      if (walkInUserDetails.email) {
-        const pdfReceipt = generateRecurringBookingPdfReceipt(walkInUserDetails, newBookings, hall);
-
-        await sendEmail({
-          io,
-          email: walkInUserDetails.email,
-          subject: 'Recurring Booking Confirmation - HallBooker',
-          html: generateRecurringBookingConfirmationEmail(walkInUserDetails.fullName, newBookings, hall),
-          attachments: [{
-            filename: `receipt-recurring-${recurringBookingId}.pdf`,
-            content: Buffer.from(pdfReceipt),
-            contentType: 'application/pdf'
-          }],
-        });
-      }
-
-      const admins = await User.find({ role: 'super-admin' });
-      const adminEmails = admins.map(admin => admin.email);
-      const notificationEmails = [hall.owner.email, ...adminEmails];
-
-      await Promise.all(notificationEmails.map(email => {
-          const userIsAdmin = admins.some(admin => admin.email === email);
-          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
-          sendEmail({
-              io,
-              email,
-              subject: 'New Recurring Booking Notification',
-              html: generateRecurringBookingConfirmationEmail(hall.owner.fullName, newBookings, hall),
-              notification: {
-                  recipient: recipient.toString(),
-                  message: `A new recurring booking has been made for hall: ${hall.name}.`,
-                  link: `/bookings/recurring/${recurringBookingId}`,
-              },
-          });
-      }));
-    } catch (emailError) {
-      console.error('Email notification failed after successful recurring booking:', emailError);
-    }
-
-    res.status(201).json(new ApiResponse(201, { bookings: newBookings, recurringBookingId }, 'Recurring booking created successfully!'));
-
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Recurring booking failed:", error);
-    throw new ApiError(500, 'Could not complete the recurring booking process.');
-  }
+  return res.status(202).json(new ApiResponse(202, { recurringBookingId }, 'Recurring booking is being processed in the background.'));
 });
 
 const createBooking = asyncHandler(async (req, res) => {

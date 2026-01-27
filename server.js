@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
 import connectDB from './config/db.js';
+import redisConnection from './config/redis.js';
 import logger from './utils/logger.js';
 import { notFound, errorHandler } from './middlewares/error.middleware.js';
 import initializeCronJobs from './cron/licenseManager.js';
@@ -36,6 +37,17 @@ import licenseTierRoutes from './routes/licenseTier.routes.js';
 import settingRoutes from './routes/setting.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import analyticsV2Routes from './routes/analytics.v2.routes.js';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js';
+import { ExpressAdapter } from '@bull-board/express';
+import {
+  emailQueue,
+  notificationQueue,
+  mediaQueue,
+  analyticsQueue,
+  pdfQueue,
+  bookingQueue
+} from './jobs/queues/index.js';
 import paymentRoutes from './routes/payment.routes.js';
 import subAccountRoutes from './routes/subaccount.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
@@ -156,6 +168,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Bull Board Dashboard
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath('/admin/queues');
+
+createBullBoard({
+  queues: [
+    new BullMQAdapter(emailQueue),
+    new BullMQAdapter(notificationQueue),
+    new BullMQAdapter(mediaQueue),
+    new BullMQAdapter(analyticsQueue),
+    new BullMQAdapter(pdfQueue),
+    new BullMQAdapter(bookingQueue),
+  ],
+  serverAdapter: serverAdapter,
+});
+
+app.use('/admin/queues', serverAdapter.getRouter());
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/pending-hallowner-request', adminRoutes);
@@ -233,6 +263,8 @@ if (isMainModule && process.env.NODE_ENV !== 'test') {
       try {
         await mongoose.connection.close();
         logger.info('MongoDB connection closed');
+        await redisConnection.quit();
+        logger.info('Redis connection closed');
         process.exit(0);
       } catch (err) {
         logger.error(`Error during MongoDB connection close: ${err}`);
