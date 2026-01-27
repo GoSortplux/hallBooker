@@ -7,6 +7,7 @@ import { Reservation } from '../models/reservation.model.js';
 import { Review } from '../models/review.model.js';
 import { createNotification } from '../services/notification.service.js';
 import { Hall } from '../models/hall.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
@@ -52,8 +53,10 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Either a recurrence rule or a list of dates is required.');
   }
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) throw new ApiError(404, 'Hall not found');
+  await hall.populate('owner', 'email fullName');
+  await hall.populate('facilities.facility');
   if (!hall.allowRecurringBookings) throw new ApiError(400, 'This hall does not allow recurring bookings.');
 
   const initialStartTime = new Date(startTime);
@@ -132,7 +135,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 
   // 1. Bulk Check Reservation Documents
   const conflictingReservations = await Reservation.find({
-    hall: hallId,
+    hall: hall._id,
     status: 'ACTIVE',
     $or: bufferedOrQuery
   });
@@ -151,7 +154,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 
   // 2. Bulk Check Booking Documents
   const conflictingBookings = await Booking.find({
-    hall: hallId,
+    hall: hall._id,
     $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }],
     $and: [{ $or: bufferedOrQuery }]
   });
@@ -210,7 +213,7 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 
   // Queue bulk booking creation
   await bookingQueue.add('createRecurringBookings', {
-    hallId,
+    hallId: hall._id.toString(),
     bookingDates: bookingDateRanges,
     eventDetails,
     finalPaymentMethod,
@@ -235,8 +238,10 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
 const createBooking = asyncHandler(async (req, res) => {
   const { hallId, bookingDates, eventDetails, selectedFacilities: selectedFacilitiesData } = req.body;
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) throw new ApiError(404, 'Hall not found');
+  await hall.populate('owner', 'email fullName');
+  await hall.populate('facilities.facility');
 
   if (!hall.pricing || (typeof hall.pricing !== 'object') || (!hall.pricing.hourlyRate && !hall.pricing.dailyRate)) {
     throw new ApiError(400, 'Hall does not have valid pricing information. Pricing should be an object with hourlyRate and/or dailyRate.');
@@ -291,7 +296,7 @@ const createBooking = asyncHandler(async (req, res) => {
   });
 
   const conflictingReservations = await Reservation.find({
-    hall: hallId,
+    hall: hall._id,
     $or: reservationOrQuery,
     status: 'ACTIVE',
   });
@@ -323,7 +328,7 @@ const createBooking = asyncHandler(async (req, res) => {
   });
 
   const conflictingBookings = await Booking.find({
-    hall: hallId,
+    hall: hall._id,
     $or: [
       { status: 'confirmed' },
       { paymentStatus: 'pending' }
@@ -361,7 +366,7 @@ const createBooking = asyncHandler(async (req, res) => {
     const bookingId = await generateBookingId(hall.name);
     const bookingData = {
       bookingId,
-      hall: hallId,
+      hall: hall._id,
       user: req.user._id,
       bookingDates,
       eventDetails,
@@ -493,8 +498,10 @@ const walkInBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const hall = await Hall.findById(hallId).populate('owner', 'email fullName').populate('facilities.facility');
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) throw new ApiError(404, 'Hall not found');
+  await hall.populate('owner', 'email fullName');
+  await hall.populate('facilities.facility');
 
   const isHallOwner = hall.owner._id.toString() === req.user._id.toString();
   const isSuperAdmin = req.user.activeRole === 'super-admin';
@@ -558,7 +565,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
   });
 
   const conflictingReservations = await Reservation.find({
-    hall: hallId,
+    hall: hall._id,
     $or: reservationOrQuery,
     status: 'ACTIVE',
   });
@@ -590,7 +597,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
   });
 
   const conflictingBookings = await Booking.find({
-    hall: hallId,
+    hall: hall._id,
     $or: [
       { status: 'confirmed' },
       { paymentStatus: 'pending' }
@@ -628,7 +635,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
 
     const bookingData = {
       bookingId,
-      hall: hallId,
+      hall: hall._id,
       bookingDates,
       eventDetails,
       totalPrice,

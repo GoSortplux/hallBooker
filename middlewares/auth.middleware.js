@@ -40,6 +40,7 @@ export const authorizeRoles = (...roles) => {
 
 import { Hall } from '../models/hall.model.js';
 import mongoose from 'mongoose';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 
 export const isEmailVerified = (req, _, next) => {
   if (!req.user.isEmailVerified) {
@@ -56,11 +57,7 @@ export const authorizeHallAccess = asyncHandler(async (req, _, next) => {
     return next();
   }
 
-  if (!mongoose.Types.ObjectId.isValid(hallId)) {
-    throw new ApiError(400, 'Invalid hall ID');
-  }
-
-  const hall = await Hall.findById(hallId);
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) {
     throw new ApiError(404, 'Hall not found');
   }

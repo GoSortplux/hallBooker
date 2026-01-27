@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -6,6 +7,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { Reservation } from '../models/reservation.model.js';
 import { Hall } from '../models/hall.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import { Facility } from '../models/facility.model.js';
 import { User } from '../models/user.model.js';
 import { createNotification } from '../services/notification.service.js';
@@ -36,7 +38,7 @@ const parseHour = (hourInput) => {
 
 const toggleOnlineBooking = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const hall = await Hall.findById(id);
+    const hall = await findHallByIdOrSlug(id);
 
     if (!hall) {
         throw new ApiError(404, "Hall not found");
@@ -203,7 +205,9 @@ const getAllHalls = asyncHandler(async (req, res) => {
 });
 
 const getHallById = asyncHandler(async (req, res) => {
-    const hall = await Hall.findById(req.params.id).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility').populate('suitableFor');
+    const { id } = req.params;
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    const hall = await Hall.findOne(query).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility').populate('suitableFor');
     if (!hall) throw new ApiError(404, "Hall not found");
 
     // If the hall is unlisted, verify user authorization
@@ -253,7 +257,7 @@ const getHallById = asyncHandler(async (req, res) => {
 
         // Queue analytics tracking
         await analyticsQueue.add('trackView', {
-            hallId: req.params.id,
+            hallId: hall._id.toString(),
             type: 'view',
             userId,
             ipAddress: req.ip
@@ -290,7 +294,7 @@ const updateHall = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Cannot update the owner of a hall.");
     }
 
-    const hall = await Hall.findById(id);
+    const hall = await findHallByIdOrSlug(id);
     if (!hall) {
         throw new ApiError(404, "Hall not found.");
     }
@@ -389,7 +393,8 @@ const updateHall = asyncHandler(async (req, res) => {
 
 const getHallRules = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const hall = await Hall.findById(id).select('rules');
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    const hall = await Hall.findOne(query).select('rules');
 
     if (!hall) {
         throw new ApiError(404, "Hall not found");
@@ -406,8 +411,9 @@ const updateHallRules = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Rules must be an array of strings");
     }
 
-    const hall = await Hall.findByIdAndUpdate(
-        id,
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    const hall = await Hall.findOneAndUpdate(
+        query,
         { rules },
         { new: true, runValidators: true }
     ).select('rules');
@@ -427,8 +433,9 @@ const updateHallSuitability = asyncHandler(async (req, res) => {
         throw new ApiError(400, "suitabilityFor must be an array of category IDs");
     }
 
-    const hall = await Hall.findByIdAndUpdate(
-        id,
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    const hall = await Hall.findOneAndUpdate(
+        query,
         { suitableFor },
         { new: true, runValidators: true }
     ).populate('suitableFor');
@@ -441,7 +448,9 @@ const updateHallSuitability = asyncHandler(async (req, res) => {
 });
 
 const deleteHall = asyncHandler(async (req, res) => {
-    const hall = await Hall.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    const hall = await Hall.findOneAndDelete(query);
     if (!hall) {
         throw new ApiError(404, "Hall not found.");
     }
@@ -509,7 +518,7 @@ const addHallMedia = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Image or video URL is required.');
   }
 
-  const hall = await Hall.findById(id);
+  const hall = await findHallByIdOrSlug(id);
   if (!hall) {
     throw new ApiError(404, 'Hall not found.');
   }
@@ -541,7 +550,7 @@ const deleteHallMedia = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Media URL is required for deletion.');
   }
 
-  const hall = await Hall.findById(id);
+  const hall = await findHallByIdOrSlug(id);
   if (!hall) {
     throw new ApiError(404, 'Hall not found.');
   }
@@ -554,8 +563,9 @@ const deleteHallMedia = asyncHandler(async (req, res) => {
   // This will attempt to delete from R2.
   await deleteFromR2(mediaUrl);
 
-  const updateResult = await Hall.findByIdAndUpdate(
-    id,
+  const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+  const updateResult = await Hall.findOneAndUpdate(
+    query,
     { $pull: { images: mediaUrl, videos: mediaUrl } },
     { new: true }
   );
@@ -630,7 +640,7 @@ const createReservation = asyncHandler(async (req, res) => {
     eventDetails,
   } = req.body;
 
-  const hall = await Hall.findById(id);
+  const hall = await findHallByIdOrSlug(id);
   if (!hall) {
     throw new ApiError(404, 'Hall not found.');
   }
@@ -752,7 +762,7 @@ const createReservation = asyncHandler(async (req, res) => {
 
   const adminBlock = await Booking.create({
     bookingId,
-    hall: id,
+    hall: hall._id,
     bookingDates: finalBookingDates,
     eventDetails: eventDetails || 'Blocked Date',
     totalPrice: 0,
@@ -769,9 +779,9 @@ const createReservation = asyncHandler(async (req, res) => {
 });
 
 const bookDemo = asyncHandler(async (req, res) => {
-    const hallId = req.params.id;
+    const { id: hallId } = req.params;
 
-    const hall = await Hall.findById(hallId);
+    const hall = await findHallByIdOrSlug(hallId);
     // Ensure the hall exists and is listed (or existed before isListed was introduced)
     if (!hall || hall.isListed === false) {
         throw new ApiError(404, "Hall not found");
@@ -790,7 +800,7 @@ const bookDemo = asyncHandler(async (req, res) => {
 
     try {
         await analyticsQueue.add('trackDemoBooking', {
-            hallId,
+            hallId: hall._id.toString(),
             type: 'demo-booking',
             userId,
             ipAddress: req.ip
@@ -799,7 +809,7 @@ const bookDemo = asyncHandler(async (req, res) => {
         console.error('Analytics demo booking queueing failed:', error);
     }
 
-    const hallWithContact = await Hall.findById(hallId).populate('owner', 'phone whatsappNumber');
+    const hallWithContact = await Hall.findById(hall._id).populate('owner', 'phone whatsappNumber');
 
     const ownerContact = {
         phone: hallWithContact.owner?.phone,
@@ -838,7 +848,7 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Start date and end date are required.");
     }
 
-    const hall = await Hall.findById(id);
+    const hall = await findHallByIdOrSlug(id);
     if (!hall) {
         throw new ApiError(404, "Hall not found");
     }
@@ -854,14 +864,14 @@ const getUnavailableDates = asyncHandler(async (req, res) => {
     const bufferedQueryEndDate = new Date(queryEndDate.getTime() + bufferMilliseconds);
 
     const bookings = await Booking.find({
-        hall: id,
+        hall: hall._id,
         status: { $in: ['confirmed', 'pending'] },
         'bookingDates.startTime': { $lte: bufferedQueryEndDate },
         'bookingDates.endTime': { $gte: bufferedQueryStartDate }
     });
 
     const reservations = await Reservation.find({
-        hall: id,
+        hall: hall._id,
         status: 'ACTIVE',
         'bookingDates.startTime': { $lte: bufferedQueryEndDate },
         'bookingDates.endTime': { $gte: bufferedQueryStartDate }
@@ -943,12 +953,12 @@ const getHallBookings = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
 
-    const hall = await Hall.findById(id);
+    const hall = await findHallByIdOrSlug(id);
     if (!hall) {
         throw new ApiError(404, "Hall not found");
     }
 
-    let query = { hall: id };
+    let query = { hall: hall._id };
 
     if (status) {
         query.status = status;

@@ -6,6 +6,7 @@ const hallSchema = new mongoose.Schema(
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     staff: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     name: { type: String, required: true, trim: true, index: true },
+    slug: { type: String, unique: true, index: true },
     country: { type: mongoose.Schema.Types.ObjectId, ref: 'Country', required: true },
     state: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },
     localGovernment: { type: mongoose.Schema.Types.ObjectId, ref: 'LocalGovernment', required: true },
@@ -140,5 +141,45 @@ const hallSchema = new mongoose.Schema(
 );
 
 hallSchema.index({ geoLocation: '2dsphere' });
+
+hallSchema.pre('save', async function (next) {
+  if (!this.isModified('name') && this.slug) {
+    return next();
+  }
+
+  let baseSlug = this.name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters except hyphen
+    .replace(/\s+/g, '-')     // Replace spaces with hyphen
+    .replace(/--+/g, '-')     // Replace multiple hyphens with single hyphen
+    .replace(/^-+/, '')       // Trim hyphens from start
+    .replace(/-+$/, '');      // Trim hyphens from end
+
+  // Handle case where name might be only special characters
+  if (!baseSlug) {
+    baseSlug = 'hall';
+  }
+
+  let uniqueSlug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    // We use this.constructor to access the model to avoid circular dependencies
+    const existingHall = await this.constructor.findOne({
+      slug: uniqueSlug,
+      _id: { $ne: this._id }
+    });
+
+    if (!existingHall) {
+      this.slug = uniqueSlug;
+      break;
+    }
+
+    uniqueSlug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+
+  next();
+});
 
 export const Hall = mongoose.model('Hall', hallSchema);
