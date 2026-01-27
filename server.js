@@ -38,7 +38,7 @@ import settingRoutes from './routes/setting.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import analyticsV2Routes from './routes/analytics.v2.routes.js';
 import { createBullBoard } from '@bull-board/api';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import {
   emailQueue,
