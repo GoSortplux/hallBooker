@@ -5,12 +5,13 @@ import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateReservationExpiredEmail, generateReservationReminderEmail, generatePendingReservationCancelledEmail } from '../utils/emailTemplates.js';
 import { createNotification } from '../services/notification.service.js';
+import logger from '../utils/logger.js';
 
 
 const reservationManager = (io) => {
   // Schedule a job to run every minute to check for expired pending reservations
   cron.schedule('* * * * *', async () => {
-    console.log('Running cron job to clean up expired pending reservations...');
+    logger.debug('Running cron job to clean up expired pending reservations...');
 
     try {
         const setting = await Setting.findOne({ key: 'pendingReservationExpiryMinutes' });
@@ -32,7 +33,7 @@ const reservationManager = (io) => {
 
 
         if (expiredPendingReservations.length > 0) {
-            console.log(`Found ${expiredPendingReservations.length} expired pending reservations to clean up.`);
+            logger.info(`Found ${expiredPendingReservations.length} expired pending reservations to clean up.`);
         }
 
         for (const reservation of expiredPendingReservations) {
@@ -41,7 +42,7 @@ const reservationManager = (io) => {
             // If the hall has been deleted, just remove the reservation and move on.
             if (!reservation.hall) {
                 await Reservation.findByIdAndDelete(reservation._id);
-                console.log(`Deleted expired pending reservation ${reservation.reservationId} for non-existent hall.`);
+                logger.info(`Deleted expired pending reservation ${reservation.reservationId} for non-existent hall.`);
                 continue;
             }
 
@@ -50,7 +51,7 @@ const reservationManager = (io) => {
 
             // Delete the reservation
             await Reservation.findByIdAndDelete(reservation._id);
-            console.log(`Deleted expired pending reservation ${reservation.reservationId}.`);
+            logger.info(`Deleted expired pending reservation ${reservation.reservationId}.`);
 
             // Notify the customer
             if (customer && customer.email) {
@@ -65,7 +66,7 @@ const reservationManager = (io) => {
                         reason: 'The reservation was not paid for within the allowed time.'
                     }),
                     // No in-app notification for the user who's reservation is deleted
-                }).catch(err => console.error(`Error sending cancellation email to customer for reservation ${reservation.reservationId}:`, err));
+                }).catch(err => logger.error(`Error sending cancellation email to customer for reservation ${reservation.reservationId}: ${err}`));
             }
 
             // Notify hall owner and super-admins
@@ -87,19 +88,19 @@ const reservationManager = (io) => {
                            message: `An unpaid reservation (${reservation.reservationId}) for ${reservation.hall.name} has been auto-cancelled.`,
                            link: `/admin/reservations` // Generic link for admins/owners
                         }
-                    }).catch(err => console.error(`Error sending cancellation email to ${recipient.email} for reservation ${reservation.reservationId}:`, err));
+                    }).catch(err => logger.error(`Error sending cancellation email to ${recipient.email} for reservation ${reservation.reservationId}: ${err}`));
                 }
             }
         }
     } catch (error) {
-        console.error('Error cleaning up expired pending reservations:', error);
+        logger.error(`Error cleaning up expired pending reservations: ${error}`);
     }
   });
 
 
   // Schedule a job to run every hour for other reservation management tasks
   cron.schedule('0 * * * *', async () => {
-    console.log('Running hourly reservation manager cron job...');
+    logger.debug('Running hourly reservation manager cron job...');
 
     const now = new Date();
 
@@ -114,7 +115,7 @@ const reservationManager = (io) => {
         reservation.status = 'EXPIRED';
         await reservation.save();
 
-        console.log(`Reservation ${reservation._id} has expired.`);
+        logger.info(`Reservation ${reservation.reservationId} has expired.`);
 
         // If hall is deleted, we can't send a proper notification with hall details.
         if (!reservation.hall) {
@@ -133,11 +134,11 @@ const reservationManager = (io) => {
                     message: `Your reservation for ${reservation.hall.name} has expired.`,
                     link: `/reservations/${reservation._id}`
                 }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending reservation expired email: ${err}`));
         }
       }
     } catch (error) {
-        console.error('Error processing expired reservations:', error);
+        logger.error(`Error processing expired reservations: ${error}`);
     }
 
     // 2. Send reminder notifications
@@ -185,11 +186,11 @@ const reservationManager = (io) => {
 
                 reservation.remindersSent.push(interval.name);
                 await reservation.save();
-                console.log(`${interval.name} reminder sent for reservation ${reservation.reservationId}.`);
+                logger.info(`${interval.name} reminder sent for reservation ${reservation.reservationId}.`);
             }
         }
     } catch (error) {
-        console.error('Error sending reservation reminders:', error);
+        logger.error(`Error sending reservation reminders: ${error}`);
     }
   });
 };

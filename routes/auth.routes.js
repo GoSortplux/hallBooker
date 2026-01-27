@@ -9,6 +9,13 @@ import {
     switchRole
 } from '../controllers/auth.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
+import validate from '../middlewares/validation.middleware.js';
+import {
+    registerSchema,
+    loginSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema
+} from '../validations/auth.validation.js';
 
 const router = Router();
 
@@ -71,7 +78,7 @@ const router = Router();
  *       409:
  *         description: User with the provided email or phone number already exists.
  */
-router.post('/register', registerUser);
+router.post('/register', validate(registerSchema), registerUser);
 
 /**
  * @swagger
@@ -141,7 +148,7 @@ router.post('/register', registerUser);
  *       401:
  *         description: Invalid email or password
  */
-router.post('/login', loginUser);
+router.post('/login', validate(loginSchema), loginUser);
 
 /**
  * @swagger
@@ -172,7 +179,7 @@ router.post('/login', loginUser);
  *       404:
  *         description: User not found.
  */
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
 
 /**
  * @swagger
@@ -210,7 +217,7 @@ router.post('/forgot-password', forgotPassword);
  *       400:
  *         description: Invalid or expired token.
  */
-router.patch('/reset-password/:token', resetPassword);
+router.patch('/reset-password/:token', validate(resetPasswordSchema), resetPassword);
 
 /**
  * @swagger

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import logger from '../utils/logger.js';
 
 const dropStaleVenueIndexes = async () => {
   try {
@@ -12,21 +13,21 @@ const dropStaleVenueIndexes = async () => {
         const indexes = await col.indexes();
         for (const index of indexes) {
           if (Object.keys(index.key).includes('venue')) {
-            console.log(`Dropping stale index ${index.name} from ${name}`);
-            await col.dropIndex(index.name).catch(e => console.error(`Failed to drop index ${index.name} from ${name}:`, e.message));
+            logger.info(`Dropping stale index ${index.name} from ${name}`);
+            await col.dropIndex(index.name).catch(e => logger.error(`Failed to drop index ${index.name} from ${name}: ${e.message}`));
           }
         }
       }
     }
   } catch (error) {
-    console.error("Error dropping stale indexes:", error.message);
+    logger.error(`Error dropping stale indexes: ${error.message}`);
   }
 };
 
 const connectDB = async () => {
   try {
     const connectionInstance = await mongoose.connect(`${process.env.MONGO_URI}`);
-    console.log(`\n MongoDB connected! DB HOST: ${connectionInstance.connection.host}`);
+    logger.info(`MongoDB connected! DB HOST: ${connectionInstance.connection.host}`);
 
     // Drop unintended unique index on hall in reviews collection
     const reviewsCollection = connectionInstance.connection.db.collection('reviews');
@@ -34,13 +35,13 @@ const connectDB = async () => {
     const unintendedIndex = indexes.find(index => index.name === 'hall_1_user_1' && index.unique);
     if (unintendedIndex) {
       await reviewsCollection.dropIndex('hall_1_user_1');
-      console.log('Successfully dropped unintended unique index: hall_1_user_1');
+      logger.info('Successfully dropped unintended unique index: hall_1_user_1');
     }
 
     // Automatically cleanup stale indexes from the venue-to-hall refactor
     await dropStaleVenueIndexes();
   } catch (error) {
-    console.error("MONGODB connection FAILED ", error);
+    logger.error(`MONGODB connection FAILED: ${error}`);
     process.exit(1);
   }
 };

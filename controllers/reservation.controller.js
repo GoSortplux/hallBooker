@@ -13,7 +13,7 @@ import { initializeTransaction, verifyTransaction } from '../services/payment.se
 import generateBookingId from '../utils/bookingIdGenerator.js';
 import crypto from 'crypto';
 import sendEmail from '../services/email.service.js';
-import pdfQueue from '../jobs/queues/pdf.queue.js';
+import logger from '../utils/logger.js';
 import {
     generateNewBookingNotificationEmailForOwner,
     generateReservationConfirmationEmail,
@@ -31,13 +31,13 @@ export async function processReservationTransaction(transactionData, io) {
     // Check if this transaction has already been recorded
     const existingTx = await Transaction.findOne({ transactionReference });
     if (existingTx) {
-        console.log(`Transaction ${transactionReference} already recorded.`);
+        logger.info(`Transaction ${transactionReference} already recorded.`);
         return;
     }
 
     const reservation = await Reservation.findById(reservationId).populate('hall').populate('user');
     if (!reservation) {
-        console.error(`Reservation with ID ${reservationId} not found.`);
+        logger.error(`Reservation with ID ${reservationId} not found.`);
         return;
     }
 
@@ -56,7 +56,7 @@ export async function processReservationTransaction(transactionData, io) {
     });
 
     if (isDuplicate) {
-        console.log(`Reservation ${reservationId} already paid.`);
+        logger.info(`Reservation ${reservationId} already paid.`);
         return;
     }
 
@@ -71,28 +71,28 @@ export async function processReservationTransaction(transactionData, io) {
 
         if (customer && customer.email) {
             sendEmail({
-                email: customer.email, subject: `Your Reservation for ${reservation.hall.name} is Confirmed!`,
+                io, email: customer.email, subject: `Your Reservation for ${reservation.hall.name} is Confirmed!`,
                 html: generateReservationConfirmationEmail(customer.fullName, reservation),
                 notification: { recipient: reservation.user?._id.toString(), message: `Your reservation for ${reservation.hall.name} is confirmed.`, link: `/reservations/${reservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending reservation confirmation email: ${err}`));
         }
         if (hallOwner) {
             sendEmail({
-                email: hallOwner.email, subject: `New Reservation for Your Hall: ${reservation.hall.name}`,
+                io, email: hallOwner.email, subject: `New Reservation for Your Hall: ${reservation.hall.name}`,
                 html: generateNewReservationNotificationForOwner(hallOwner, customer, reservation),
                 notification: { recipient: hallOwner._id.toString(), message: `A new reservation has been made for your hall: ${reservation.hall.name}.`, link: `/hall-owner/reservations/${reservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending reservation notification to owner: ${err}`));
         }
         admins.forEach(admin => {
             sendEmail({
-                email: admin.email, subject: `Admin Alert: New Reservation Made for ${reservation.hall.name}`,
+                io, email: admin.email, subject: `Admin Alert: New Reservation Made for ${reservation.hall.name}`,
                 html: generateNewReservationNotificationForOwner(admin, customer, reservation),
                 notification: { recipient: admin._id.toString(), message: `A new reservation was made for ${reservation.hall.name}.`, link: `/admin/reservations/${reservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending reservation alert to admin: ${err}`));
         });
     } else {
         await Reservation.findByIdAndDelete(reservationId);
-        console.log(`Temporary reservation ${reservationId} deleted due to failed/cancelled payment.`);
+        logger.info(`Temporary reservation ${reservationId} deleted due to failed/cancelled payment.`);
     }
 }
 
@@ -126,31 +126,27 @@ async function finalizeConversion(reservation, paymentDetails, io) {
     const admins = await User.find({ role: 'super-admin' });
 
     if (customer && customer.email) {
-        pdfQueue.add('generateBookingPdf', {
-            type: 'booking',
-            data: { booking: { ...newBooking.toObject(), hall: reservation.hall, user: customer } },
-            emailOptions: {
-                email: customer.email, subject: `Your Booking for ${reservation.hall.name} is Confirmed!`,
-                html: generatePaymentConfirmationEmail({ ...newBooking.toObject(), hall: reservation.hall, user: customer }),
-                notification: { recipient: newBooking.user?._id.toString(), message: `Your booking for ${reservation.hall.name} is confirmed.`, link: `/bookings/${newBooking._id}` }
-            }
-        }).catch(console.error);
+        sendEmail({
+            io, email: customer.email, subject: `Your Booking for ${reservation.hall.name} is Confirmed!`,
+            html: generatePaymentConfirmationEmail({ ...newBooking.toObject(), hall: reservation.hall, user: customer }),
+            notification: { recipient: newBooking.user?._id.toString(), message: `Your booking for ${reservation.hall.name} is confirmed.`, link: `/bookings/${newBooking._id}` }
+        }).catch(err => logger.error(`Error sending conversion confirmation email: ${err}`));
     }
 
     const notificationHtml = generateNewBookingNotificationEmailForOwner(hallOwner, customer, { ...newBooking.toObject(), hall: reservation.hall });
     if (hallOwner) {
         sendEmail({
-            email: hallOwner.email, subject: `Booking Confirmed for Your Hall: ${reservation.hall.name}`,
+            io, email: hallOwner.email, subject: `Booking Confirmed for Your Hall: ${reservation.hall.name}`,
             html: notificationHtml,
             notification: { recipient: hallOwner._id.toString(), message: `A booking has been confirmed for your hall: ${reservation.hall.name}.`, link: `/hall-owner/bookings/${newBooking._id}` }
-        }).catch(console.error);
+        }).catch(err => logger.error(`Error sending conversion notification to owner: ${err}`));
     }
     admins.forEach(admin => {
         sendEmail({
-            email: admin.email, subject: `Admin Alert: Booking Confirmed for ${reservation.hall.name}`,
+            io, email: admin.email, subject: `Admin Alert: Booking Confirmed for ${reservation.hall.name}`,
             html: notificationHtml,
             notification: { recipient: admin._id.toString(), message: `A booking was confirmed for ${reservation.hall.name}.`, link: `/admin/bookings/${newBooking._id}` }
-        }).catch(console.error);
+        }).catch(err => logger.error(`Error sending conversion alert to admin: ${err}`));
     });
 
     return newBooking;
@@ -163,13 +159,13 @@ export async function processConversionTransaction(transactionData, io) {
     // Check if this transaction has already been recorded
     const existingTx = await Transaction.findOne({ transactionReference });
     if (existingTx) {
-        console.log(`Transaction ${transactionReference} already recorded.`);
+        logger.info(`Transaction ${transactionReference} already recorded.`);
         return;
     }
 
     const reservation = await Reservation.findById(reservationId).populate('hall').populate('user');
     if (!reservation) {
-        console.error(`Reservation ${reservationId} not found for conversion.`);
+        logger.error(`Reservation ${reservationId} not found for conversion.`);
         return;
     }
 
@@ -188,7 +184,7 @@ export async function processConversionTransaction(transactionData, io) {
     });
 
     if (isDuplicate) {
-        console.log(`Reservation ${reservationId} already converted.`);
+        logger.info(`Reservation ${reservationId} already converted.`);
         return;
     }
 
@@ -213,10 +209,11 @@ export async function processConversionTransaction(transactionData, io) {
             };
 
             sendEmail({
+                io,
                 email: customer.email,
                 subject: 'Booking Payment Failed',
                 html: generatePaymentFailedEmail(mockBookingForEmail),
-            }).catch(err => console.error("Conversion failure email error:", err));
+            }).catch(err => logger.error(`Conversion failure email error: ${err}`));
         }
     }
 }
@@ -313,6 +310,7 @@ const createReservation = asyncHandler(async (req, res) => {
     // Notify customer
     if (customer && customer.email) {
       sendEmail({
+        io,
         email: customer.email,
         subject: `Your Reservation for ${hall.name} is Pending Payment`,
         html: generateNewReservationPendingPaymentEmailForUser(customer.fullName, reservationForEmail),
@@ -327,6 +325,7 @@ const createReservation = asyncHandler(async (req, res) => {
     // Notify hall owner
     if (hallOwner) {
       sendEmail({
+        io,
         email: hallOwner.email,
         subject: `New Reservation Pending for ${hall.name}`,
         html: generateNewReservationNotificationForOwner(hallOwner, customer, reservationForEmail),
@@ -341,6 +340,7 @@ const createReservation = asyncHandler(async (req, res) => {
     // Notify admins
     admins.forEach(admin => {
       sendEmail({
+        io,
         email: admin.email,
         subject: `Admin Alert: New Reservation Pending for ${hall.name}`,
         html: generateNewReservationNotificationForOwner(admin, customer, reservationForEmail),
@@ -352,7 +352,7 @@ const createReservation = asyncHandler(async (req, res) => {
       });
     });
   } catch (error) {
-    console.error('Failed to send reservation creation notifications:', error);
+    logger.error(`Failed to send reservation creation notifications: ${error}`);
     // Do not throw an error, as the reservation itself was successful.
   }
 
@@ -379,7 +379,7 @@ const verifyReservationPayment = asyncHandler(async (req, res) => {
         const status = transaction.paymentStatus === 'PAID' ? 'success' : 'failed';
         res.status(200).json(new ApiResponse(200, { status, type: 'reservation' }, 'Payment verification complete.'));
     } catch (error) {
-        console.error("Payment verification failed:", error);
+        logger.error(`Payment verification failed: ${error}`);
         throw new ApiError(500, 'Payment verification failed.');
     }
 });
@@ -450,7 +450,7 @@ const verifyConversionPayment = asyncHandler(async (req, res) => {
         await processConversionTransaction(transaction, req.app.get('io'));
         res.redirect(`${frontendUrl}/payment/${transaction.paymentStatus === 'PAID' ? 'success' : 'failed'}?type=booking`);
     } catch (error) {
-        console.error("Conversion payment verification failed:", error);
+        logger.error(`Conversion payment verification failed: ${error}`);
         res.redirect(`${frontendUrl}/payment/failed?type=booking&error=verification_failed`);
     }
 });
@@ -645,24 +645,25 @@ const walkInReservation = asyncHandler(async (req, res) => {
         // --- Notifications ---
         if (walkInUserDetails.email) {
             sendEmail({
+                io,
                 email: walkInUserDetails.email,
                 subject: `Your Reservation for ${hall.name} is Pending Payment`,
                 html: generateNewReservationPendingPaymentEmailForUser(walkInUserDetails.fullName, reservationForEmail),
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending walk-in pending email: ${err}`));
         }
         if (hallOwner) {
             sendEmail({
-                email: hallOwner.email, subject: `New Walk-in Reservation Pending for ${hall.name}`,
+                io, email: hallOwner.email, subject: `New Walk-in Reservation Pending for ${hall.name}`,
                 html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail),
                 notification: { recipient: hallOwner._id.toString(), message: `A new walk-in reservation for ${hall.name} is awaiting payment.`, link: `/hall-owner/reservations/${newReservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending walk-in pending notification to owner: ${err}`));
         }
         admins.forEach(admin => {
             sendEmail({
-                email: admin.email, subject: `Admin Alert: New Walk-in Reservation Pending for ${hall.name}`,
+                io, email: admin.email, subject: `Admin Alert: New Walk-in Reservation Pending for ${hall.name}`,
                 html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail),
                 notification: { recipient: admin._id.toString(), message: `A new walk-in reservation for ${hall.name} is pending payment.`, link: `/admin/reservations/${newReservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending walk-in pending alert to admin: ${err}`));
         });
     } else { // Offline payment
         reservationData.paymentStatus = 'paid';
@@ -676,24 +677,25 @@ const walkInReservation = asyncHandler(async (req, res) => {
         // --- Notifications ---
         if (walkInUserDetails.email) {
             sendEmail({
+                io,
                 email: walkInUserDetails.email,
                 subject: `Your Reservation for ${hall.name} is Confirmed!`,
                 html: generateReservationConfirmationEmail(walkInUserDetails.fullName, reservationForEmail),
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending walk-in confirmation email: ${err}`));
         }
         if (hallOwner) {
             sendEmail({
-                email: hallOwner.email, subject: `New Walk-in Reservation for ${hall.name}`,
+                io, email: hallOwner.email, subject: `New Walk-in Reservation for ${hall.name}`,
                 html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail),
                 notification: { recipient: hallOwner._id.toString(), message: `A new walk-in reservation has been made for your hall: ${hall.name}.`, link: `/hall-owner/reservations/${newReservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending walk-in confirmation notification to owner: ${err}`));
         }
         admins.forEach(admin => {
             sendEmail({
-                email: admin.email, subject: `Admin Alert: New Walk-in Reservation for ${hall.name}`,
+                io, email: admin.email, subject: `Admin Alert: New Walk-in Reservation for ${hall.name}`,
                 html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail),
                 notification: { recipient: admin._id.toString(), message: `A new walk-in reservation was made for ${hall.name}.`, link: `/admin/reservations/${newReservation._id}` }
-            }).catch(console.error);
+            }).catch(err => logger.error(`Error sending walk-in confirmation alert to admin: ${err}`));
         });
     }
 

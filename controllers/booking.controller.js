@@ -11,10 +11,9 @@ import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail, generateRecurringBookingConfirmationEmail } from '../utils/emailTemplates.js';
+import { generatePdfReceipt, generateRecurringBookingPdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
 import crypto from 'crypto';
-import pdfQueue from '../jobs/queues/pdf.queue.js';
-import bookingQueue from '../jobs/queues/booking.queue.js';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 
 const createRecurringBooking = asyncHandler(async (req, res) => {
@@ -198,31 +197,101 @@ const createRecurringBooking = asyncHandler(async (req, res) => {
     finalPricePerBooking = Math.round((finalHallPricePerBooking + finalFacilitiesPricePerBooking) * 100) / 100;
   }
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const firstBookingId = await generateBookingId(hall.name, 0);
     const recurringBookingId = `REC-${firstBookingId}`;
+    const createdBookings = [];
 
-    await bookingQueue.add('createRecurringBooking', {
-      hallId,
-      generatedBookingRanges,
-      eventDetails,
-      finalPricePerBooking,
-      finalHallPricePerBooking,
-      finalFacilitiesPricePerBooking,
-      finalPaymentMethod,
-      paymentStatus,
-      userId: req.user._id,
-      walkInUserDetails,
-      recurringBookingId,
-      facilitiesWithCalculatedCosts,
-      selectedFacilitiesData
-    });
+    for (let i = 0; i < bookingDates.length; i++) {
+      const date = bookingDates[i];
+      const bookingId = (i === 0) ? firstBookingId : await generateBookingId(hall.name, i);
+      const bookingStart = new Date(date);
+      bookingStart.setHours(initialStartTime.getHours(), initialStartTime.getMinutes(), initialStartTime.getSeconds());
+      const bookingEnd = new Date(bookingStart.getTime() + eventDuration);
 
-    res.status(202).json(new ApiResponse(202, { recurringBookingId }, 'Recurring booking is being processed in the background.'));
+      const bookingData = {
+        bookingId,
+        hall: hallId,
+        bookingDates: [{ startTime: bookingStart, endTime: bookingEnd }],
+        eventDetails,
+        totalPrice: finalPricePerBooking,
+        hallPrice: finalHallPricePerBooking,
+        facilitiesPrice: finalFacilitiesPricePerBooking,
+        paymentMethod: finalPaymentMethod,
+        paymentStatus: paymentStatus,
+        bookingType: 'walk-in',
+        bookedBy: req.user._id,
+        walkInUserDetails: {
+          fullName: walkInUserDetails.fullName,
+          email: walkInUserDetails.email,
+          phone: walkInUserDetails.phone,
+        },
+        isRecurring: true,
+        recurringBookingId,
+        selectedFacilities: facilitiesWithCalculatedCosts.map((cf, idx) => ({
+          ...cf,
+          facility: selectedFacilitiesData[idx].facilityId,
+        })),
+      };
+      createdBookings.push(bookingData);
+    }
+
+    const newBookings = await Booking.create(createdBookings, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Notifications are sent only after the transaction is successful
+    try {
+      if (walkInUserDetails.email) {
+        const pdfReceipt = generateRecurringBookingPdfReceipt(walkInUserDetails, newBookings, hall);
+
+        await sendEmail({
+          io,
+          email: walkInUserDetails.email,
+          subject: 'Recurring Booking Confirmation - HallBooker',
+          html: generateRecurringBookingConfirmationEmail(walkInUserDetails.fullName, newBookings, hall),
+          attachments: [{
+            filename: `receipt-recurring-${recurringBookingId}.pdf`,
+            content: Buffer.from(pdfReceipt),
+            contentType: 'application/pdf'
+          }],
+        });
+      }
+
+      const admins = await User.find({ role: 'super-admin' });
+      const adminEmails = admins.map(admin => admin.email);
+      const notificationEmails = [hall.owner.email, ...adminEmails];
+
+      await Promise.all(notificationEmails.map(email => {
+          const userIsAdmin = admins.some(admin => admin.email === email);
+          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+          sendEmail({
+              io,
+              email,
+              subject: 'New Recurring Booking Notification',
+              html: generateRecurringBookingConfirmationEmail(hall.owner.fullName, newBookings, hall),
+              notification: {
+                  recipient: recipient.toString(),
+                  message: `A new recurring booking has been made for hall: ${hall.name}.`,
+                  link: `/bookings/recurring/${recurringBookingId}`,
+              },
+          });
+      }));
+    } catch (emailError) {
+      console.error('Email notification failed after successful recurring booking:', emailError);
+    }
+
+    res.status(201).json(new ApiResponse(201, { bookings: newBookings, recurringBookingId }, 'Recurring booking created successfully!'));
 
   } catch (error) {
-    console.error("Recurring booking queuing failed:", error);
-    throw new ApiError(500, 'Could not initiate the recurring booking process.');
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Recurring booking failed:", error);
+    throw new ApiError(500, 'Could not complete the recurring booking process.');
   }
 });
 
@@ -396,20 +465,25 @@ const createBooking = asyncHandler(async (req, res) => {
         throw new Error(`Failed to refetch booking with ID ${newBooking._id} after transaction commit.`);
       }
 
-      // Send confirmation with PDF generation offloaded
-      await pdfQueue.add('generateBookingPdf', {
-        type: 'booking',
-        data: { booking: finalBooking },
-        emailOptions: {
-          email: finalBooking.user.email,
-          subject: 'Booking Confirmation - HallBooker',
-          html: generateBookingConfirmationEmail(finalBooking),
-          notification: {
-            recipient: finalBooking.user._id.toString(),
-            message: `Your booking for ${finalBooking.hall.name} has been confirmed.`,
-            link: `/bookings/${finalBooking._id}`,
-          },
-        }
+      const io = req.app.get('io');
+
+      // Send confirmation to the user who made the booking
+      const pdfReceipt = generatePdfReceipt(finalBooking);
+      await sendEmail({
+        io,
+        email: finalBooking.user.email,
+        subject: 'Booking Confirmation - HallBooker',
+        html: generateBookingConfirmationEmail(finalBooking),
+        attachments: [{
+          filename: `receipt-${finalBooking.bookingId}.pdf`,
+          content: Buffer.from(pdfReceipt),
+          contentType: 'application/pdf'
+        }],
+        notification: {
+          recipient: finalBooking.user._id.toString(),
+          message: `Your booking for ${finalBooking.hall.name} has been confirmed.`,
+          link: `/bookings/${finalBooking._id}`,
+        },
       });
 
       // Send notification to hall owner and all admins
@@ -424,6 +498,7 @@ const createBooking = asyncHandler(async (req, res) => {
       await Promise.all(
         Array.from(notificationRecipients.values()).map(recipient => {
           return sendEmail({
+            io,
             email: recipient.email,
             subject: 'New Booking Notification',
             html: generateNewBookingNotificationEmailForOwner(recipient, customer, finalBooking),
@@ -654,22 +729,25 @@ const walkInBooking = asyncHandler(async (req, res) => {
       };
 
       if (walkInUserDetails.email) {
+        const pdfReceipt = generatePdfReceipt(bookingForEmail);
         const emailSubject = paymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
         const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
 
-        await pdfQueue.add('generateWalkInPdf', {
-          type: 'booking',
-          data: { booking: bookingForEmail },
-          emailOptions: {
-            email: walkInUserDetails.email,
-            subject: emailSubject,
-            html: emailHtml,
-            notification: {
+        await sendEmail({
+          io,
+          email: walkInUserDetails.email,
+          subject: emailSubject,
+          html: emailHtml,
+          attachments: [{
+            filename: `receipt-${bookingForEmail.bookingId}.pdf`,
+            content: Buffer.from(pdfReceipt),
+            contentType: 'application/pdf'
+          }],
+          notification: {
               recipient: hall.owner._id.toString(),
               message: `A walk-in booking for ${hall.name} has been confirmed.`,
               link: `/bookings/${newBooking._id}`,
             },
-          }
         });
       }
 
@@ -681,6 +759,7 @@ const walkInBooking = asyncHandler(async (req, res) => {
           const userIsAdmin = admins.some(admin => admin.email === email);
           const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
           return sendEmail({
+              io,
               email,
               subject: 'New Walk-in Booking Notification',
               html: generateNewBookingNotificationEmailForOwner(bookingForEmail),

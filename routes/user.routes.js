@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { verifyJWT, authorizeRoles } from '../middlewares/auth.middleware.js';
+import validate from '../middlewares/validation.middleware.js';
+import { updateBankAccountSchema, addStaffSchema } from '../validations/user.validation.js';
 import { 
     getAllUsers,
     getUserById,
@@ -127,7 +129,7 @@ const router = Router();
  */
 router.route('/me/bank-details')
     .get(verifyJWT, authorizeRoles('hall-owner'), getUserBankAccount)
-    .patch(verifyJWT, authorizeRoles('hall-owner'), updateUserBankAccount);
+    .patch(verifyJWT, authorizeRoles('hall-owner'), validate(updateBankAccountSchema), updateUserBankAccount);
 
 /**
  * @swagger
@@ -158,7 +160,7 @@ router.route('/me/bank-details')
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/add-staff')
-    .post(verifyJWT, authorizeRoles('hall-owner'), addStaff);
+    .post(verifyJWT, authorizeRoles('hall-owner'), validate(addStaffSchema), addStaff);
 
 /**
  * @swagger

@@ -6,6 +6,7 @@ import sendEmail from '../services/email.service.js';
 import { createNotification } from '../services/notification.service.js';
 import crypto from 'crypto';
 import { generateVerificationEmail, generateWelcomeEmail } from '../utils/emailTemplates.js';
+import logger from '../utils/logger.js';
 
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.body;
@@ -41,7 +42,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
       },
     });
   } catch (emailError) {
-      console.error(`Welcome email failed for ${user.email}:`, emailError.message);
+      logger.error(`Welcome email failed for ${user.email}: ${emailError.message}`);
   }
 
   res.status(200).json(new ApiResponse(200, {}, 'Email verified successfully.'));
@@ -74,7 +75,7 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
       },
     });
   } catch (emailError) {
-    console.error(`Verification email failed for ${user.email}:`, emailError.message);
+    logger.error(`Verification email failed for ${user.email}: ${emailError.message}`);
     throw new ApiError(500, "There was an error sending the email. Try again later.");
   }
 
@@ -83,10 +84,6 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, password, role } = req.body;
-
-  if ([fullName, email, phone, password].some((field) => !field || field.trim() === '')) {
-    throw new ApiError(400, 'All fields are required');
-  }
 
   const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
   if (existingUser) {
@@ -110,7 +107,7 @@ const registerUser = asyncHandler(async (req, res) => {
       },
     });
   } catch (emailError) {
-    console.error(`Verification email failed for ${user.email}:`, emailError.message);
+    logger.error(`Verification email failed for ${user.email}: ${emailError.message}`);
     // Optional: Add logic to handle failed email sending, e.g., by rolling back user creation
     // For now, we'll just log the error and the user can request a new token.
   }
@@ -148,7 +145,11 @@ const loginUser = asyncHandler(async (req, res) => {
   
   const accessToken = user.generateAccessToken(role);
   const loggedInUser = await User.findById(user._id);
-  const options = { httpOnly: true, secure: process.env.NODE_ENV === 'production' };
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax'
+  };
 
   return res
     .status(200)
@@ -207,7 +208,11 @@ const resetPassword = asyncHandler(async (req, res) => {
     await user.save();
 
     const accessToken = user.generateAccessToken();
-    const options = { httpOnly: true, secure: process.env.NODE_ENV === 'production' };
+    const options = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax'
+    };
 
     res.status(200)
        .cookie('accessToken', accessToken, options)
@@ -227,7 +232,11 @@ const switchRole = asyncHandler(async (req, res) => {
   }
 
   const accessToken = user.generateAccessToken(role);
-  const options = { httpOnly: true, secure: process.env.NODE_ENV === 'production' };
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax'
+  };
 
   return res
     .status(200)
