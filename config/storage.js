@@ -8,14 +8,21 @@ import { applyWatermarkToImage } from '../utils/imageProcessor.js';
 
 dotenv.config();
 
-const s3Client = new S3Client({
-  endpoint: process.env.R2_ENDPOINT,
-  region: 'auto',
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-  },
-});
+let s3Client = null;
+
+const getS3Client = () => {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      endpoint: process.env.R2_ENDPOINT,
+      region: 'auto',
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      },
+    });
+  }
+  return s3Client;
+};
 
 
 const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null, shouldWatermark = true) => {
@@ -50,7 +57,7 @@ const uploadToR2 = async (localFilePath, resourceType = 'image', mimeType = null
       ContentType: resolvedMimeType,
     };
 
-    await s3Client.send(new PutObjectCommand(uploadParams), { abortSignal: abortController.signal });
+    await getS3Client().send(new PutObjectCommand(uploadParams), { abortSignal: abortController.signal });
 
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${uploadParams.Key}`;
     return publicUrl;
@@ -85,7 +92,7 @@ const deleteFromR2 = async (publicUrl) => {
       Key: key,
     };
 
-    const result = await s3Client.send(new DeleteObjectCommand(deleteParams));
+    const result = await getS3Client().send(new DeleteObjectCommand(deleteParams));
     return result;
   } catch (error) {
     console.error(`R2 deletion error for URL ${publicUrl}:`, error);

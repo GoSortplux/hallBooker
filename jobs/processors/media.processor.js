@@ -1,16 +1,22 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import axios from 'axios';
 import { applyWatermarkToImage } from '../../utils/imageProcessor.js';
 
-const s3Client = new S3Client({
-  endpoint: process.env.R2_ENDPOINT,
-  region: 'auto',
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-  },
-});
+let s3Client = null;
 
+const getS3Client = () => {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      endpoint: process.env.R2_ENDPOINT,
+      region: 'auto',
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      },
+    });
+  }
+  return s3Client;
+};
 
 const mediaProcessor = async (job) => {
   const { url, resourceType, mimeType, hallId } = job.data;
@@ -39,7 +45,7 @@ const mediaProcessor = async (job) => {
       ContentType: mimeType || 'image/jpeg',
     };
 
-    await s3Client.send(new PutObjectCommand(uploadParams));
+    await getS3Client().send(new PutObjectCommand(uploadParams));
     console.log(`[MediaWorker] Watermark applied and overwritten for ${url}`);
 
   } catch (error) {
