@@ -1,11 +1,11 @@
 import nodemailer from 'nodemailer';
 import notificationQueue from '../queues/notification.queue.js';
 
-const emailProcessor = async (job) => {
-  const { email, subject, html, attachments, notification } = job.data;
+let transporter = null;
 
-  try {
-    const transporter = nodemailer.createTransport({
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
       secure: process.env.EMAIL_SECURE === 'true',
@@ -14,7 +14,14 @@ const emailProcessor = async (job) => {
         pass: process.env.EMAIL_PASS,
       },
     });
+  }
+  return transporter;
+};
 
+const emailProcessor = async (job) => {
+  const { email, subject, html, attachments, notification } = job.data;
+
+  try {
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: email,
@@ -24,7 +31,7 @@ const emailProcessor = async (job) => {
     };
 
     console.log(`[EmailWorker] Attempting to send email to ${email}...`);
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`[EmailWorker] Email sent to ${email}`);
 
     if (notification) {
