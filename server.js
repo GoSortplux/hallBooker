@@ -1,7 +1,7 @@
+import './config/env.js';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -16,6 +16,8 @@ import initializeNotificationCronJobs from './cron/notificationManager.js';
 import initializeReservationCronJobs from './cron/reservationManager.js';
 import { scheduleReviewNotifications } from './cron/reviewNotification.js';
 import initializeUserCleanupCronJob from './cron/userCleanupManager.js';
+
+import redisConnection from './config/redis.js';
 
 // Route Imports
 import reservationRoutes from './routes/reservation.routes.js';
@@ -38,10 +40,8 @@ import facilityRoutes from './routes/facility.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import monnifyRoutes from './routes/monnify.routes.js';
 import suitabilityRoutes from './routes/suitability.routes.js';
-
-
-// Load environment variables
-dotenv.config();
+import { verifyJWT, authorizeRoles } from './middlewares/auth.middleware.js';
+import bullBoardAdapter from './config/bullboard.js';
 
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
@@ -127,6 +127,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Bull Board Monitoring (Super Admin Only)
+app.use('/admin/queues', verifyJWT, authorizeRoles('super-admin'), bullBoardAdapter.getRouter());
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/pending-hallowner-request', adminRoutes);
@@ -178,3 +181,26 @@ io.on('connection', (socket) => {
 httpServer.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
+// Graceful Shutdown
+const gracefulShutdown = async (signal) => {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+
+  httpServer.close(async () => {
+    console.log('HTTP server closed.');
+
+    console.log('Closing Redis connection...');
+    await redisConnection.quit();
+
+    process.exit(0);
+  });
+
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
