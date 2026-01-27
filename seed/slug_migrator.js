@@ -23,7 +23,8 @@ async function migrate() {
       // Triggering save will run the pre-save hook we added to the model
       // We set a dummy field or just mark name as modified to be sure
       hall.markModified('name');
-      await hall.save();
+      // Bypass validation to avoid errors with legacy "incomplete" data
+      await hall.save({ validateBeforeSave: false });
       console.log(`Generated slug for hall "${hall.name}" (ID: ${hall._id}): ${hall.slug}`);
     }
 
