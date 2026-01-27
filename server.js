@@ -1,7 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -17,13 +19,6 @@ import initializeReservationCronJobs from './cron/reservationManager.js';
 import { scheduleReviewNotifications } from './cron/reviewNotification.js';
 import initializeUserCleanupCronJob from './cron/userCleanupManager.js';
 
-// Worker Imports
-import './jobs/workers/email.worker.js';
-import createNotificationWorker from './jobs/workers/notification.worker.js';
-import './jobs/workers/analytics.worker.js';
-import './jobs/workers/pdf.worker.js';
-import './jobs/workers/booking.worker.js';
-import './jobs/workers/media.worker.js';
 import redisConnection from './config/redis.js';
 
 // Route Imports
@@ -47,10 +42,8 @@ import facilityRoutes from './routes/facility.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import monnifyRoutes from './routes/monnify.routes.js';
 import suitabilityRoutes from './routes/suitability.routes.js';
-
-
-// Load environment variables
-dotenv.config();
+import { verifyJWT, authorizeRoles } from './middlewares/auth.middleware.js';
+import bullBoardAdapter from './config/bullboard.js';
 
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
@@ -101,9 +94,6 @@ scheduleReviewNotifications(io);
 initializeReservationCronJobs(io);
 initializeUserCleanupCronJob(io);
 
-// Initialize Workers that need IO
-createNotificationWorker(io);
-
 // Middleware
 
 // CORS Configuration for multi-origin
@@ -138,6 +128,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Bull Board Monitoring (Super Admin Only)
+app.use('/admin/queues', verifyJWT, authorizeRoles('super-admin'), bullBoardAdapter.getRouter());
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);

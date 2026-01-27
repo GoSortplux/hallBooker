@@ -91,6 +91,18 @@ export const applyWatermarkToImage = async (buffer) => {
     const fontSize = Math.max(20, Math.floor(width / 20));
     const svgText = `
       <svg width="${width}" height="${height}">
+        <defs>
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+            <feOffset dx="1" dy="1" result="offsetblur" />
+            <feFlood flood-color="#D4AF37" result="color" />
+            <feComposite in="color" in2="offsetblur" operator="in" />
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         <style>
           .title {
             fill: white;
@@ -98,6 +110,7 @@ export const applyWatermarkToImage = async (buffer) => {
             font-weight: bold;
             font-family: Arial, sans-serif;
             opacity: 0.95;
+            filter: url(#shadow);
           }
         </style>
         <text x="98%" y="95%" text-anchor="end" class="title">${companyName}</text>

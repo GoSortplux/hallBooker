@@ -7,12 +7,16 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "worker": "node jobs/worker.js",
+    "worker:dev": "nodemon jobs/worker.js",
     "seed": "node seed/seeder.js"
   },
   "author": "HallBooker Dev Team",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.972.0",
+    "@bull-board/api": "^6.16.4",
+    "@bull-board/express": "^6.16.4",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.67.1",

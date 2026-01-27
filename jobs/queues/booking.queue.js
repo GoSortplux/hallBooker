@@ -7,9 +7,10 @@ const bookingQueue = new Queue('bookingQueue', {
     attempts: 3,
     backoff: {
       type: 'exponential',
-      delay: 1000,
+      delay: 5000,
     },
-    removeOnComplete: true,
+    removeOnComplete: { count: 100 },
+    removeOnFail: { age: 24 * 3600 },
   },
 });
 

@@ -9,7 +9,8 @@ const mediaQueue = new Queue('mediaQueue', {
       type: 'exponential',
       delay: 5000,
     },
-    removeOnComplete: true,
+    removeOnComplete: { count: 100 },
+    removeOnFail: { age: 24 * 3600 },
   },
 });
 
