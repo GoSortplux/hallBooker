@@ -6,6 +6,7 @@ import generateBookingId from '../../utils/bookingIdGenerator.js';
 import sendEmail from '../../services/email.service.js';
 import { generateRecurringBookingConfirmationEmail } from '../../utils/emailTemplates.js';
 import { generateRecurringBookingPdfReceipt } from '../../utils/pdfGenerator.js';
+import { getCompanyName } from '../../utils/settings.js';
 import logger from '../../utils/logger.js';
 
 const bookingProcessor = async (job) => {
@@ -73,13 +74,14 @@ const bookingProcessor = async (job) => {
 
     // Send notifications
     try {
+      const companyName = await getCompanyName();
       if (walkInUserDetails.email) {
-        const pdfReceipt = generateRecurringBookingPdfReceipt(walkInUserDetails, newBookings, hall);
+        const pdfReceipt = generateRecurringBookingPdfReceipt(walkInUserDetails, newBookings, hall, companyName);
 
         await sendEmail({
           email: walkInUserDetails.email,
-          subject: 'Recurring Booking Confirmation - HallBooker',
-          html: generateRecurringBookingConfirmationEmail(walkInUserDetails.fullName, newBookings, hall),
+          subject: `Recurring Booking Confirmation - ${companyName}`,
+          html: generateRecurringBookingConfirmationEmail(walkInUserDetails.fullName, newBookings, hall, companyName),
           attachments: [{
             filename: `receipt-recurring-${recurringBookingId}.pdf`,
             content: Buffer.from(pdfReceipt),
@@ -92,10 +94,11 @@ const bookingProcessor = async (job) => {
       const notificationEmails = [hall.owner.email, ...admins.map(a => a.email)];
 
       await Promise.all(notificationEmails.map(email => {
+          const recipientName = email === hall.owner.email ? hall.owner.fullName : 'Admin';
           return sendEmail({
               email,
               subject: 'New Recurring Booking Notification',
-              html: generateRecurringBookingConfirmationEmail(hall.owner.fullName, newBookings, hall),
+              html: generateRecurringBookingConfirmationEmail(recipientName, newBookings, hall, companyName),
           });
       }));
     } catch (emailError) {

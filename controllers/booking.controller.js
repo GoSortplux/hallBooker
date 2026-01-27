@@ -13,6 +13,7 @@ import sendEmail from '../services/email.service.js';
 import { generateBookingConfirmationEmail, generateNewBookingNotificationEmailForOwner, generatePaymentConfirmationEmail, generateRecurringBookingConfirmationEmail } from '../utils/emailTemplates.js';
 import { generatePdfReceipt, generateRecurringBookingPdfReceipt } from '../utils/pdfGenerator.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
+import { getCompanyName } from '../utils/settings.js';
 import crypto from 'crypto';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 import { bookingQueue } from '../jobs/queues/index.js';
@@ -403,14 +404,15 @@ const createBooking = asyncHandler(async (req, res) => {
       }
 
       const io = req.app.get('io');
+      const companyName = await getCompanyName();
 
       // Send confirmation to the user who made the booking
-      const pdfReceipt = generatePdfReceipt(finalBooking);
+      const pdfReceipt = generatePdfReceipt(finalBooking, companyName);
       await sendEmail({
         io,
         email: finalBooking.user.email,
-        subject: 'Booking Confirmation - HallBooker',
-        html: generateBookingConfirmationEmail(finalBooking),
+        subject: `Booking Confirmation - ${companyName}`,
+        html: generateBookingConfirmationEmail(finalBooking, companyName),
         attachments: [{
           filename: `receipt-${finalBooking.bookingId}.pdf`,
           content: Buffer.from(pdfReceipt),
@@ -438,7 +440,7 @@ const createBooking = asyncHandler(async (req, res) => {
             io,
             email: recipient.email,
             subject: 'New Booking Notification',
-            html: generateNewBookingNotificationEmailForOwner(recipient, customer, finalBooking),
+            html: generateNewBookingNotificationEmailForOwner(recipient, customer, finalBooking, companyName),
             notification: {
               recipient: recipient._id.toString(),
               message: `A new booking has been made for hall: ${finalBooking.hall.name}.`,
@@ -665,10 +667,11 @@ const walkInBooking = asyncHandler(async (req, res) => {
         hall: hall,
       };
 
+      const companyName = await getCompanyName();
       if (walkInUserDetails.email) {
-        const pdfReceipt = generatePdfReceipt(bookingForEmail);
-        const emailSubject = paymentStatus === 'paid' ? 'Payment Confirmation - HallBooker' : 'Booking Confirmation - HallBooker';
-        const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail) : generateBookingConfirmationEmail(bookingForEmail);
+        const pdfReceipt = generatePdfReceipt(bookingForEmail, companyName);
+        const emailSubject = paymentStatus === 'paid' ? `Payment Confirmation - ${companyName}` : `Booking Confirmation - ${companyName}`;
+        const emailHtml = paymentStatus === 'paid' ? generatePaymentConfirmationEmail(bookingForEmail, companyName) : generateBookingConfirmationEmail(bookingForEmail, companyName);
 
         await sendEmail({
           io,
@@ -688,20 +691,25 @@ const walkInBooking = asyncHandler(async (req, res) => {
         });
       }
 
-      const admins = await User.find({ role: 'super-admin' });
-      const adminEmails = admins.map(admin => admin.email);
-      const notificationEmails = [hall.owner.email, ...adminEmails];
+      const admins = await User.find({ role: 'super-admin' }).select('fullName email').lean();
+      const notificationRecipients = new Map();
+      notificationRecipients.set(hall.owner.email, hall.owner);
+      admins.forEach(admin => notificationRecipients.set(admin.email, admin));
 
-      await Promise.all(notificationEmails.map(email => {
-          const userIsAdmin = admins.some(admin => admin.email === email);
-          const recipient = userIsAdmin ? admins.find(admin => admin.email === email)._id : hall.owner._id;
+      const customer = {
+          fullName: walkInUserDetails.fullName,
+          email: walkInUserDetails.email,
+          phone: walkInUserDetails.phone
+      };
+
+      await Promise.all(Array.from(notificationRecipients.values()).map(recipient => {
           return sendEmail({
               io,
-              email,
+              email: recipient.email,
               subject: 'New Walk-in Booking Notification',
-              html: generateNewBookingNotificationEmailForOwner(bookingForEmail),
+              html: generateNewBookingNotificationEmailForOwner(recipient, customer, bookingForEmail, companyName),
               notification: {
-                  recipient: recipient.toString(),
+                  recipient: recipient._id.toString(),
                   message: `A new walk-in booking has been made for hall: ${hall.name}.`,
                   link: `/bookings/${newBooking._id}`,
               },

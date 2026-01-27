@@ -18,6 +18,7 @@ import { analyticsQueue, mediaQueue } from '../jobs/queues/index.js';
 
 import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import Setting from '../models/setting.model.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
 
@@ -168,11 +169,12 @@ const createHall = asyncHandler(async (req, res) => {
 
     try {
         const io = req.app.get('io');
+        const companyName = await getCompanyName();
         await sendEmail({
             io,
             email: req.user.email,
             subject: 'Your New Hall is Ready!',
-            html: generateHallCreationEmail(req.user.fullName, hall.name, hall.location),
+            html: generateHallCreationEmail(req.user.fullName, hall.name, hall.location, companyName),
             notification: {
                 recipient: req.user._id.toString(),
                 message: `Your new hall, ${hall.name}, has been created successfully.`,

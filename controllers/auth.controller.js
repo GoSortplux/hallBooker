@@ -6,6 +6,7 @@ import sendEmail from '../services/email.service.js';
 import { createNotification } from '../services/notification.service.js';
 import crypto from 'crypto';
 import { generateVerificationEmail, generateWelcomeEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import logger from '../utils/logger.js';
 
 const verifyEmail = asyncHandler(async (req, res) => {
@@ -31,14 +32,15 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
   try {
     const io = req.app.get('io');
+    const companyName = await getCompanyName();
     await sendEmail({
       io,
       email: user.email,
-      subject: 'Welcome to HallBooker!',
-      html: generateWelcomeEmail(user.fullName),
+      subject: `Welcome to ${companyName}!`,
+      html: generateWelcomeEmail(user.fullName, companyName),
       notification: {
         recipient: user._id.toString(),
-        message: 'Your email has been verified. Welcome to HallBooker!',
+        message: `Your email has been verified. Welcome to ${companyName}!`,
       },
     });
   } catch (emailError) {
@@ -64,11 +66,12 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 
   try {
     const io = req.app.get('io');
+    const companyName = await getCompanyName();
     await sendEmail({
       io,
       email: user.email,
       subject: 'Verify Your Email Address',
-      html: generateVerificationEmail(user.fullName, verificationToken),
+      html: generateVerificationEmail(user.fullName, verificationToken, companyName),
       notification: {
         recipient: user._id.toString(),
         message: 'A verification email has been sent to your email address.',
@@ -96,11 +99,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
   try {
     const io = req.app.get('io');
+    const companyName = await getCompanyName();
     await sendEmail({
       io,
       email: user.email,
       subject: 'Verify Your Email Address',
-      html: generateVerificationEmail(user.fullName, verificationToken),
+      html: generateVerificationEmail(user.fullName, verificationToken, companyName),
       notification: {
         recipient: user._id.toString(),
         message: 'A verification email has been sent to your email address.',

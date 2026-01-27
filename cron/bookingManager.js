@@ -4,6 +4,7 @@ import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generatePendingBookingCancelledEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import logger from '../utils/logger.js';
 
 const deletePendingBookings = async (io) => {
@@ -34,6 +35,7 @@ const deletePendingBookings = async (io) => {
             return;
         }
 
+        const companyName = await getCompanyName();
         const adminUsers = await User.find({ role: 'super-admin' }).select('email fullName');
         const adminEmails = adminUsers.map(admin => ({ email: admin.email, name: admin.fullName }));
 
@@ -97,7 +99,7 @@ const deletePendingBookings = async (io) => {
                         io,
                         email,
                         subject: `Booking Cancelled: ${booking.bookingId}`,
-                        html: generatePendingBookingCancelledEmail(name, booking),
+                        html: generatePendingBookingCancelledEmail(name, booking, companyName),
                         notification: notificationPayload,
                     });
                 }

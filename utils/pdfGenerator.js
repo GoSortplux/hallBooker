@@ -5,7 +5,7 @@ import { formatDuration } from './time.js';
 const require = createRequire(import.meta.url);
 const { jsPDF } = require('jspdf');
 
-const generatePdfReceipt = (booking) => {
+const generatePdfReceipt = (booking, companyName = 'Gobokin') => {
     const doc = new jsPDF();
 
     // Header
@@ -107,7 +107,7 @@ const generatePdfReceipt = (booking) => {
 
     doc.setFontSize(10);
     doc.setTextColor(150);
-    doc.text('Thank you for booking with HallBooker.', 14, doc.internal.pageSize.height - 15);
+    doc.text(`Thank you for booking with ${companyName}.`, 14, doc.internal.pageSize.height - 15);
 
   if (booking.hall.bookingBufferInHours > 0) {
     //
@@ -125,7 +125,7 @@ const generatePdfReceipt = (booking) => {
     return doc.output('arraybuffer');
 };
 
-const generateSubscriptionPdfReceipt = (subscription) => {
+const generateSubscriptionPdfReceipt = (subscription, companyName = 'Gobokin') => {
     const doc = new jsPDF();
 
     // Header
@@ -176,14 +176,14 @@ const generateSubscriptionPdfReceipt = (subscription) => {
             // Footer
             doc.setFontSize(10);
             doc.setTextColor(150);
-            doc.text('Thank you for subscribing to HallBooker.', data.settings.margin.left, doc.internal.pageSize.height - 15);
+            doc.text(`Thank you for subscribing to ${companyName}.`, data.settings.margin.left, doc.internal.pageSize.height - 15);
         }
     });
 
     return doc.output('arraybuffer');
 };
 
-const generateRecurringBookingPdfReceipt = (customerDetails, bookings, hall) => {
+const generateRecurringBookingPdfReceipt = (customerDetails, bookings, hall, companyName = 'Gobokin') => {
     const doc = new jsPDF();
     const firstBooking = bookings[0];
 
@@ -266,7 +266,7 @@ const generateRecurringBookingPdfReceipt = (customerDetails, bookings, hall) => 
 
     doc.setFontSize(10);
     doc.setTextColor(150);
-    doc.text('Thank you for booking with HallBooker.', 14, doc.internal.pageSize.height - 15);
+    doc.text(`Thank you for booking with ${companyName}.`, 14, doc.internal.pageSize.height - 15);
 
     return doc.output('arraybuffer');
 };

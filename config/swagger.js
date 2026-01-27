@@ -4,10 +4,10 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Hall Booking API",
+      title: "Gobokin API",
       version: "1.0.0",
       description:
-        "API documentation for the Hall Booking application. This API allows users to find, book, and manage halls.",
+        "API documentation for the Gobokin application. This API allows users to find, book, and manage halls.",
     },
     servers: [
       {
