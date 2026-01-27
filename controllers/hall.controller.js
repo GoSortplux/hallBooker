@@ -14,14 +14,13 @@ import geocoder from '../utils/geocoder.js';
 import {
   uploadToR2,
   deleteFromR2,
+  applyWatermark,
 } from '../config/storage.js';
 
 import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
 import Setting from '../models/setting.model.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
-import analyticsQueue from '../jobs/queues/analytics.queue.js';
-import mediaQueue from '../jobs/queues/media.queue.js';
 
 // Helper to parse hour from input (handles "HH:mm" strings or integers)
 const parseHour = (hourInput) => {
@@ -129,6 +128,9 @@ const createHall = asyncHandler(async (req, res) => {
 
     const geocodedData = await geocoder.geocode(location);
 
+    const watermarkedImages = images ? await applyWatermark(images, 'image') : [];
+    const watermarkedVideos = videos ? await applyWatermark(videos, 'video') : [];
+
     const hallData = {
         name,
         location,
@@ -146,8 +148,8 @@ const createHall = asyncHandler(async (req, res) => {
         recurringBookingDiscount,
         suitableFor,
         rules,
-        images: images || [],
-        videos: videos || [],
+        images: watermarkedImages,
+        videos: watermarkedVideos,
         openingHour: parseHour(openingHour),
         closingHour: parseHour(closingHour),
         bookingBufferInHours,
@@ -253,14 +255,31 @@ const getHallById = asyncHandler(async (req, res) => {
             }
         }
 
-        await analyticsQueue.add('trackView', {
-            hallId: req.params.id,
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const analyticsQuery = {
+            hall: req.params.id,
             type: 'view',
-            userId,
-            ipAddress: req.ip
-        });
+            ...(userId ? { user: userId } : { ipAddress: req.ip }),
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        };
+
+        const alreadyViewedToday = await Analytics.findOne(analyticsQuery);
+
+        if (!alreadyViewedToday) {
+            await Analytics.create({
+                hall: req.params.id,
+                type: 'view',
+                ...(userId ? { user: userId } : { ipAddress: req.ip }),
+            });
+            hall.views += 1;
+            await hall.save({ validateBeforeSave: false });
+        }
     } catch (error) {
-        console.error('Analytics view tracking failed to queue:', error);
+        console.error('Analytics view tracking failed:', error);
     }
 
     return res.status(200).json(new ApiResponse(200, hall, "Hall details fetched successfully"));
@@ -477,20 +496,10 @@ const uploadMedia = asyncHandler(async (req, res) => {
     }
 
     const resourceType = isVideo ? 'video' : 'image';
-    // Upload without watermarking first for snappy response
-    const url = await uploadToR2(file.path, resourceType, file.mimetype, false);
+    const url = await uploadToR2(file.path, resourceType, file.mimetype);
 
     if (!url) {
       return { error: 'Upload failed', fileName: file.originalname };
-    }
-
-    // Queue watermark processing for images
-    if (resourceType === 'image') {
-        await mediaQueue.add('applyWatermark', {
-            url,
-            resourceType,
-            mimeType: file.mimetype
-        });
     }
 
     return { url };
@@ -808,15 +817,19 @@ const bookDemo = asyncHandler(async (req, res) => {
         createdAt: { $gte: startOfDay, $lte: endOfDay },
     };
 
-    try {
-        await analyticsQueue.add('trackDemoBooking', {
-            hallId,
-            type: 'demo-booking',
-            userId,
-            ipAddress: req.ip
-        });
-    } catch (error) {
-        console.error('Analytics demo booking tracking failed to queue:', error);
+    const alreadyClickedToday = await Analytics.findOne(analyticsQuery);
+
+    if (!alreadyClickedToday) {
+        try {
+            await Analytics.create({
+                hall: hallId,
+                type: 'demo-booking',
+                ...(userId ? { user: userId } : { ipAddress: req.ip }),
+            });
+            await Hall.findByIdAndUpdate(hallId, { $inc: { demoBookings: 1 } });
+        } catch (error) {
+            console.error('Analytics demo booking tracking failed:', error);
+        }
     }
 
     const hallWithContact = await Hall.findById(hallId).populate('owner', 'phone whatsappNumber');
