@@ -1,8 +1,9 @@
 import cron from 'node-cron';
 import Notification from '../models/notification.model.js';
+import logger from '../utils/logger.js';
 
 const deleteReadNotifications = async () => {
-  console.log('Running daily check for read notifications to delete...');
+  logger.debug('Running daily check for read notifications to delete...');
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -12,12 +13,10 @@ const deleteReadNotifications = async () => {
       readAt: { $lte: thirtyDaysAgo },
     });
     if (result.deletedCount > 0) {
-      console.log(`Deleted ${result.deletedCount} read notifications.`);
-    } else {
-      console.log('No read notifications to delete.');
+      logger.info(`Deleted ${result.deletedCount} read notifications.`);
     }
   } catch (err) {
-    console.error('Failed to delete read notifications', err);
+    logger.error(`Failed to delete read notifications: ${err}`);
   }
 };
 
@@ -27,7 +26,7 @@ const initializeCronJobs = () => {
     timezone: "Africa/Lagos"
   });
 
-  console.log('🗓️  Cron job for deleting read notifications has been scheduled.');
+  logger.info('🗓️ Cron job for deleting read notifications has been scheduled.');
 };
 
 export default initializeCronJobs;

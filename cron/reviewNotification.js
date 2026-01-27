@@ -5,6 +5,7 @@ import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
 import sendEmail from '../services/email.service.js';
 import { generateReviewNotificationEmail } from '../utils/emailTemplates.js';
+import logger from '../utils/logger.js';
 
 const scheduleReviewNotifications = (io) => {
   cron.schedule('0 * * * *', async () => {
@@ -61,7 +62,7 @@ const scheduleReviewNotifications = (io) => {
         await booking.save();
       }
     } catch (error) {
-      console.error('Error sending review notifications:', error);
+      logger.error(`Error sending review notifications: ${error}`);
     }
   });
 };

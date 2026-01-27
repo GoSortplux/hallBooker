@@ -1,14 +1,20 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
 import connectDB from './config/db.js';
+import logger from './utils/logger.js';
 import { notFound, errorHandler } from './middlewares/error.middleware.js';
 import initializeCronJobs from './cron/licenseManager.js';
 import initializeBookingCronJobs from './cron/bookingManager.js';
@@ -51,6 +57,10 @@ const allowedOrigins = process.env.CORS_ORIGIN
 connectDB();
 
 const app = express();
+
+// Trust proxy for correct client IP detection (needed for rate limiting behind proxies like Coolify/Traefik)
+app.set('trust proxy', 1);
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -93,6 +103,35 @@ initializeReservationCronJobs(io);
 initializeUserCleanupCronJob(io);
 
 // Middleware
+
+// Security Middlewares
+app.use(helmet()); // Secure HTTP headers
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(hpp()); // Prevent HTTP Parameter Pollution
+
+// Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // stricter limit for auth routes
+  message: 'Too many authentication attempts, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting
+app.use('/api', globalLimiter);
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
+app.use('/api/v1/auth/forgot-password', authLimiter);
+app.use('/api/v1/auth/reset-password', authLimiter);
 
 // CORS Configuration for multi-origin
 app.use(
@@ -163,18 +202,43 @@ app.use(errorHandler);
 
 // Socket.io connection
 io.on('connection', (socket) => {
-  console.log('a user connected:', socket.id);
+  logger.info(`a user connected: ${socket.id}`);
 
   socket.on('join', (userId) => {
     socket.join(userId);
-    console.log(`User ${userId} joined room`);
+    logger.info(`User ${userId} joined room`);
   });
 
   socket.on('disconnect', () => {
-    console.log('user disconnected:', socket.id);
+    logger.info(`user disconnected: ${socket.id}`);
   });
 });
 
-httpServer.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
+const server = httpServer.listen(port, () => {
+  logger.info(`🚀 Server running on port ${port}`);
 });
+
+// Graceful Shutdown
+const gracefulShutdown = (signal) => {
+  logger.info(`${signal} signal received: closing HTTP server`);
+  server.close(async () => {
+    logger.info('HTTP server closed');
+    try {
+      await mongoose.connection.close();
+      logger.info('MongoDB connection closed');
+      process.exit(0);
+    } catch (err) {
+      logger.error(`Error during MongoDB connection close: ${err}`);
+      process.exit(1);
+    }
+  });
+
+  // Force close after 10s if graceful shutdown fails
+  setTimeout(() => {
+    logger.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

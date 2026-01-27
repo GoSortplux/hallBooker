@@ -4,9 +4,10 @@ import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateSubscriptionExpiryWarningEmail, generateSubscriptionExpiredEmail } from '../utils/emailTemplates.js';
+import logger from '../utils/logger.js';
 
 const sendExpirationWarnings = async (io) => {
-    console.log('Running subscription expiration warning check...');
+    logger.debug('Running subscription expiration warning check...');
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
@@ -30,15 +31,15 @@ const sendExpirationWarnings = async (io) => {
                     message: `Your ${sub.tier.name} subscription is expiring soon.`,
                 },
             });
-            console.log(`Expiration warning sent to ${sub.owner.email}`);
+            logger.info(`Expiration warning sent to ${sub.owner.email}`);
         } catch (err) {
-            console.error(`Failed to send expiration warning to ${sub.owner.email}`, err);
+            logger.error(`Failed to send expiration warning to ${sub.owner.email}: ${err}`);
         }
     }
 };
 
 const deactivateExpiredSubscriptions = async (io) => {
-    console.log('Running daily subscription deactivation check...');
+    logger.debug('Running daily subscription deactivation check...');
     const expiredSubscriptions = await SubscriptionHistory.find({
         expiryDate: { $ne: null, $lt: new Date() },
         status: 'active'
@@ -47,10 +48,10 @@ const deactivateExpiredSubscriptions = async (io) => {
     for (const sub of expiredSubscriptions) {
         sub.status = 'expired';
         await sub.save();
-        console.log(`Subscription for owner ${sub.owner.fullName} has been marked as expired.`);
+        logger.info(`Subscription for owner ${sub.owner.fullName} has been marked as expired.`);
 
         await Hall.updateMany({ owner: sub.owner._id }, { $set: { isActive: false } });
-        console.log(`Deactivated halls for owner ${sub.owner.fullName}.`);
+        logger.info(`Deactivated halls for owner ${sub.owner.fullName}.`);
 
         try {
             await sendEmail({
@@ -64,7 +65,7 @@ const deactivateExpiredSubscriptions = async (io) => {
                 },
             });
         } catch (err) {
-            console.error(`Failed to send expiration email to ${sub.owner.email}`, err);
+            logger.error(`Failed to send expiration email to ${sub.owner.email}: ${err}`);
         }
     }
 };
@@ -80,7 +81,7 @@ const initializeCronJobs = (io) => {
         timezone: "Africa/Lagos"
     });
 
-    console.log('🗓️  Cron jobs for subscription management have been scheduled.');
+    logger.info('🗓️ Cron jobs for subscription management have been scheduled.');
 };
 
 export default initializeCronJobs;

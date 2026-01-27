@@ -4,9 +4,10 @@ import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generatePendingBookingCancelledEmail } from '../utils/emailTemplates.js';
+import logger from '../utils/logger.js';
 
 const deletePendingBookings = async (io) => {
-    console.log('Running pending bookings cleanup job...');
+    logger.debug('Running pending bookings cleanup job...');
 
     try {
         let deletionTime = 30; // Default to 30 minutes
@@ -30,7 +31,6 @@ const deletePendingBookings = async (io) => {
         }).populate('user', 'email fullName');
 
         if (expiredBookings.length === 0) {
-            console.log('No pending bookings to delete.');
             return;
         }
 
@@ -102,18 +102,18 @@ const deletePendingBookings = async (io) => {
                     });
                 }
 
-                console.log(`Sent cancellation notifications for booking ${booking.bookingId}`);
+                logger.info(`Sent cancellation notifications for booking ${booking.bookingId}`);
 
                 // Finally, delete the booking
                 await Booking.findByIdAndDelete(booking._id);
-                console.log(`Successfully deleted pending booking ${booking.bookingId}`);
+                logger.info(`Successfully deleted pending booking ${booking.bookingId}`);
 
             } catch (emailError) {
-                console.error(`Error processing booking ${booking.bookingId}:`, emailError);
+                logger.error(`Error processing booking ${booking.bookingId}: ${emailError}`);
             }
         }
     } catch (error) {
-        console.error('Error in pending bookings cleanup job:', error);
+        logger.error(`Error in pending bookings cleanup job: ${error}`);
     }
 };
 
@@ -123,7 +123,7 @@ const initializeBookingCronJobs = (io) => {
         timezone: "Africa/Lagos"
     });
 
-    console.log('🗓️  Cron job for pending bookings management has been scheduled.');
+    logger.info('🗓️ Cron job for pending bookings management has been scheduled.');
 };
 
 export default initializeBookingCronJobs;

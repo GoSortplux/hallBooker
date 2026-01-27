@@ -1,15 +1,10 @@
 import nodemailer from 'nodemailer';
 import { ApiError } from '../utils/apiError.js';
+import logger from '../utils/logger.js';
 
 const sendEmail = async (options) => {
   const { io, notification, ...emailOptions } = options;
   try {
-    console.log('--- Email Config For Debugging ---');
-    console.log('Host:', process.env.EMAIL_HOST);
-    console.log('Port:', process.env.EMAIL_PORT);
-    console.log('Secure:', process.env.EMAIL_SECURE);
-    console.log('---------------------------------');
-
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
@@ -28,9 +23,9 @@ const sendEmail = async (options) => {
       attachments: emailOptions.attachments,
     };
 
-    console.log('Attempting to send email...');
+    logger.debug('Attempting to send email...');
     await transporter.sendMail(mailOptions);
-    console.log('Email sent!');
+    logger.info(`Email sent to ${emailOptions.email}`);
     if (io && notification) {
       io.to(notification.recipient).emit('notification', {
         message: notification.message,
@@ -38,7 +33,7 @@ const sendEmail = async (options) => {
       });
     }
   } catch (error) {
-    console.error("Email sending failed:", error);
+    logger.error(`Email sending failed: ${error}`);
     throw new ApiError(500, "The email could not be sent.");
   }
 };

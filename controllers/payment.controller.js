@@ -13,6 +13,7 @@ import Setting from '../models/setting.model.js';
 import { SubAccount } from '../models/subaccount.model.js';
 import { Disbursement } from '../models/disbursement.model.js';
 import sendEmail from '../services/email.service.js';
+import logger from '../utils/logger.js';
 import {
     generateAdminDisbursementFailureEmail,
     generateMandateCancellationEmail,
@@ -70,7 +71,7 @@ async function processTransaction(transactionData, io) {
     // Check if this transaction has already been recorded
     const existingTx = await Transaction.findOne({ transactionReference });
     if (existingTx) {
-        console.log(`Transaction ${transactionReference} already recorded.`);
+        logger.info(`Transaction ${transactionReference} already recorded.`);
         return;
     }
 
@@ -79,7 +80,7 @@ async function processTransaction(transactionData, io) {
         .populate('tier');
 
     if (!subscription) {
-        console.log(`No matching subscription found for payment reference: ${refFromMonnify}`);
+        logger.info(`No matching subscription found for payment reference: ${refFromMonnify}`);
         return;
     }
 
@@ -98,7 +99,7 @@ async function processTransaction(transactionData, io) {
     });
 
     if (isDuplicate) {
-        console.log(`Subscription ${subscription._id} already processed. Status: ${subscription.status}`);
+        logger.info(`Subscription ${subscription._id} already processed. Status: ${subscription.status}`);
         return;
     }
 
@@ -158,7 +159,7 @@ async function processTransaction(transactionData, io) {
                     });
                 }
             } catch (error) {
-                console.error("Email sending failed:", error);
+                logger.error(`Email sending failed: ${error}`);
             }
             break;
 
@@ -191,7 +192,7 @@ async function processBookingTransaction(bookingDetails, io) {
     // Check if this transaction has already been recorded
     const existingTx = await Transaction.findOne({ transactionReference });
     if (existingTx) {
-        console.log(`Transaction ${transactionReference} already recorded.`);
+        logger.info(`Transaction ${transactionReference} already recorded.`);
         return;
     }
 
@@ -203,7 +204,7 @@ async function processBookingTransaction(bookingDetails, io) {
         const recurringBookingId = refFromMonnify.split('_')[1];
         const bookings = await Booking.find({ recurringBookingId }).populate('hall user walkInUserDetails');
         if (!bookings.length) {
-            console.log(`Recurring booking ${recurringBookingId} not found.`);
+            logger.info(`Recurring booking ${recurringBookingId} not found.`);
             return;
         }
         booking = bookings[0]; // Use the first booking for customer details
@@ -223,7 +224,7 @@ async function processBookingTransaction(bookingDetails, io) {
         });
 
         if (isDuplicate) {
-            console.log(`Recurring booking ${recurringBookingId} already processed.`);
+            logger.info(`Recurring booking ${recurringBookingId} already processed.`);
             return;
         }
     } else {
@@ -235,7 +236,7 @@ async function processBookingTransaction(bookingDetails, io) {
         }
 
         if (!booking) {
-            console.log(`No matching booking found for ${refFromMonnify}`);
+            logger.info(`No matching booking found for ${refFromMonnify}`);
             return;
         }
 
@@ -254,7 +255,7 @@ async function processBookingTransaction(bookingDetails, io) {
         });
 
         if (isDuplicate) {
-            console.log(`Booking ${booking._id} already paid.`);
+            logger.info(`Booking ${booking._id} already paid.`);
             return;
         }
     }
@@ -288,7 +289,7 @@ async function processBookingTransaction(bookingDetails, io) {
                          email: customerEmail,
                          subject: `Your Recurring Booking for ${hall.name} is Confirmed!`,
                          html: generateRecurringBookingConfirmationEmail(customerDetails.fullName, allBookings, hall),
-                     }).catch(err => console.error("Recurring booking email error:", err));
+                 }).catch(err => logger.error(`Recurring booking email error: ${err}`));
                  }
                  sendEmail({
                      io,
@@ -296,7 +297,7 @@ async function processBookingTransaction(bookingDetails, io) {
                      subject: `New Recurring Booking for ${hall.name}`,
                      html: generateRecurringBookingConfirmationEmail(hallOwner.fullName, allBookings, hall),
                      notification: { recipient: hallOwner._id.toString(), message: `A new recurring booking has been confirmed for ${hall.name}.`, link: `/hall-owner/bookings?recurringId=${booking.recurringBookingId}` },
-                 }).catch(err => console.error("Recurring booking notification error for owner:", err));
+                 }).catch(err => logger.error(`Recurring booking notification error for owner: ${err}`));
                  admins.forEach(admin => {
                      sendEmail({
                          io,
@@ -304,7 +305,7 @@ async function processBookingTransaction(bookingDetails, io) {
                          subject: `Admin Alert: New Recurring Booking for ${hall.name}`,
                          html: generateRecurringBookingConfirmationEmail(admin.fullName, allBookings, hall),
                          notification: { recipient: admin._id.toString(), message: `A recurring booking was made for ${hall.name} by ${hallOwner.fullName}.`, link: `/admin/bookings?recurringId=${booking.recurringBookingId}` },
-                     }).catch(err => console.error("Recurring booking notification error for admin:", err));
+                     }).catch(err => logger.error(`Recurring booking notification error for admin: ${err}`));
                  });
 
             } else {
@@ -324,7 +325,7 @@ async function processBookingTransaction(bookingDetails, io) {
                          html: generatePaymentConfirmationEmail(bookingForEmail),
                          attachments: [{ filename: `receipt-${bookingForEmail.bookingId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
                          notification: { recipient: confirmedBooking.user?._id?.toString(), message: `Your booking #${confirmedBooking.bookingId} has been confirmed.`, link: `/bookings/${confirmedBooking._id}` },
-                     }).catch(err => console.error("Email error:", err));
+                     }).catch(err => logger.error(`Email error: ${err}`));
                  }
                  sendEmail({
                      io,
@@ -332,7 +333,7 @@ async function processBookingTransaction(bookingDetails, io) {
                      subject: `Booking Payment Received for ${confirmedBooking.hall.name}`,
                      html: generateNewBookingNotificationEmailForOwner(hallOwner, customerDetails, confirmedBooking),
                      notification: { recipient: hallOwner._id.toString(), message: `Payment for booking #${confirmedBooking.bookingId} has been confirmed.`, link: `/hall-owner/bookings/${confirmedBooking._id}` },
-                 }).catch(err => console.error("Owner notification error:", err));
+                 }).catch(err => logger.error(`Owner notification error: ${err}`));
                  admins.forEach(admin => {
                      sendEmail({
                          io,
@@ -340,7 +341,7 @@ async function processBookingTransaction(bookingDetails, io) {
                          subject: `Admin Alert: Booking Payment Received for ${confirmedBooking.hall.name}`,
                          html: generateNewBookingNotificationEmailForOwner(admin, customerDetails, confirmedBooking),
                          notification: { recipient: admin._id.toString(), message: `Payment confirmed for booking #${confirmedBooking.bookingId} at ${confirmedBooking.hall.name}.`, link: `/admin/bookings/${confirmedBooking._id}` },
-                     }).catch(err => console.error("Admin notification error:", err));
+                     }).catch(err => logger.error(`Admin notification error: ${err}`));
                  });
             }
             break;
@@ -366,12 +367,12 @@ async function processBookingTransaction(bookingDetails, io) {
                     email: customerEmail,
                     subject: 'Booking Payment Failed',
                     html: generatePaymentFailedEmail(bookingForEmail),
-                }).catch(err => console.error("Failure email error:", err));
+                }).catch(err => logger.error(`Failure email error: ${err}`));
             }
             break;
 
         default:
-            console.log(`Unhandled payment status: ${paymentStatus}`);
+            logger.info(`Unhandled payment status: ${paymentStatus}`);
             break;
     }
 }
@@ -497,7 +498,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
             res.redirect(`${frontendUrl}/payment-failed?bookingId=${idForUrl}`);
         }
     } catch (error) {
-        console.error('Verification Error:', error);
+        logger.error(`Verification Error: ${error}`);
         res.redirect(`${frontendUrl}/payment-failed?error=verification_failed`);
     }
 });
@@ -563,11 +564,11 @@ const handleMonnifyWebhook = asyncHandler(async (req, res) => {
             }
 
             default:
-                console.log(`Received unhandled event type: ${eventType}`);
+                logger.info(`Received unhandled event type: ${eventType}`);
                 break;
         }
     } catch (error) {
-        console.error('Webhook processing error:', error);
+        logger.error(`Webhook processing error: ${error}`);
         // Still return a 200 to prevent Monnify from retrying. The error is logged for debugging.
     }
 
