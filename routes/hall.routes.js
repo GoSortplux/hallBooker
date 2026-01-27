@@ -682,7 +682,8 @@ router.route('/media/upload')
  * @swagger
  * /api/v1/halls/{id}:
  *   get:
- *     summary: Get a hall by ID
+ *     summary: Get a hall by ID or slug
+ *     description: "Retrieves hall details using either its MongoDB ObjectId or its unique kebab-case slug."
  *     tags: [Halls]
  *     parameters:
  *       - in: path
@@ -690,7 +691,8 @@ router.route('/media/upload')
  *         schema:
  *           type: string
  *         required: true
- *         example: "60d0fe4f5311236168a109ca"
+ *         description: "The ID or slug of the hall."
+ *         example: "aduda-hall"
  *     responses:
  *       200:
  *         description: Hall details.

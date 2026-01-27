@@ -4,6 +4,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { Booking } from '../models/booking.model.js';
 import { Reservation } from '../models/reservation.model.js';
 import { Hall } from '../models/hall.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import { User } from '../models/user.model.js';
 import { SubAccount } from '../models/subaccount.model.js';
 import Setting from '../models/setting.model.js';
@@ -231,8 +232,9 @@ const createReservation = asyncHandler(async (req, res) => {
   if (!user && !isWalkIn) throw new ApiError(401, 'User must be logged in or walk-in details must be provided.');
   if (isWalkIn && !['super-admin', 'hall-owner', 'staff'].includes(user.activeRole)) throw new ApiError(403, 'You are not authorized to create a walk-in reservation.');
 
-  const hall = await Hall.findById(hallId).populate('facilities.facility');
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) throw new ApiError(404, 'Hall not found');
+  await hall.populate('facilities.facility');
 
   const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
   const orQuery = bookingDates.map(date => {
@@ -243,7 +245,7 @@ const createReservation = asyncHandler(async (req, res) => {
   });
 
   const bookingConflictQuery = {
-    hall: hallId,
+    hall: hall._id,
     $and: [
       { $or: orQuery },
       { $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }] }
@@ -252,7 +254,7 @@ const createReservation = asyncHandler(async (req, res) => {
   if (await Booking.findOne(bookingConflictQuery)) throw new ApiError(409, "Time slot conflicts with a booking.");
 
   const reservationConflictQuery = {
-    hall: hallId,
+    hall: hall._id,
     $or: orQuery,
     status: 'ACTIVE',
     paymentStatus: 'paid'
@@ -277,7 +279,7 @@ const createReservation = asyncHandler(async (req, res) => {
       const reservationId = await generateBookingId(hall.name, attempts); // Pass attempt for uniqueness
       const tempReservation = new Reservation({
           reservationId: `RES-${reservationId}`,
-          hall: hallId, user: isWalkIn ? null : user._id, reservedBy: user._id, bookingDates, eventDetails, totalPrice, hallPrice, facilitiesPrice, reservationFee,
+          hall: hall._id, user: isWalkIn ? null : user._id, reservedBy: user._id, bookingDates, eventDetails, totalPrice, hallPrice, facilitiesPrice, reservationFee,
           paymentStatus: 'pending', status: 'ACTIVE', reservationType: isWalkIn ? 'walk-in' : 'online', walkInUserDetails: isWalkIn ? walkInUserDetails : undefined,
           selectedFacilities: facilitiesWithCalculatedCosts.map((cf, i) => ({ ...cf, facility: selectedFacilitiesData[i].facilityId })),
           cutoffDate: new Date(new Date(bookingDates[0].startTime).getTime() - (hall.reservationCutoffHours * 60 * 60 * 1000)),
@@ -464,7 +466,10 @@ const getReservationsForHall = asyncHandler(async (req, res) => {
     const { hallId } = req.params;
     const { status, paymentStatus, page = 1, limit = 10 } = req.query;
 
-    const query = { hall: hallId };
+    const hall = await findHallByIdOrSlug(hallId);
+    if (!hall) throw new ApiError(404, 'Hall not found');
+
+    const query = { hall: hall._id };
     if (status) {
         query.status = status.toUpperCase();
     }
@@ -558,10 +563,11 @@ const walkInReservation = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Invalid payment method: ${paymentMethod}`);
     }
 
-    const hall = await Hall.findById(hallId).populate('facilities.facility');
+    const hall = await findHallByIdOrSlug(hallId);
     if (!hall) {
         throw new ApiError(404, 'Hall not found');
     }
+    await hall.populate('facilities.facility');
 
     // --- Conflict Checking (copied from createReservation) ---
     const bufferMilliseconds = (hall.bookingBufferInHours || 0) * 60 * 60 * 1000;
@@ -577,7 +583,7 @@ const walkInReservation = asyncHandler(async (req, res) => {
     });
 
     const bookingConflictQuery = {
-        hall: hallId,
+        hall: hall._id,
         $and: [
             { $or: orQuery },
             { $or: [{ status: 'confirmed' }, { paymentStatus: 'pending' }] }
@@ -588,7 +594,7 @@ const walkInReservation = asyncHandler(async (req, res) => {
     }
 
     const reservationConflictQuery = {
-        hall: hallId,
+        hall: hall._id,
         $or: orQuery,
         status: 'ACTIVE',
         paymentStatus: 'paid'
@@ -618,7 +624,7 @@ const walkInReservation = asyncHandler(async (req, res) => {
         const reservationId = await generateBookingId(hall.name, attempts);
         const reservationData = {
             reservationId: `RES-${reservationId}`,
-            hall: hallId,
+            hall: hall._id,
             user: null, // Walk-in reservations are not linked to a registered user
         reservedBy: staffUser._id,
         bookingDates,

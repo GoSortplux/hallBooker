@@ -4,6 +4,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { Booking } from '../models/booking.model.js';
 import { Hall } from '../models/hall.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import Setting from '../models/setting.model.js';
 import { uploadToR2 } from '../config/storage.js';
 import { createNotification } from '../services/notification.service.js';
@@ -273,10 +274,11 @@ const unlistHall = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'A reason for unlisting is required.');
   }
 
-  const hall = await Hall.findById(hallId).populate('owner');
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) {
     throw new ApiError(404, 'Hall not found');
   }
+  await hall.populate('owner');
 
   hall.isListed = false;
   hall.unlistedReason = reason;
@@ -303,7 +305,7 @@ const unlistHall = asyncHandler(async (req, res) => {
 const relistHall = asyncHandler(async (req, res) => {
   const { hallId } = req.params;
 
-  const hall = await Hall.findById(hallId);
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) {
     throw new ApiError(404, 'Hall not found');
   }
@@ -393,7 +395,7 @@ const declineDeletionRequest = asyncHandler(async (req, res) => {
 const getBookingsForHall = asyncHandler(async (req, res) => {
   const { hallId } = req.params;
 
-  const hall = await Hall.findById(hallId);
+  const hall = await findHallByIdOrSlug(hallId);
   if (!hall) {
     throw new ApiError(404, 'Hall not found');
   }
@@ -407,7 +409,7 @@ const getBookingsForHall = asyncHandler(async (req, res) => {
     status,
   } = req.query;
 
-  const query = { hall: hallId };
+  const query = { hall: hall._id };
   if (status) {
     query.status = status;
   }
