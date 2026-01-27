@@ -8,14 +8,13 @@ import { Reservation } from '../models/reservation.model.js';
 import { Hall } from '../models/hall.model.js';
 import { Facility } from '../models/facility.model.js';
 import { User } from '../models/user.model.js';
-import { Analytics } from '../models/analytics.model.js';
 import { createNotification } from '../services/notification.service.js';
 import geocoder from '../utils/geocoder.js';
 import {
   uploadToR2,
   deleteFromR2,
-  applyWatermark,
 } from '../config/storage.js';
+import { analyticsQueue, mediaQueue } from '../jobs/queues/index.js';
 
 import sendEmail from '../services/email.service.js';
 import { generateHallCreationEmail } from '../utils/emailTemplates.js';
@@ -128,9 +127,6 @@ const createHall = asyncHandler(async (req, res) => {
 
     const geocodedData = await geocoder.geocode(location);
 
-    const watermarkedImages = images ? await applyWatermark(images, 'image') : [];
-    const watermarkedVideos = videos ? await applyWatermark(videos, 'video') : [];
-
     const hallData = {
         name,
         location,
@@ -148,8 +144,8 @@ const createHall = asyncHandler(async (req, res) => {
         recurringBookingDiscount,
         suitableFor,
         rules,
-        images: watermarkedImages,
-        videos: watermarkedVideos,
+        images: images || [],
+        videos: videos || [],
         openingHour: parseHour(openingHour),
         closingHour: parseHour(closingHour),
         bookingBufferInHours,
@@ -255,29 +251,13 @@ const getHallById = asyncHandler(async (req, res) => {
             }
         }
 
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const analyticsQuery = {
-            hall: req.params.id,
+        // Queue analytics tracking
+        await analyticsQueue.add('trackView', {
+            hallId: req.params.id,
             type: 'view',
-            ...(userId ? { user: userId } : { ipAddress: req.ip }),
-            createdAt: { $gte: startOfDay, $lte: endOfDay },
-        };
-
-        const alreadyViewedToday = await Analytics.findOne(analyticsQuery);
-
-        if (!alreadyViewedToday) {
-            await Analytics.create({
-                hall: req.params.id,
-                type: 'view',
-                ...(userId ? { user: userId } : { ipAddress: req.ip }),
-            });
-            hall.views += 1;
-            await hall.save({ validateBeforeSave: false });
-        }
+            userId,
+            ipAddress: req.ip
+        });
     } catch (error) {
         console.error('Analytics view tracking failed:', error);
     }
@@ -302,13 +282,6 @@ const updateHall = asyncHandler(async (req, res) => {
         ...otherDetails
     } = req.body;
 
-    if (otherDetails.images) {
-        otherDetails.images = await applyWatermark(otherDetails.images, 'image');
-    }
-
-    if (otherDetails.videos) {
-        otherDetails.videos = await applyWatermark(otherDetails.videos, 'video');
-    }
 
     const { location, allowRecurringBookings, recurringBookingDiscount, facilities, suitableFor, rules } = otherDetails;
 
@@ -496,10 +469,20 @@ const uploadMedia = asyncHandler(async (req, res) => {
     }
 
     const resourceType = isVideo ? 'video' : 'image';
-    const url = await uploadToR2(file.path, resourceType, file.mimetype);
+    // Upload original without watermarking synchronously
+    const url = await uploadToR2(file.path, resourceType, file.mimetype, false);
 
     if (!url) {
       return { error: 'Upload failed', fileName: file.originalname };
+    }
+
+    // Queue watermarking for images
+    if (isImage) {
+      await mediaQueue.add('watermark', {
+        publicUrl: url,
+        resourceType,
+        mimeType: file.mimetype
+      });
     }
 
     return { url };
@@ -805,31 +788,15 @@ const bookDemo = asyncHandler(async (req, res) => {
         }
     }
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const analyticsQuery = {
-        hall: hallId,
-        type: 'demo-booking',
-        ...(userId ? { user: userId } : { ipAddress: req.ip }),
-        createdAt: { $gte: startOfDay, $lte: endOfDay },
-    };
-
-    const alreadyClickedToday = await Analytics.findOne(analyticsQuery);
-
-    if (!alreadyClickedToday) {
-        try {
-            await Analytics.create({
-                hall: hallId,
-                type: 'demo-booking',
-                ...(userId ? { user: userId } : { ipAddress: req.ip }),
-            });
-            await Hall.findByIdAndUpdate(hallId, { $inc: { demoBookings: 1 } });
-        } catch (error) {
-            console.error('Analytics demo booking tracking failed:', error);
-        }
+    try {
+        await analyticsQueue.add('trackDemoBooking', {
+            hallId,
+            type: 'demo-booking',
+            userId,
+            ipAddress: req.ip
+        });
+    } catch (error) {
+        console.error('Analytics demo booking queueing failed:', error);
     }
 
     const hallWithContact = await Hall.findById(hallId).populate('owner', 'phone whatsappNumber');
