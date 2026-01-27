@@ -11,6 +11,7 @@ import { Transaction } from '../models/transaction.model.js';
 import { calculateBookingPriceAndValidate } from '../utils/booking.utils.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 import generateBookingId from '../utils/bookingIdGenerator.js';
+import { getCompanyName } from '../utils/settings.js';
 import crypto from 'crypto';
 import sendEmail from '../services/email.service.js';
 import logger from '../utils/logger.js';
@@ -69,24 +70,25 @@ export async function processReservationTransaction(transactionData, io) {
         const hallOwner = await User.findById(reservation.hall.owner);
         const admins = await User.find({ role: 'super-admin' });
 
+        const companyName = await getCompanyName();
         if (customer && customer.email) {
             sendEmail({
                 io, email: customer.email, subject: `Your Reservation for ${reservation.hall.name} is Confirmed!`,
-                html: generateReservationConfirmationEmail(customer.fullName, reservation),
+                html: generateReservationConfirmationEmail(customer.fullName, reservation, companyName),
                 notification: { recipient: reservation.user?._id.toString(), message: `Your reservation for ${reservation.hall.name} is confirmed.`, link: `/reservations/${reservation._id}` }
             }).catch(err => logger.error(`Error sending reservation confirmation email: ${err}`));
         }
         if (hallOwner) {
             sendEmail({
                 io, email: hallOwner.email, subject: `New Reservation for Your Hall: ${reservation.hall.name}`,
-                html: generateNewReservationNotificationForOwner(hallOwner, customer, reservation),
+                html: generateNewReservationNotificationForOwner(hallOwner, customer, reservation, companyName),
                 notification: { recipient: hallOwner._id.toString(), message: `A new reservation has been made for your hall: ${reservation.hall.name}.`, link: `/hall-owner/reservations/${reservation._id}` }
             }).catch(err => logger.error(`Error sending reservation notification to owner: ${err}`));
         }
         admins.forEach(admin => {
             sendEmail({
                 io, email: admin.email, subject: `Admin Alert: New Reservation Made for ${reservation.hall.name}`,
-                html: generateNewReservationNotificationForOwner(admin, customer, reservation),
+                html: generateNewReservationNotificationForOwner(admin, customer, reservation, companyName),
                 notification: { recipient: admin._id.toString(), message: `A new reservation was made for ${reservation.hall.name}.`, link: `/admin/reservations/${reservation._id}` }
             }).catch(err => logger.error(`Error sending reservation alert to admin: ${err}`));
         });
@@ -125,15 +127,16 @@ async function finalizeConversion(reservation, paymentDetails, io) {
     const hallOwner = await User.findById(reservation.hall.owner);
     const admins = await User.find({ role: 'super-admin' });
 
+    const companyName = await getCompanyName();
     if (customer && customer.email) {
         sendEmail({
             io, email: customer.email, subject: `Your Booking for ${reservation.hall.name} is Confirmed!`,
-            html: generatePaymentConfirmationEmail({ ...newBooking.toObject(), hall: reservation.hall, user: customer }),
+            html: generatePaymentConfirmationEmail({ ...newBooking.toObject(), hall: reservation.hall, user: customer }, companyName),
             notification: { recipient: newBooking.user?._id.toString(), message: `Your booking for ${reservation.hall.name} is confirmed.`, link: `/bookings/${newBooking._id}` }
         }).catch(err => logger.error(`Error sending conversion confirmation email: ${err}`));
     }
 
-    const notificationHtml = generateNewBookingNotificationEmailForOwner(hallOwner, customer, { ...newBooking.toObject(), hall: reservation.hall });
+    const notificationHtml = generateNewBookingNotificationEmailForOwner(hallOwner, customer, { ...newBooking.toObject(), hall: reservation.hall }, companyName);
     if (hallOwner) {
         sendEmail({
             io, email: hallOwner.email, subject: `Booking Confirmed for Your Hall: ${reservation.hall.name}`,
@@ -208,11 +211,12 @@ export async function processConversionTransaction(transactionData, io) {
                 user: customer, // The template will get fullName from here
             };
 
+            const companyName = await getCompanyName();
             sendEmail({
                 io,
                 email: customer.email,
                 subject: 'Booking Payment Failed',
-                html: generatePaymentFailedEmail(mockBookingForEmail),
+                html: generatePaymentFailedEmail(mockBookingForEmail, companyName),
             }).catch(err => logger.error(`Conversion failure email error: ${err}`));
         }
     }
@@ -307,13 +311,14 @@ const createReservation = asyncHandler(async (req, res) => {
     // Combine the new reservation with the populated hall for email templates
     const reservationForEmail = { ...newReservation.toObject(), hall };
 
+    const companyName = await getCompanyName();
     // Notify customer
     if (customer && customer.email) {
       sendEmail({
         io,
         email: customer.email,
         subject: `Your Reservation for ${hall.name} is Pending Payment`,
-        html: generateNewReservationPendingPaymentEmailForUser(customer.fullName, reservationForEmail),
+        html: generateNewReservationPendingPaymentEmailForUser(customer.fullName, reservationForEmail, companyName),
         notification: {
           recipient: user?._id.toString(),
           message: `Your reservation for ${hall.name} is pending payment.`,
@@ -328,7 +333,7 @@ const createReservation = asyncHandler(async (req, res) => {
         io,
         email: hallOwner.email,
         subject: `New Reservation Pending for ${hall.name}`,
-        html: generateNewReservationNotificationForOwner(hallOwner, customer, reservationForEmail),
+        html: generateNewReservationNotificationForOwner(hallOwner, customer, reservationForEmail, companyName),
         notification: {
           recipient: hallOwner._id.toString(),
           message: `A new reservation for your hall ${hall.name} is awaiting payment.`,
@@ -343,7 +348,7 @@ const createReservation = asyncHandler(async (req, res) => {
         io,
         email: admin.email,
         subject: `Admin Alert: New Reservation Pending for ${hall.name}`,
-        html: generateNewReservationNotificationForOwner(admin, customer, reservationForEmail),
+        html: generateNewReservationNotificationForOwner(admin, customer, reservationForEmail, companyName),
         notification: {
           recipient: admin._id.toString(),
           message: `A new reservation for ${hall.name} is pending payment.`,
@@ -643,25 +648,26 @@ const walkInReservation = asyncHandler(async (req, res) => {
         const reservationForEmail = { ...newReservation.toObject(), hall };
 
         // --- Notifications ---
+        const companyName = await getCompanyName();
         if (walkInUserDetails.email) {
             sendEmail({
                 io,
                 email: walkInUserDetails.email,
                 subject: `Your Reservation for ${hall.name} is Pending Payment`,
-                html: generateNewReservationPendingPaymentEmailForUser(walkInUserDetails.fullName, reservationForEmail),
+                html: generateNewReservationPendingPaymentEmailForUser(walkInUserDetails.fullName, reservationForEmail, companyName),
             }).catch(err => logger.error(`Error sending walk-in pending email: ${err}`));
         }
         if (hallOwner) {
             sendEmail({
                 io, email: hallOwner.email, subject: `New Walk-in Reservation Pending for ${hall.name}`,
-                html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail),
+                html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail, companyName),
                 notification: { recipient: hallOwner._id.toString(), message: `A new walk-in reservation for ${hall.name} is awaiting payment.`, link: `/hall-owner/reservations/${newReservation._id}` }
             }).catch(err => logger.error(`Error sending walk-in pending notification to owner: ${err}`));
         }
         admins.forEach(admin => {
             sendEmail({
                 io, email: admin.email, subject: `Admin Alert: New Walk-in Reservation Pending for ${hall.name}`,
-                html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail),
+                html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail, companyName),
                 notification: { recipient: admin._id.toString(), message: `A new walk-in reservation for ${hall.name} is pending payment.`, link: `/admin/reservations/${newReservation._id}` }
             }).catch(err => logger.error(`Error sending walk-in pending alert to admin: ${err}`));
         });
@@ -675,25 +681,26 @@ const walkInReservation = asyncHandler(async (req, res) => {
         const reservationForEmail = { ...newReservation.toObject(), hall };
 
         // --- Notifications ---
+        const companyName = await getCompanyName();
         if (walkInUserDetails.email) {
             sendEmail({
                 io,
                 email: walkInUserDetails.email,
                 subject: `Your Reservation for ${hall.name} is Confirmed!`,
-                html: generateReservationConfirmationEmail(walkInUserDetails.fullName, reservationForEmail),
+                html: generateReservationConfirmationEmail(walkInUserDetails.fullName, reservationForEmail, companyName),
             }).catch(err => logger.error(`Error sending walk-in confirmation email: ${err}`));
         }
         if (hallOwner) {
             sendEmail({
                 io, email: hallOwner.email, subject: `New Walk-in Reservation for ${hall.name}`,
-                html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail),
+                html: generateNewReservationNotificationForOwner(hallOwner, walkInUserDetails, reservationForEmail, companyName),
                 notification: { recipient: hallOwner._id.toString(), message: `A new walk-in reservation has been made for your hall: ${hall.name}.`, link: `/hall-owner/reservations/${newReservation._id}` }
             }).catch(err => logger.error(`Error sending walk-in confirmation notification to owner: ${err}`));
         }
         admins.forEach(admin => {
             sendEmail({
                 io, email: admin.email, subject: `Admin Alert: New Walk-in Reservation for ${hall.name}`,
-                html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail),
+                html: generateNewReservationNotificationForOwner(admin, walkInUserDetails, reservationForEmail, companyName),
                 notification: { recipient: admin._id.toString(), message: `A new walk-in reservation was made for ${hall.name}.`, link: `/admin/reservations/${newReservation._id}` }
             }).catch(err => logger.error(`Error sending walk-in confirmation alert to admin: ${err}`));
         });

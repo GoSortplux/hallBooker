@@ -23,6 +23,7 @@ import {
     generateStaffAdditionEmail,
     generateStaffRemovalEmail
 } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({});
@@ -124,7 +125,8 @@ const addStaff = asyncHandler(async (req, res) => {
 	}
 
 	const io = req.app.get('io');
-	const emailHtml = generateStaffAdditionEmail(staff.fullName, req.user.fullName, halls);
+	const companyName = await getCompanyName();
+	const emailHtml = generateStaffAdditionEmail(staff.fullName, req.user.fullName, halls, companyName);
 	const notificationMessage = `You have been added as a staff member by ${req.user.fullName}.`;
 	await Notification.create({
 		recipient: staff._id,
@@ -178,7 +180,8 @@ const removeStaff = asyncHandler(async (req, res) => {
 	await staff.save({ validateBeforeSave: false });
 
 	const io = req.app.get('io');
-	const emailHtml = generateStaffRemovalEmail(staff.fullName, req.user.fullName);
+	const companyName = await getCompanyName();
+	const emailHtml = generateStaffRemovalEmail(staff.fullName, req.user.fullName, companyName);
 	const notificationMessage = `You have been removed as a staff member by ${req.user.fullName}.`;
 	await Notification.create({
 		recipient: staff._id,
@@ -226,7 +229,8 @@ const applyHallOwner = asyncHandler(async (req, res) => {
 
     // Send email notifications
     const io = req.app.get('io');
-    const userEmailHtml = generateHallOwnerApplicationEmailForUser(user.fullName);
+    const companyName = await getCompanyName();
+    const userEmailHtml = generateHallOwnerApplicationEmailForUser(user.fullName, companyName);
     await sendEmail({
         io,
         email: user.email,
@@ -240,7 +244,7 @@ const applyHallOwner = asyncHandler(async (req, res) => {
 
     const superAdmins = await User.find({ role: 'super-admin' });
     for (const admin of superAdmins) {
-        const adminEmailHtml = generateHallOwnerApplicationEmailForAdmin(user.fullName, user.email);
+        const adminEmailHtml = generateHallOwnerApplicationEmailForAdmin(user.fullName, user.email, companyName);
         await sendEmail({
             io,
             email: admin.email,
@@ -315,9 +319,10 @@ const requestAccountDeletion = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   const io = req.app.get('io');
+  const companyName = await getCompanyName();
 
   // Notify user
-  const userEmailHtml = generateAccountDeletionRequestEmailForUser(user.fullName);
+  const userEmailHtml = generateAccountDeletionRequestEmailForUser(user.fullName, companyName);
   await sendEmail({
     io,
     email: user.email,
@@ -332,7 +337,7 @@ const requestAccountDeletion = asyncHandler(async (req, res) => {
   // Notify all super-admins
   const superAdmins = await User.find({ role: 'super-admin' });
   for (const admin of superAdmins) {
-    const adminEmailHtml = generateAccountDeletionRequestEmailForAdmin(user.fullName, user.email);
+    const adminEmailHtml = generateAccountDeletionRequestEmailForAdmin(user.fullName, user.email, companyName);
     await sendEmail({
       io,
       email: admin.email,
@@ -368,11 +373,12 @@ const createHallOwner = asyncHandler(async (req, res) => {
     await user.save();
 
     const io = req.app.get('io');
-    const userEmailHtml = generateHallOwnerCreationEmailForUser(user.fullName, password);
+    const companyName = await getCompanyName();
+    const userEmailHtml = generateHallOwnerCreationEmailForUser(user.fullName, password, companyName);
     await sendEmail({
         io,
         email: user.email,
-        subject: 'Welcome to HallBooker!',
+        subject: `Welcome to ${companyName}!`,
         html: userEmailHtml,
         notification: {
             recipient: user._id.toString(),
@@ -400,7 +406,8 @@ const approveHallOwner = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     const io = req.app.get('io');
-    const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName);
+    const companyName = await getCompanyName();
+    const userEmailHtml = generateHallOwnerApprovalEmailForUser(user.fullName, companyName);
     await sendEmail({
         io,
         email: user.email,
@@ -432,7 +439,8 @@ const promoteToHallOwner = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     const io = req.app.get('io');
-    const userEmailHtml = generatePromotionToHallOwnerEmailForUser(user.fullName);
+    const companyName = await getCompanyName();
+    const userEmailHtml = generatePromotionToHallOwnerEmailForUser(user.fullName, companyName);
     await sendEmail({
         io,
         email: user.email,

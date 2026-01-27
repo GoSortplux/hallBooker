@@ -8,6 +8,7 @@ import { User } from '../models/user.model.js';
 import mongoose from 'mongoose';
 import sendEmail from '../services/email.service.js';
 import { generateAdminLicenseNotificationEmail, generateSubscriptionConfirmationEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import { initializeTransaction, verifyTransaction } from '../services/payment.service.js';
 
 
@@ -51,12 +52,13 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
         await Hall.updateMany({ owner: ownerId }, { $set: { isActive: true } });
 
         const io = req.app.get('io');
+        const companyName = await getCompanyName();
         // Send confirmation emails
         sendEmail({
             io,
             email: req.user.email,
             subject: 'Your Free Subscription is Active!',
-            html: generateSubscriptionConfirmationEmail(req.user.fullName, tier.name, 0, expiryDate),
+            html: generateSubscriptionConfirmationEmail(req.user.fullName, tier.name, 0, expiryDate, companyName),
             notification: {
                 recipient: req.user._id.toString(),
                 message: `Your free subscription for the ${tier.name} tier has been activated.`,
@@ -69,7 +71,7 @@ const purchaseSubscription = asyncHandler(async (req, res) => {
                 io,
                 email: admin.email,
                 subject: 'New Free Subscription Activated',
-                html: generateAdminLicenseNotificationEmail(req.user.fullName, tier.name, 0),
+                html: generateAdminLicenseNotificationEmail(req.user.fullName, tier.name, 0, companyName),
                 notification: {
                     recipient: admin._id.toString(),
                     message: `${req.user.fullName} has activated a free subscription for the ${tier.name} tier.`,

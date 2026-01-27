@@ -1,17 +1,17 @@
 import { formatDuration } from './time.js';
 
-const generateVerificationEmail = (name, token) => {
+const generateVerificationEmail = (name, token, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-      <h2 style="color: #333;">Welcome to HallBooker, ${name}!</h2>
+      <h2 style="color: #333;">Welcome to ${companyName}, ${name}!</h2>
       <p>Thank you for registering. To complete your registration, please use the following verification code:</p>
       <p style="font-size: 24px; font-weight: bold; color: #444; letter-spacing: 2px; border: 1px solid #ddd; padding: 10px; display: inline-block;">
         ${token}
       </p>
       <p>This code will expire in 10 minutes.</p>
-      <p>If you did not sign up for a HallBooker account, you can safely ignore this email.</p>
+      <p>If you did not sign up for a ${companyName} account, you can safely ignore this email.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
@@ -35,31 +35,31 @@ const generateAdminDisbursementFailureEmail = (disbursementData) => {
   `;
 };
 
-const generateMandateCancellationEmail = (userName, expiryDate) => {
+const generateMandateCancellationEmail = (userName, expiryDate, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #333;">Subscription Auto-Renewal Cancelled</h2>
         <p>Hi ${userName},</p>
         <p>This email confirms that the automatic renewal for your subscription has been successfully cancelled.</p>
         <p>Your subscription will remain active and you can continue to enjoy all its benefits until the current billing period ends on <strong>${new Date(expiryDate).toDateString()}</strong>.</p>
-        <p>If you change your mind, you can set up a new subscription from your dashboard at any time. Thank you for using HallBooker.</p>
+        <p>If you change your mind, you can set up a new subscription from your dashboard at any time. Thank you for using ${companyName}.</p>
     </div>
   `;
 };
 
-const generateWelcomeEmail = (name) => {
+const generateWelcomeEmail = (name, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #333;">Welcome to HallBooker, ${name}!</h2>
+        <h2 style="color: #333;">Welcome to ${companyName}, ${name}!</h2>
         <p>Your email has been successfully verified. We're excited to have you on board.</p>
         <p>You can now log in and start exploring our services.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateSubscriptionExpiryWarningEmail = (userName, tierName, expiryDate) => {
+const generateSubscriptionExpiryWarningEmail = (userName, tierName, expiryDate, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #333;">Your Subscription is Expiring Soon</h2>
@@ -67,12 +67,12 @@ const generateSubscriptionExpiryWarningEmail = (userName, tierName, expiryDate) 
         <p>This is a reminder that your subscription for the <strong>${tierName}</strong> plan is expiring on <strong>${new Date(expiryDate).toDateString()}</strong>.</p>
         <p>To avoid any interruption in service and to keep your halls active, please renew your subscription at your earliest convenience.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateSubscriptionConfirmationEmail = (userName, tierName, price, expiryDate) => {
+const generateSubscriptionConfirmationEmail = (userName, tierName, price, expiryDate, companyName = 'Gobokin') => {
     const expiryString = expiryDate ? `Your subscription will renew on ${new Date(expiryDate).toDateString()}.` : 'You have a lifetime subscription.';
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -85,18 +85,18 @@ const generateSubscriptionConfirmationEmail = (userName, tierName, price, expiry
             <li><strong>Amount Paid:</strong> NGN ${price.toLocaleString()}</li>
         </ul>
         <p>${expiryString}</p>
-        <p>Thank you for choosing HallBooker.</p>
+        <p>Thank you for choosing ${companyName}.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
+const generateAdminLicenseNotificationEmail = (ownerName, tierName, price, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #333;">New Subscription Purchase</h2>
-        <p>A new subscription has been purchased on HallBooker.</p>
+        <p>A new subscription has been purchased on ${companyName}.</p>
         <h3>Transaction Details:</h3>
         <ul>
             <li><strong>Hall Owner:</strong> ${ownerName}</li>
@@ -104,12 +104,12 @@ const generateAdminLicenseNotificationEmail = (ownerName, tierName, price) => {
             <li><strong>Amount Paid:</strong> NGN ${price.toLocaleString()}</li>
         </ul>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
+        <p style="font-size: 12px; color: #888;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 }
 
-const generatePaymentConfirmationEmail = (booking) => {
+const generatePaymentConfirmationEmail = (booking, companyName = 'Gobokin') => {
     const bookingDatesHtml = booking.bookingDates.map(bookingDate => {
         const duration = formatDuration(new Date(bookingDate.startTime), new Date(bookingDate.endTime));
         const startDate = new Date(bookingDate.startTime);
@@ -237,12 +237,12 @@ const generatePaymentConfirmationEmail = (booking) => {
         ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
         <p style="font-size: 14px; color: #555;">We have also attached an updated PDF receipt for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateBookingConfirmationEmail = (booking) => {
+const generateBookingConfirmationEmail = (booking, companyName = 'Gobokin') => {
     const bookingDatesHtml = booking.bookingDates.map(bookingDate => {
         const duration = formatDuration(new Date(bookingDate.startTime), new Date(bookingDate.endTime));
         const startDate = new Date(bookingDate.startTime);
@@ -376,12 +376,12 @@ const generateBookingConfirmationEmail = (booking) => {
         ` : '<p style="font-size: 14px; color: #555;">Please note that your access to the hall will expire at the end of your booking period.</p>'}
         <p style="font-size: 14px; color: #555;">We have also attached a PDF receipt for your payment and booking details for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateNewBookingNotificationEmailForOwner = (recipient, customer, booking) => {
+const generateNewBookingNotificationEmailForOwner = (recipient, customer, booking, companyName = 'Gobokin') => {
     const timezone = 'Africa/Lagos';
     const bookedOn = new Date(booking.createdAt).toLocaleString('en-US', {
         month: 'long',
@@ -541,17 +541,17 @@ const generateNewBookingNotificationEmailForOwner = (recipient, customer, bookin
         </table>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 };
 
-const generateHallCreationEmail = (name, hallName, hallLocation) => {
+const generateHallCreationEmail = (name, hallName, hallLocation, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #333;">New Hall Created!</h2>
         <p>Hi ${name},</p>
-        <p>Congratulations! Your new hall has been successfully created on HallBooker.</p>
+        <p>Congratulations! Your new hall has been successfully created on ${companyName}.</p>
         <h3>Hall Details:</h3>
         <ul>
             <li><strong>Name:</strong> ${hallName}</li>
@@ -559,12 +559,12 @@ const generateHallCreationEmail = (name, hallName, hallLocation) => {
         </ul>
         <p>You can now manage your hall from your dashboard.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateLicensePurchaseEmail = (name, tierName, price, expiryDate) => {
+const generateLicensePurchaseEmail = (name, tierName, price, expiryDate, companyName = 'Gobokin') => {
     const expiryString = expiryDate ? `Your license will expire on ${expiryDate.toDateString()}.` : 'Your license is for a lifetime.';
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -579,12 +579,12 @@ const generateLicensePurchaseEmail = (name, tierName, price, expiryDate) => {
         <p>${expiryString}</p>
         <p>You can now enjoy the benefits of your new license.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateSubscriptionPaymentEmail = (subscription) => {
+const generateSubscriptionPaymentEmail = (subscription, companyName = 'Gobokin') => {
     const purchaseDate = new Date(subscription.purchaseDate);
     const expiryDate = new Date(subscription.expiryDate);
     const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -627,12 +627,12 @@ const generateSubscriptionPaymentEmail = (subscription) => {
 
         <p style="font-size: 14px; color: #555;">We have attached a PDF receipt for your records.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateSubscriptionExpiredEmail = (userName, tierName) => {
+const generateSubscriptionExpiredEmail = (userName, tierName, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #d9534f;">Your Subscription Has Expired</h2>
@@ -640,17 +640,17 @@ const generateSubscriptionExpiredEmail = (userName, tierName) => {
         <p>This is to notify you that your subscription for the <strong>${tierName}</strong> plan has expired.</p>
         <p>As a result, your halls have been deactivated and are no longer visible for booking. To continue using our services and reactivate your halls, please log in to your dashboard and purchase a new subscription.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generatePendingBookingCancelledEmail = (recipientName, booking) => {
+const generatePendingBookingCancelledEmail = (recipientName, booking, companyName = 'Gobokin', reason = 'the payment was not completed within the allowed time frame') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #d9534f; text-align: center;">Booking Automatically Cancelled</h2>
         <p>Hi ${recipientName},</p>
-        <p>This is to inform you that a pending booking has been automatically cancelled because the payment was not completed within the allowed time frame.</p>
+        <p>This is to inform you that a pending booking has been automatically cancelled because ${reason}.</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <thead>
@@ -676,7 +676,7 @@ const generatePendingBookingCancelledEmail = (recipientName, booking) => {
 
         <p style="font-size: 14px; color: #555;">No further action is required. The timeslot may now be available for others to book.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 }
@@ -721,7 +721,7 @@ export {
   generatePaymentFailedEmail
 };
 
-const generatePaymentFailedEmail = (booking) => {
+const generatePaymentFailedEmail = (booking, companyName = 'Gobokin') => {
   // Use a generic customer name if the user details aren't fully populated
   const customerName = booking.user ? booking.user.fullName : (booking.walkInUserDetails ? booking.walkInUserDetails.fullName : 'Customer');
 
@@ -757,12 +757,12 @@ const generatePaymentFailedEmail = (booking) => {
         <p style="font-size: 14px; color: #555;">You can attempt to make the payment again from your dashboard. If the problem persists, please try a different payment method or contact your bank.</p>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateHallUnlistedEmailForOwner = (ownerName, hallName, reason) => {
+const generateHallUnlistedEmailForOwner = (ownerName, hallName, reason, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #d9534f;">Your Hall Has Been Unlisted</h2>
@@ -775,12 +775,12 @@ const generateHallUnlistedEmailForOwner = (ownerName, hallName, reason) => {
       <p>Your hall will not appear in search results and will not be available for new bookings. Existing bookings are not affected.</p>
       <p>If you have any questions, please contact our support team.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateAccountDeletionDeclinedEmailForUser = (name, reason) => {
+const generateAccountDeletionDeclinedEmailForUser = (name, reason, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">Account Deletion Request Update</h2>
@@ -792,12 +792,12 @@ const generateAccountDeletionDeclinedEmailForUser = (name, reason) => {
       </p>
       <p>Your account remains active. If you have any questions, please contact our support team.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateAccountDeletionApprovedEmailForUser = (name) => {
+const generateAccountDeletionApprovedEmailForUser = (name, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">Your Account Has Been Deactivated</h2>
@@ -805,12 +805,12 @@ const generateAccountDeletionApprovedEmailForUser = (name) => {
       <p>As you requested, your account has been deactivated and will be permanently deleted in 7 days. We are sorry to see you go.</p>
       <p>If you did not request this, please contact our support team immediately.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateAccountDeletionRequestEmailForAdmin = (userName, userEmail) => {
+const generateAccountDeletionRequestEmailForAdmin = (userName, userEmail, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #d9534f;">User Account Deletion Request</h2>
@@ -822,12 +822,12 @@ const generateAccountDeletionRequestEmailForAdmin = (userName, userEmail) => {
       </ul>
       <p>Please review this request in the admin dashboard and take the appropriate action (approve or decline).</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
+      <p style="font-size: 12px; color: #888;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 };
 
-const generateAccountDeletionRequestEmailForUser = (name) => {
+const generateAccountDeletionRequestEmailForUser = (name, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">Account Deletion Request Received</h2>
@@ -836,17 +836,17 @@ const generateAccountDeletionRequestEmailForUser = (name) => {
       <p>An administrator will review your request shortly. You will receive another email once a decision has been made.</p>
       <p>If you did not make this request, please contact our support team immediately.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generatePendingReservationCancelledEmail = (recipientName, reservation) => {
+const generatePendingReservationCancelledEmail = (recipientName, reservation, companyName = 'Gobokin', reason = 'the reservation fee was not paid within the allowed time frame') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #d9534f; text-align: center;">Reservation Automatically Cancelled</h2>
         <p>Hi ${recipientName},</p>
-        <p>This is to inform you that a pending reservation has been automatically cancelled because the reservation fee was not paid within the allowed time frame.</p>
+        <p>This is to inform you that a pending reservation has been automatically cancelled because ${reason}.</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <thead>
@@ -872,12 +872,12 @@ const generatePendingReservationCancelledEmail = (recipientName, reservation) =>
 
         <p style="font-size: 14px; color: #555;">No further action is required. The timeslot may now be available for others to book.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 }
 
-const generateNewReservationPendingPaymentEmailForUser = (customerName, reservation) => {
+const generateNewReservationPendingPaymentEmailForUser = (customerName, reservation, companyName = 'Gobokin') => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   // The payment for the initial reservation fee is now handled by the frontend,
   // which will trigger the payment initialization endpoint.
@@ -934,12 +934,12 @@ const generateNewReservationPendingPaymentEmailForUser = (customerName, reservat
         </div>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateReservationConfirmationEmail = (customerName, reservation) => {
+const generateReservationConfirmationEmail = (customerName, reservation, companyName = 'Gobokin') => {
   const remainingBalance = reservation.totalPrice - reservation.reservationFee;
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const paymentUrl = `${frontendUrl}/reservations/${reservation.reservationId}/pay`; // Assuming a route like this
@@ -948,7 +948,7 @@ const generateReservationConfirmationEmail = (customerName, reservation) => {
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #0056b3; text-align: center;">Your Reservation is Confirmed!</h2>
         <p>Hi ${customerName},</p>
-        <p>Thank you for making a reservation with HallBooker. Your requested time slot for <strong>${reservation.hall.name}</strong> has been successfully held. To complete your booking, you must pay the remaining balance before the cutoff date.</p>
+        <p>Thank you for making a reservation with ${companyName}. Your requested time slot for <strong>${reservation.hall.name}</strong> has been successfully held. To complete your booking, you must pay the remaining balance before the cutoff date.</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <thead>
@@ -1007,12 +1007,12 @@ const generateReservationConfirmationEmail = (customerName, reservation) => {
         </div>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateNewReservationNotificationForOwner = (recipient, customer, reservation) => {
+const generateNewReservationNotificationForOwner = (recipient, customer, reservation, companyName = 'Gobokin') => {
   const isSuperAdmin = recipient.role.includes('super-admin');
   const hallOwnershipText = isSuperAdmin ? `a hall on the platform, <strong>${reservation.hall.name}</strong>` : `your hall, <strong>${reservation.hall.name}</strong>`;
   const paymentStatus = reservation.paymentStatus === 'paid' ? 'Fee Paid' : 'Pending Fee Payment';
@@ -1098,36 +1098,36 @@ const generateNewReservationNotificationForOwner = (recipient, customer, reserva
         </table>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from HallBooker.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 };
 
-const generateReservationExpiredEmail = (customerName, reservation) => {
+const generateReservationExpiredEmail = (customerName, reservation, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; color: #333;">
       <h2>Reservation Expired</h2>
       <p>Dear ${customerName},</p>
       <p>We're writing to inform you that your reservation for <strong>${reservation.hall.name}</strong> has expired because it was not converted into a booking before the cutoff time.</p>
       <p>The time slot may now be available for other users. If you are still interested, please visit our website to make a new booking or reservation.</p>
-      <p>Thank you for your interest in HallBooker.</p>
+      <p>Thank you for your interest in ${companyName}.</p>
     </div>
   `;
 };
 
-const generateReservationReminderEmail = (customerName, reservation) => {
+const generateReservationReminderEmail = (customerName, reservation, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; color: #333;">
       <h2>Reservation Reminder</h2>
       <p>Dear ${customerName},</p>
       <p>This is a friendly reminder that your reservation for <strong>${reservation.hall.name}</strong> is due to expire on <strong>${new Date(reservation.cutoffDate).toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}</strong>.</p>
       <p>Please log in to your account to convert your reservation into a full booking to secure your date.</p>
-      <p>Thank you for using HallBooker!</p>
+      <p>Thank you for using ${companyName}!</p>
     </div>
   `;
 };
 
-function generateRecurringBookingConfirmationEmail(customerName, bookings, hall) {
+function generateRecurringBookingConfirmationEmail(customerName, bookings, hall, companyName = 'Gobokin') {
     const totalAmount = bookings.reduce((acc, booking) => acc + booking.totalPrice, 0);
     const totalHallPrice = bookings.reduce((acc, booking) => acc + booking.hallPrice, 0);
     const totalFacilitiesPrice = bookings.reduce((acc, booking) => acc + booking.facilitiesPrice, 0);
@@ -1195,12 +1195,12 @@ function generateRecurringBookingConfirmationEmail(customerName, bookings, hall)
 
         <p>Thank you for choosing us for your recurring events!</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #888; text-align: center;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; ${companyName}. All rights reserved.</p>
     </div>
     `;
 }
 
-const generateReviewNotificationEmail = (userName, hallName, reviewLink) => {
+const generateReviewNotificationEmail = (userName, hallName, reviewLink, companyName = 'Gobokin') => {
     return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2 style="color: #333;">Share Your Experience!</h2>
@@ -1210,26 +1210,26 @@ const generateReviewNotificationEmail = (userName, hallName, reviewLink) => {
         <div style="text-align: center; margin: 20px 0;">
             <a href="${reviewLink}" style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Write a Review</a>
         </div>
-        <p>Thank you for choosing HallBooker.</p>
+        <p>Thank you for choosing ${companyName}.</p>
         <hr style="border: 0; border-top: 1px solid #eee;" />
-        <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+        <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 }
 
-const generateStaffRemovalEmail = (staffName, ownerName) => {
+const generateStaffRemovalEmail = (staffName, ownerName, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">You have been removed as a staff member.</h2>
       <p>Hi ${staffName},</p>
       <p>You have been removed as a staff member by ${ownerName}.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateStaffAdditionEmail = (staffName, ownerName, halls) => {
+const generateStaffAdditionEmail = (staffName, ownerName, halls, companyName = 'Gobokin') => {
   const hallsHtml = halls.map(hall => `<li><strong>${hall.name}</strong> at ${hall.location}</li>`).join('');
 
   return `
@@ -1242,12 +1242,12 @@ const generateStaffAdditionEmail = (staffName, ownerName, halls) => {
       </ul>
       <p>Log in to your dashboard to see the halls you have been assigned to.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateHallOwnerRejectionEmailForUser = (name, reason) => {
+const generateHallOwnerRejectionEmailForUser = (name, reason, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #d9534f;">Application Status Update</h2>
@@ -1259,25 +1259,25 @@ const generateHallOwnerRejectionEmailForUser = (name, reason) => {
       </p>
       <p>If you have any questions, please contact our support team.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateHallOwnerApplicationEmailForUser = (name) => {
+const generateHallOwnerApplicationEmailForUser = (name, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">Application Received</h2>
       <p>Hi ${name},</p>
       <p>We have received your application to become a hall owner. Our team will review your application and get back to you shortly.</p>
-      <p>Thank you for your interest in HallBooker.</p>
+      <p>Thank you for your interest in ${companyName}.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateHallOwnerApplicationEmailForAdmin = (userName, userEmail) => {
+const generateHallOwnerApplicationEmailForAdmin = (userName, userEmail, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #333;">New Hall Owner Application</h2>
@@ -1289,47 +1289,47 @@ const generateHallOwnerApplicationEmailForAdmin = (userName, userEmail) => {
       </ul>
       <p>Please review the application in the admin dashboard.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">This is an automated notification from HallBooker.</p>
+      <p style="font-size: 12px; color: #888;">This is an automated notification from ${companyName}.</p>
     </div>
   `;
 };
 
-const generateHallOwnerApprovalEmailForUser = (name) => {
+const generateHallOwnerApprovalEmailForUser = (name, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #4CAF50;">Application Approved!</h2>
       <p>Hi ${name},</p>
       <p>Congratulations! Your application to become a hall owner has been approved. You can now log in to your dashboard and start managing your halls.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generateHallOwnerCreationEmailForUser = (name, password) => {
+const generateHallOwnerCreationEmailForUser = (name, password, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-      <h2 style="color: #333;">Welcome to HallBooker!</h2>
+      <h2 style="color: #333;">Welcome to ${companyName}!</h2>
       <p>Hi ${name},</p>
-      <p>A hall owner account has been created for you on HallBooker. You can log in with the following temporary password:</p>
+      <p>A hall owner account has been created for you on ${companyName}. You can log in with the following temporary password:</p>
       <p style="font-size: 24px; font-weight: bold; color: #444; letter-spacing: 2px; border: 1px solid #ddd; padding: 10px; display: inline-block;">
         ${password}
       </p>
       <p>We recommend changing your password after your first login.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };
 
-const generatePromotionToHallOwnerEmailForUser = (name) => {
+const generatePromotionToHallOwnerEmailForUser = (name, companyName = 'Gobokin') => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2 style="color: #4CAF50;">You have been promoted!</h2>
       <p>Hi ${name},</p>
       <p>Congratulations! You have been promoted to a hall owner. You can now log in to your dashboard and start managing your halls.</p>
       <hr style="border: 0; border-top: 1px solid #eee;" />
-      <p style="font-size: 12px; color: #888;">&copy; HallBooker Inc. All rights reserved.</p>
+      <p style="font-size: 12px; color: #888;">&copy; ${companyName}. All rights reserved.</p>
     </div>
   `;
 };

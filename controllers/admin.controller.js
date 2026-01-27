@@ -13,6 +13,7 @@ import {
   generateAccountDeletionApprovedEmailForUser,
   generateAccountDeletionDeclinedEmailForUser,
 } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 
 const getHallOwnerApplications = asyncHandler(async (req, res) => {
   const users = await User.find({ 'hallOwnerApplication.status': 'pending' }).select(
@@ -283,7 +284,8 @@ const unlistHall = asyncHandler(async (req, res) => {
 
   const io = req.app.get('io');
   const owner = hall.owner;
-  const emailHtml = generateHallUnlistedEmailForOwner(owner.fullName, hall.name, reason);
+  const companyName = await getCompanyName();
+  const emailHtml = generateHallUnlistedEmailForOwner(owner.fullName, hall.name, reason, companyName);
   await sendEmail({
     io,
     email: owner.email,
@@ -339,7 +341,8 @@ const approveDeletionRequest = asyncHandler(async (req, res) => {
   }
 
   const io = req.app.get('io');
-  const emailHtml = generateAccountDeletionApprovedEmailForUser(user.fullName);
+  const companyName = await getCompanyName();
+  const emailHtml = generateAccountDeletionApprovedEmailForUser(user.fullName, companyName);
   await sendEmail({
     io,
     email: user.email,
@@ -371,7 +374,8 @@ const declineDeletionRequest = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   const io = req.app.get('io');
-  const emailHtml = generateAccountDeletionDeclinedEmailForUser(user.fullName, reason);
+  const companyName = await getCompanyName();
+  const emailHtml = generateAccountDeletionDeclinedEmailForUser(user.fullName, reason, companyName);
   await sendEmail({
     io,
     email: user.email,

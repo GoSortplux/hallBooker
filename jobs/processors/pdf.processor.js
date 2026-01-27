@@ -1,4 +1,5 @@
 import { generatePdfReceipt, generateSubscriptionPdfReceipt, generateRecurringBookingPdfReceipt } from '../../utils/pdfGenerator.js';
+import { getCompanyName } from '../../utils/settings.js';
 import logger from '../../utils/logger.js';
 // We might want to send the PDF via email or store it in R2
 import sendEmail from '../../services/email.service.js';
@@ -8,12 +9,13 @@ const pdfProcessor = async (job) => {
 
   try {
     let pdfBuffer;
+    const companyName = await getCompanyName();
     if (type === 'booking') {
-      pdfBuffer = generatePdfReceipt(data);
+      pdfBuffer = generatePdfReceipt(data, companyName);
     } else if (type === 'subscription') {
-      pdfBuffer = generateSubscriptionPdfReceipt(data);
+      pdfBuffer = generateSubscriptionPdfReceipt(data, companyName);
     } else if (type === 'recurring') {
-      pdfBuffer = generateRecurringBookingPdfReceipt(data.customerDetails, data.bookings, data.hall);
+      pdfBuffer = generateRecurringBookingPdfReceipt(data.customerDetails, data.bookings, data.hall, companyName);
     }
 
     if (email && pdfBuffer) {

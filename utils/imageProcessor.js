@@ -87,7 +87,7 @@ export const applyWatermarkToImage = async (buffer) => {
 
     // Text Watermark Fallback
     const fallbackSetting = await Setting.findOne({ key: 'companyName' });
-    const companyName = escapeXml(fallbackSetting ? fallbackSetting.value : 'HallBooker');
+    const companyName = escapeXml(fallbackSetting ? fallbackSetting.value : 'Gobokin');
 
     // Create an SVG for the watermark with a gold shadow for visibility on white backgrounds
     const fontSize = Math.max(20, Math.floor(width / 20));

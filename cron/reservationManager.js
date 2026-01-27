@@ -4,6 +4,7 @@ import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateReservationExpiredEmail, generateReservationReminderEmail, generatePendingReservationCancelledEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import { createNotification } from '../services/notification.service.js';
 import logger from '../utils/logger.js';
 
@@ -36,6 +37,8 @@ const reservationManager = (io) => {
             logger.info(`Found ${expiredPendingReservations.length} expired pending reservations to clean up.`);
         }
 
+        const companyName = await getCompanyName();
+
         for (const reservation of expiredPendingReservations) {
             const customer = reservation.reservationType === 'walk-in' ? reservation.walkInUserDetails : reservation.user;
 
@@ -59,12 +62,7 @@ const reservationManager = (io) => {
                     io,
                     email: customer.email,
                     subject: `Reservation for ${reservation.hall.name} Cancelled`,
-                    html: generatePendingReservationCancelledEmail({
-                        customerName: customer.fullName,
-                        reservationId: reservation.reservationId,
-                        hallName: reservation.hall.name,
-                        reason: 'The reservation was not paid for within the allowed time.'
-                    }),
+                    html: generatePendingReservationCancelledEmail(customer.fullName, reservation, companyName, 'the reservation was not paid for within the allowed time'),
                     // No in-app notification for the user who's reservation is deleted
                 }).catch(err => logger.error(`Error sending cancellation email to customer for reservation ${reservation.reservationId}: ${err}`));
             }
@@ -77,12 +75,7 @@ const reservationManager = (io) => {
                         io,
                         email: recipient.email,
                         subject: `An Unpaid Reservation for ${reservation.hall.name} Has Been Cancelled`,
-                        html: generatePendingReservationCancelledEmail({
-                            customerName: recipient.fullName, // Use recipient's name for their email
-                            reservationId: reservation.reservationId,
-                            hallName: reservation.hall.name,
-                            reason: `The reservation made by ${customer.fullName} was automatically cancelled because it was not paid for within the ${pendingReservationExpiryMinutes}-minute window.`
-                        }),
+                        html: generatePendingReservationCancelledEmail(recipient.fullName, reservation, companyName, `the reservation made by ${customer.fullName} was automatically cancelled because it was not paid for within the ${pendingReservationExpiryMinutes}-minute window`),
                         notification: {
                            recipient: recipient._id.toString(),
                            message: `An unpaid reservation (${reservation.reservationId}) for ${reservation.hall.name} has been auto-cancelled.`,
@@ -103,6 +96,7 @@ const reservationManager = (io) => {
     logger.debug('Running hourly reservation manager cron job...');
 
     const now = new Date();
+    const companyName = await getCompanyName();
 
     // 1. Handle expired reservations (status: ACTIVE -> EXPIRED)
     try {
@@ -128,7 +122,7 @@ const reservationManager = (io) => {
                 io,
                 email: customer.email,
                 subject: `Your Reservation for ${reservation.hall.name} Has Expired`,
-                html: generateReservationExpiredEmail(customer.fullName, reservation),
+                html: generateReservationExpiredEmail(customer.fullName, reservation, companyName),
                 notification: {
                     recipient: reservation.user?._id.toString(),
                     message: `Your reservation for ${reservation.hall.name} has expired.`,
@@ -175,7 +169,7 @@ const reservationManager = (io) => {
                         io,
                         email: customer.email,
                         subject: `Reminder: Action Required for Your Reservation at ${reservation.hall.name}`,
-                        html: generateReservationReminderEmail(customer.fullName, reservation),
+                        html: generateReservationReminderEmail(customer.fullName, reservation, companyName),
                         notification: {
                             recipient: reservation.user?._id.toString(),
                             message: `Your reservation for ${reservation.hall.name} is expiring soon. Complete your payment to confirm.`,

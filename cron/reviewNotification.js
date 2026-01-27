@@ -5,6 +5,7 @@ import { Hall } from '../models/hall.model.js';
 import { createNotification } from '../services/notification.service.js';
 import sendEmail from '../services/email.service.js';
 import { generateReviewNotificationEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import logger from '../utils/logger.js';
 
 const scheduleReviewNotifications = (io) => {
@@ -51,7 +52,8 @@ const scheduleReviewNotifications = (io) => {
           reviewLink
         );
 
-        const emailBody = generateReviewNotificationEmail(user.fullName, hall.name, reviewLink);
+        const companyName = await getCompanyName();
+        const emailBody = generateReviewNotificationEmail(user.fullName, hall.name, reviewLink, companyName);
         await sendEmail({
           email: user.email,
           subject: `Leave a review for ${hall.name}`,

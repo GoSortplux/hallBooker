@@ -4,6 +4,7 @@ import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import sendEmail from '../services/email.service.js';
 import { generateSubscriptionExpiryWarningEmail, generateSubscriptionExpiredEmail } from '../utils/emailTemplates.js';
+import { getCompanyName } from '../utils/settings.js';
 import logger from '../utils/logger.js';
 
 const sendExpirationWarnings = async (io) => {
@@ -19,13 +20,14 @@ const sendExpirationWarnings = async (io) => {
         }
     }).populate('owner', 'email fullName').populate('tier', 'name');
 
+    const companyName = await getCompanyName();
     for (const sub of upcomingExpirations) {
         try {
             await sendEmail({
                 io,
                 email: sub.owner.email,
-                subject: 'Your HallBooker Subscription is Expiring Soon',
-                html: generateSubscriptionExpiryWarningEmail(sub.owner.fullName, sub.tier.name, sub.expiryDate),
+                subject: `Your ${companyName} Subscription is Expiring Soon`,
+                html: generateSubscriptionExpiryWarningEmail(sub.owner.fullName, sub.tier.name, sub.expiryDate, companyName),
                 notification: {
                     recipient: sub.owner._id.toString(),
                     message: `Your ${sub.tier.name} subscription is expiring soon.`,
@@ -45,6 +47,7 @@ const deactivateExpiredSubscriptions = async (io) => {
         status: 'active'
     }).populate('owner', 'email fullName').populate('tier', 'name');
 
+    const companyName = await getCompanyName();
     for (const sub of expiredSubscriptions) {
         sub.status = 'expired';
         await sub.save();
@@ -57,8 +60,8 @@ const deactivateExpiredSubscriptions = async (io) => {
             await sendEmail({
                 io,
                 email: sub.owner.email,
-                subject: 'Your HallBooker Subscription Has Expired',
-                html: generateSubscriptionExpiredEmail(sub.owner.fullName, sub.tier.name),
+                subject: `Your ${companyName} Subscription Has Expired`,
+                html: generateSubscriptionExpiredEmail(sub.owner.fullName, sub.tier.name, companyName),
                 notification: {
                     recipient: sub.owner._id.toString(),
                     message: `Your ${sub.tier.name} subscription has expired.`,
