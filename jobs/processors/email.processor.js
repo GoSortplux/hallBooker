@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import logger from '../../utils/logger.js';
+import { getCompanyName } from '../../utils/settings.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -26,8 +27,18 @@ const emailProcessor = async (job) => {
       return att;
     });
 
+    const companyName = await getCompanyName();
+    const fromAddress = process.env.EMAIL_FROM || 'no-reply@gobokin.com';
+
+    // Extract just the email if it's already in "Name <email>" format,
+    // or just use it as is if it's just an email.
+    // Then wrap it with the dynamic company name.
+    const emailOnly = fromAddress.includes('<')
+      ? fromAddress.match(/<([^>]+)>/)[1]
+      : fromAddress;
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM,
+      from: `"${companyName}" <${emailOnly}>`,
       to: email,
       subject,
       html,
