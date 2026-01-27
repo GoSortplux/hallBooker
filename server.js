@@ -53,9 +53,6 @@ const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
   : [];
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
 
 // Trust proxy for correct client IP detection (needed for rate limiting behind proxies like Coolify/Traefik)
@@ -94,13 +91,6 @@ app.set('io', io);
 
 const port = process.env.PORT || 5000;
 
-// Initialize Cron Jobs
-initializeCronJobs(io);
-initializeBookingCronJobs(io);
-initializeNotificationCronJobs();
-scheduleReviewNotifications(io);
-initializeReservationCronJobs(io);
-initializeUserCleanupCronJob(io);
 
 // Middleware
 
@@ -215,9 +205,22 @@ io.on('connection', (socket) => {
 });
 
 // Only start the server if this file is run directly
-const isMainModule = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+const isMainModule = process.argv[1] &&
+  (path.resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
+   path.resolve(process.argv[1]) === path.resolve(process.cwd(), 'server.js'));
 
-if (isMainModule) {
+if (isMainModule && process.env.NODE_ENV !== 'test') {
+  // Connect to MongoDB
+  connectDB();
+
+  // Initialize Cron Jobs
+  initializeCronJobs(io);
+  initializeBookingCronJobs(io);
+  initializeNotificationCronJobs();
+  scheduleReviewNotifications(io);
+  initializeReservationCronJobs(io);
+  initializeUserCleanupCronJob(io);
+
   const server = httpServer.listen(port, () => {
     logger.info(`🚀 Server running on port ${port}`);
   });
