@@ -5,6 +5,7 @@ import { Hall } from '../models/hall.model.js';
 import { User } from '../models/user.model.js';
 import { Booking } from '../models/booking.model.js';
 import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import mongoose from 'mongoose';
 
 const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
@@ -45,7 +46,10 @@ const getHallAnalytics = asyncHandler(async (req, res) => {
     const { hallId } = req.params;
     const { startDate, endDate, type } = req.query;
 
-    const query = { hall: new mongoose.Types.ObjectId(hallId) };
+    const hall = await findHallByIdOrSlug(hallId);
+    if (!hall) throw new ApiError(404, "Hall not found");
+
+    const query = { hall: hall._id };
 
     if (startDate || endDate) {
         query.createdAt = {};

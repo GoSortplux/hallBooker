@@ -8,6 +8,7 @@ import { SubscriptionHistory } from '../models/subscriptionHistory.model.js';
 import Setting from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import { Reservation } from '../models/reservation.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import mongoose from 'mongoose';
 
 
@@ -451,9 +452,15 @@ const getHallOwnerAnalytics = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, {}, `No halls found for this ${roleDisplay}.`));
   }
 
-  const targetHalls = specificHallId
-    ? accessibleHalls.filter(h => h._id.toString() === specificHallId)
-    : accessibleHalls;
+  let targetHalls = accessibleHalls;
+  if (specificHallId) {
+      const hall = await findHallByIdOrSlug(specificHallId);
+      if (hall) {
+          targetHalls = accessibleHalls.filter(h => h._id.toString() === hall._id.toString());
+      } else {
+          targetHalls = [];
+      }
+  }
 
   const targetHallIds = targetHalls.map(h => h._id);
 
@@ -557,7 +564,10 @@ const getSuperAdminAnalytics = asyncHandler(async (req, res) => {
     };
 
     if (hallId) {
-        commissionMatch.hall = new mongoose.Types.ObjectId(hallId);
+        const hall = await findHallByIdOrSlug(hallId);
+        if (hall) {
+            commissionMatch.hall = hall._id;
+        }
     }
 
     const commissionAnalyticsPromise = Booking.aggregate([

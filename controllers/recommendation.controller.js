@@ -1,6 +1,7 @@
 import { Hall } from '../models/hall.model.js';
 import { Analytics } from '../models/analytics.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 
@@ -165,16 +166,17 @@ const getHallRecommendations = asyncHandler(async (req, res) => {
   const ipAddress = req.ip;
 
   // Find the reference hall and populate its facilities
-  const referenceHall = await Hall.findById(id).populate('facilities.facility');
+  const referenceHall = await findHallByIdOrSlug(id);
   if (!referenceHall) {
     throw new ApiError(404, 'Hall not found');
   }
+  await referenceHall.populate('facilities.facility');
 
   // If the reference hall has no location, use fallback logic.
   if (!referenceHall.geoLocation?.coordinates) {
     // --- Fallback Logic: Recommend based on other similarities ---
     const similarHalls = await Hall.find({
-      _id: { $ne: id },
+      _id: { $ne: referenceHall._id },
       state: referenceHall.state,
       localGovernment: referenceHall.localGovernment,
     }).populate('facilities.facility');
@@ -204,7 +206,7 @@ const getHallRecommendations = asyncHandler(async (req, res) => {
 
   // Find halls within a 50km radius
   const nearbyHalls = await Hall.find({
-    _id: { $ne: id },
+    _id: { $ne: referenceHall._id },
     geoLocation: {
       $near: {
         $geometry: {
