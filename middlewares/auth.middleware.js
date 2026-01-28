@@ -50,11 +50,15 @@ export const isEmailVerified = (req, _, next) => {
 };
 
 export const authorizeHallAccess = asyncHandler(async (req, _, next) => {
-  const { id: hallId } = req.params;
+  const hallId = req.params.id || req.params.hallId;
   const user = req.user;
 
   if (user.role.includes('super-admin')) {
     return next();
+  }
+
+  if (!hallId) {
+    throw new ApiError(400, 'Hall ID or slug is required');
   }
 
   const hall = await findHallByIdOrSlug(hallId);

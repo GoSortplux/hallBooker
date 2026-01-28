@@ -208,9 +208,15 @@ const getAllHalls = asyncHandler(async (req, res) => {
 
 const getHallById = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
-    const hall = await Hall.findOne(query).populate('owner', 'fullName email phone whatsappNumber').populate('country').populate('state').populate('localGovernment').populate('facilities.facility').populate('suitableFor');
+    const hall = await findHallByIdOrSlug(id);
     if (!hall) throw new ApiError(404, "Hall not found");
+
+    await hall.populate('owner', 'fullName email phone whatsappNumber');
+    await hall.populate('country');
+    await hall.populate('state');
+    await hall.populate('localGovernment');
+    await hall.populate('facilities.facility');
+    await hall.populate('suitableFor');
 
     // If the hall is unlisted, verify user authorization
     if (hall.isListed === false) {

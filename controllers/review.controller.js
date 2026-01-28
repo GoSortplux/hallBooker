@@ -1,6 +1,7 @@
 import { Review } from '../models/review.model.js';
 import { Booking } from '../models/booking.model.js';
 import { Hall } from '../models/hall.model.js';
+import { findHallByIdOrSlug } from '../utils/hall.utils.js';
 import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
@@ -11,10 +12,13 @@ const createReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
   const { hallId, bookingId } = req.params;
 
+  const hallDoc = await findHallByIdOrSlug(hallId);
+  if (!hallDoc) throw new ApiError(404, "Hall not found");
+
   const booking = await Booking.findOne({
     _id: bookingId,
     user: req.user._id,
-    hall: hallId
+    hall: hallDoc._id
   });
 
   if (!booking) {
@@ -58,13 +62,13 @@ const createReview = asyncHandler(async (req, res) => {
   const existingReview = await Review.findOne({ booking: bookingId });
   if (existingReview) throw new ApiError(400, "You have already submitted a review for this booking.");
 
-  const review = await Review.create({ rating, comment, hall: hallId, user: req.user._id, booking: bookingId });
+  const review = await Review.create({ rating, comment, hall: hallDoc._id, user: req.user._id, booking: bookingId });
 
   // Mark review notification as sent to prevent automated emails
   booking.reviewNotificationSent = true;
   await booking.save();
 
-  const hall = await Hall.findById(hallId);
+  const hall = hallDoc;
   const io = req.app.get('io');
 
   // Notify hall owner
@@ -72,7 +76,7 @@ const createReview = asyncHandler(async (req, res) => {
     io,
     hall.owner.toString(),
     `You have received a new review for your hall: ${hall.name}.`,
-    `/halls/${hallId}/reviews`
+    `/halls/${hall._id}/reviews`
   );
 
   // Notify admins
@@ -82,7 +86,7 @@ const createReview = asyncHandler(async (req, res) => {
       io,
       admin._id.toString(),
       `A new review has been submitted for hall: ${hall.name}.`,
-      `/halls/${hallId}/reviews`
+      `/halls/${hall._id}/reviews`
     );
   });
 
@@ -90,7 +94,11 @@ const createReview = asyncHandler(async (req, res) => {
 });
 
 const getReviewsForHall = asyncHandler(async (req, res) => {
-  const reviews = await Review.find({ hall: req.params.hallId }).populate('user', 'fullName');
+  const { hallId } = req.params;
+  const hall = await findHallByIdOrSlug(hallId);
+  if (!hall) throw new ApiError(404, 'Hall not found');
+
+  const reviews = await Review.find({ hall: hall._id }).populate('user', 'fullName');
   res.status(200).json(new ApiResponse(200, reviews, 'Reviews fetched successfully.'));
 });
 
