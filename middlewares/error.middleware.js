@@ -12,7 +12,7 @@ const errorHandler = (err, req, res, next) => {
 
   if (err.name === 'CastError' && err.kind === 'ObjectId') {
     statusCode = 404;
-    message = 'Resource not found';
+    message = `Resource not found (Invalid ${err.path}: ${err.value})`;
   }
   
   if (err.code === 11000) {
