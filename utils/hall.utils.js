@@ -8,6 +8,14 @@ import { Hall } from '../models/hall.model.js';
  */
 export const findHallByIdOrSlug = async (idOrSlug) => {
     if (!idOrSlug) return null;
-    const query = mongoose.Types.ObjectId.isValid(idOrSlug) ? { _id: idOrSlug } : { slug: idOrSlug };
-    return await Hall.findOne(query);
+
+    // Try finding by ID if it's a valid ObjectId
+    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
+        const hallById = await Hall.findById(idOrSlug);
+        if (hallById) return hallById;
+    }
+
+    // Otherwise, or if not found by ID, try finding by slug
+    // We use lowercase to ensure case-insensitive matching for slugs
+    return await Hall.findOne({ slug: idOrSlug.toLowerCase() });
 };
